@@ -43,7 +43,7 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   }
 });
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit per file
 });
@@ -163,10 +163,10 @@ app.post('/api/submissions', upload.array('documents', 5), (req, res) => {
     submissions.push(newSubmission);
     saveSubmissions(submissions);
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       message: "Application submitted successfully!",
-      id: newSubmission.id 
+      id: newSubmission.id
     });
   } catch (error) {
     console.error("Submission error:", error);

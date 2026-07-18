@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +8,14 @@
   <!-- Google Fonts: Outfit and Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
   <!-- Navbar -->
@@ -20,14 +24,27 @@
       <i class="fa-solid fa-laptop-code logo-icon"></i>
       <span class="logo-text">Cyber<span class="highlight">Cafe</span></span>
     </div>
-    <nav class="nav-links">
-      <a href="#portal" class="nav-item active" data-tab="portal"><i class="fa-solid fa-earth-americas"></i> Customer Portal</a>
+    <div class="header-actions">
+      <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <nav class="nav-links" id="nav-links">
+      <label class="theme-switcher" for="theme-select">
+        <i class="fa-solid fa-palette"></i>
+        <select id="theme-select" class="theme-select" aria-label="Theme preference">
+          <option value="system">System</option>
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </label>
+      <a href="#portal" class="nav-item active" data-tab="portal"><i class="fa-solid fa-earth-americas"></i> Customer
+        Portal</a>
       <a href="#simulator" class="nav-item" data-tab="simulator"><i class="fa-brands fa-whatsapp"></i> Bot Simulator</a>
       <a href="#admin" class="nav-item" data-tab="admin"><i class="fa-solid fa-lock"></i> Admin Dashboard</a>
     </nav>
-    <div class="shop-status-badge open" id="shop-status-badge">
-      <span class="pulse-dot"></span> <span id="shop-status-text">Shop Timings: Loading...</span>
-    </div>
   </header>
 
   <!-- Main Container -->
@@ -37,19 +54,20 @@
     <section id="portal-tab" class="tab-content active">
       <div class="hero-section">
         <h1>Welcome to <span class="shop-title-text" id="hero-shop-name">Maa Durga Jan Seva Kendra</span></h1>
-        <p class="hero-subtitle">Online Services Portal. Upload your documents directly, and we will process your applications instantly!</p>
-        
+        <p class="hero-subtitle">Online Services Portal. Upload your documents directly, and we will process your
+          applications instantly!</p>
+
         <div class="quick-contact-bar">
-          <span><i class="fa-solid fa-location-dot"></i> <span id="info-address">Loading Address...</span></span>
-          <span><i class="fa-solid fa-phone"></i> <a href="#" id="info-phone-link">Loading...</a></span>
-          <span><i class="fa-solid fa-clock"></i> <span id="info-timings">Loading...</span></span>
+          <span><i class="fa-solid fa-location-dot"></i> <span id="info-address">Bindwaliya Ghazipur, UP</span></span>
+          <span><i class="fa-solid fa-phone"></i> <a href="#" id="info-phone-link">+91 8707845206</a></span>
+          <span><i class="fa-solid fa-clock"></i> <span id="info-timings">Any Time</span></span>
         </div>
       </div>
 
       <div class="services-container">
         <h2 class="section-title"><i class="fa-solid fa-briefcase"></i> Our Digital Services</h2>
         <p class="section-subtitle">Select a service below to view the required documents and submit them online.</p>
-        
+
         <div class="services-grid" id="services-grid">
           <!-- Service cards injected dynamically via app.js -->
         </div>
@@ -60,12 +78,12 @@
     <!-- TAB 2: WHATSAPP BOT SIMULATOR -->
     <section id="simulator-tab" class="tab-content">
       <div class="simulator-layout">
-        
+
         <!-- Left Column: WhatsApp UI Mockup -->
         <div class="phone-wrapper">
           <div class="phone-frame">
             <div class="phone-camera"></div>
-            
+
             <!-- WhatsApp App Container -->
             <div class="whatsapp-container">
               <!-- WA Header -->
@@ -84,14 +102,14 @@
                   <i class="fa-solid fa-ellipsis-vertical"></i>
                 </div>
               </div>
-              
+
               <!-- WA Chat Window -->
               <div class="wa-chat-window" id="wa-chat-window">
                 <div class="wa-chat-date">TODAY</div>
-                
+
                 <!-- Initial messages will be added by app.js -->
               </div>
-              
+
               <!-- WA Input Area -->
               <div class="wa-input-area">
                 <div class="wa-input-wrapper">
@@ -105,18 +123,20 @@
                 </button>
               </div>
             </div>
-            
+
           </div>
           <div class="simulator-hint">
-            <i class="fa-solid fa-circle-info"></i> Type <strong class="glow-text">"Hi"</strong> or <strong class="glow-text">"shop"</strong> to start testing the automated routing responses!
+            <i class="fa-solid fa-circle-info"></i> Type <strong class="glow-text">"Hi"</strong> or <strong
+              class="glow-text">"shop"</strong> to start testing the automated routing responses!
           </div>
         </div>
-        
+
         <!-- Right Column: n8n workflow explanation & Code payloads -->
         <div class="sim-details-panel">
           <h2><i class="fa-brands fa-whatsapp"></i> WhatsApp Cloud API & n8n</h2>
-          <p>This simulator displays exactly how the self-hosted n8n workflow processes messages sent to the Meta WhatsApp Cloud API.</p>
-          
+          <p>This simulator displays exactly how the self-hosted n8n workflow processes messages sent to the Meta
+            WhatsApp Cloud API.</p>
+
           <div class="n8n-features-list">
             <div class="feature-item">
               <div class="feature-icon"><i class="fa-solid fa-network-wired"></i></div>
@@ -129,14 +149,16 @@
               <div class="feature-icon"><i class="fa-solid fa-code-branch"></i></div>
               <div class="feature-body">
                 <h3>Switch Node (Logic)</h3>
-                <p>Analyzes user input. Identifies if they selected a service ID (like <code>srv_pancard</code>) or typed standard terms, routing them to the correct reply node.</p>
+                <p>Analyzes user input. Identifies if they selected a service ID (like <code>srv_pancard</code>) or
+                  typed standard terms, routing them to the correct reply node.</p>
               </div>
             </div>
             <div class="feature-item">
               <div class="feature-icon"><i class="fa-solid fa-paper-plane"></i></div>
               <div class="feature-body">
                 <h3>HTTP Request Node (Action)</h3>
-                <p>Sends custom messages or interactive elements (like lists and buttons) back to the user via Meta's HTTP endpoint.</p>
+                <p>Sends custom messages or interactive elements (like lists and buttons) back to the user via Meta's
+                  HTTP endpoint.</p>
               </div>
             </div>
           </div>
@@ -147,15 +169,18 @@
               <span><i class="fa-solid fa-code"></i> Live Meta API Payload JSON</span>
               <span class="payload-badge" id="payload-node-name">Waiting...</span>
             </div>
-            <pre class="payload-code-box"><code id="payload-code">// Send a message in the chat on the left to see the WhatsApp Graph API JSON payloads in real-time.</code></pre>
+            <pre
+              class="payload-code-box"><code id="payload-code">// Send a message in the chat on the left to see the WhatsApp Graph API JSON payloads in real-time.</code></pre>
           </div>
-          
+
           <div class="n8n-download-promo">
             <div class="promo-text">
               <h4>Ready to build this for real?</h4>
-              <p>You can download the full pre-configured n8n workflow file and follow the step-by-step setup guides in the Admin Panel.</p>
+              <p>You can download the full pre-configured n8n workflow file and follow the step-by-step setup guides in
+                the Admin Panel.</p>
             </div>
-            <button class="btn btn-primary" onclick="window.location.hash='#admin'; document.querySelector('[data-tab=admin]').click();">
+            <button class="btn btn-primary"
+              onclick="window.location.hash='#admin'; document.querySelector('[data-tab=admin]').click();">
               <i class="fa-solid fa-download"></i> Get n8n Workflow
             </button>
           </div>
@@ -167,7 +192,7 @@
 
     <!-- TAB 3: ADMIN DASHBOARD -->
     <section id="admin-tab" class="tab-content">
-      
+
       <!-- Admin Login -->
       <div id="admin-login-card" class="admin-login-card">
         <div class="login-header">
@@ -190,7 +215,7 @@
 
       <!-- Admin Panel Content (Hidden initially) -->
       <div id="admin-panel" class="admin-panel hidden">
-        
+
         <!-- Admin Dashboard Header / Stats -->
         <div class="admin-header-bar">
           <div>
@@ -198,7 +223,8 @@
             <p>Manage customer document uploads, applications, and shop settings.</p>
           </div>
           <div class="admin-actions">
-            <button class="btn btn-outline" id="btn-admin-logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+            <button class="btn btn-outline" id="btn-admin-logout"><i class="fa-solid fa-right-from-bracket"></i>
+              Logout</button>
           </div>
         </div>
 
@@ -235,19 +261,23 @@
 
         <!-- Dashboard Layout Tabs -->
         <div class="admin-tab-nav">
-          <button class="admin-tab-btn active" data-admin-tab="submissions-list"><i class="fa-solid fa-list-check"></i> Submissions</button>
-          <button class="admin-tab-btn" data-admin-tab="shop-settings"><i class="fa-solid fa-gears"></i> Shop Settings</button>
-          <button class="admin-tab-btn" data-admin-tab="n8n-setup"><i class="fa-solid fa-network-wired"></i> n8n & WhatsApp Setup</button>
+          <button class="admin-tab-btn active" data-admin-tab="submissions-list"><i class="fa-solid fa-list-check"></i>
+            Submissions</button>
+          <button class="admin-tab-btn" data-admin-tab="shop-settings"><i class="fa-solid fa-gears"></i> Shop
+            Settings</button>
+          <button class="admin-tab-btn" data-admin-tab="n8n-setup"><i class="fa-solid fa-network-wired"></i> n8n &
+            WhatsApp Setup</button>
         </div>
 
         <!-- Admin Subsections -->
-        
+
         <!-- SUBSECTION A: SUBMISSIONS LIST -->
         <div id="admin-submissions-list" class="admin-subcontent active">
           <div class="subcontent-header">
             <h3>Customer Submissions</h3>
             <div class="filter-controls">
-              <input type="text" id="search-submissions" placeholder="Filter by name, phone, or service..." class="search-input">
+              <input type="text" id="search-submissions" placeholder="Filter by name, phone, or service..."
+                class="search-input">
               <select id="filter-status" class="status-select-filter">
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -306,19 +336,19 @@
                 <input type="email" id="settings-email" required>
               </div>
             </div>
-            
+
             <div class="form-group">
               <label for="settings-address">Shop Physical Address</label>
               <textarea id="settings-address" rows="2" required></textarea>
             </div>
-            
+
             <div class="form-group">
               <label for="settings-timings">Shop Timings Message</label>
               <input type="text" id="settings-timings" required>
             </div>
 
             <div class="divider"></div>
-            
+
             <div class="form-group password-group">
               <label for="settings-password">Change Admin Dashboard Password</label>
               <input type="text" id="settings-password" placeholder="Leave empty to keep current password">
@@ -326,7 +356,8 @@
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
+              <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save
+                Settings</button>
             </div>
           </form>
         </div>
@@ -343,22 +374,28 @@
               <div class="download-icon"><i class="fa-solid fa-file-arrow-down"></i></div>
               <div class="download-info">
                 <h4>Download Pre-configured n8n Workflow</h4>
-                <p>This JSON file contains the Webhook, Switch logic, and Meta API Request nodes matching this project's requirements.</p>
+                <p>This JSON file contains the Webhook, Switch logic, and Meta API Request nodes matching this project's
+                  requirements.</p>
               </div>
-              <a href="/n8n_whatsapp_workflow.json" download="n8n_whatsapp_workflow.json" class="btn btn-primary" id="btn-download-n8n">
+              <a href="/n8n_whatsapp_workflow.json" download="n8n_whatsapp_workflow.json" class="btn btn-primary"
+                id="btn-download-n8n">
                 <i class="fa-solid fa-download"></i> Download JSON
               </a>
             </div>
 
             <div class="setup-steps-container">
               <h4>Setup Instructions (Hinglish / English)</h4>
-              
+
               <div class="accordion-step">
                 <div class="step-num">1</div>
                 <div class="step-content">
                   <h5>Step 1: Meta Developer Account Setup</h5>
-                  <p>Go to <a href="https://developers.facebook.com/" target="_blank">Meta for Developers</a>, log in with your client's Facebook account, and create a new App. Choose **Other** -> **Business** app type.</p>
-                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> Meta for Developers par client ki Business ID se login karke ek App banayein aur usme **WhatsApp Business Platform** add karein.</p>
+                  <p>Go to <a href="https://developers.facebook.com/" target="_blank">Meta for Developers</a>, log in
+                    with your client's Facebook account, and create a new App. Choose **Other** -> **Business** app
+                    type.</p>
+                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> Meta for
+                    Developers par client ki Business ID se login karke ek App banayein aur usme **WhatsApp Business
+                    Platform** add karein.</p>
                 </div>
               </div>
 
@@ -366,8 +403,14 @@
                 <div class="step-num">2</div>
                 <div class="step-content">
                   <h5>Step 2: Get WhatsApp Credentials</h5>
-                  <p>In the WhatsApp Setup Panel, configure a phone number. Meta will provide a <strong>Temporary Access Token</strong>, a <strong>Phone Number ID</strong>, and a <strong>WhatsApp Business Account ID</strong>. Generate a <strong>Permanent Access Token</strong> in your System User settings to avoid authorization expiry.</p>
-                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> WhatsApp settings me test number ya permanent client phone verify karein. Wahan se <strong>Phone Number ID</strong> copy kar lein aur System User section me ja kar ek **Permanent Access Token** generate karein jo kabhi expire nahi hoga.</p>
+                  <p>In the WhatsApp Setup Panel, configure a phone number. Meta will provide a <strong>Temporary Access
+                      Token</strong>, a <strong>Phone Number ID</strong>, and a <strong>WhatsApp Business Account
+                      ID</strong>. Generate a <strong>Permanent Access Token</strong> in your System User settings to
+                    avoid authorization expiry.</p>
+                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> WhatsApp
+                    settings me test number ya permanent client phone verify karein. Wahan se <strong>Phone Number
+                      ID</strong> copy kar lein aur System User section me ja kar ek **Permanent Access Token** generate
+                    karein jo kabhi expire nahi hoga.</p>
                 </div>
               </div>
 
@@ -375,8 +418,12 @@
                 <div class="step-num">3</div>
                 <div class="step-content">
                   <h5>Step 3: Setup n8n & Import Workflow</h5>
-                  <p>Deploy n8n (e.g. self-host on a cheap VPS or run it locally). Create a new workflow, and click <strong>Import from File</strong>. Upload the downloaded <code>n8n_whatsapp_workflow.json</code>.</p>
-                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> n8n console open karein, Settings menu se 'Import from File' select karein, aur hamara download kiya hua JSON upload karein. Poora workflow diagram aapke saamne aa jayega.</p>
+                  <p>Deploy n8n (e.g. self-host on a cheap VPS or run it locally). Create a new workflow, and click
+                    <strong>Import from File</strong>. Upload the downloaded <code>n8n_whatsapp_workflow.json</code>.
+                  </p>
+                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> n8n console
+                    open karein, Settings menu se 'Import from File' select karein, aur hamara download kiya hua JSON
+                    upload karein. Poora workflow diagram aapke saamne aa jayega.</p>
                 </div>
               </div>
 
@@ -385,13 +432,18 @@
                 <div class="step-content">
                   <h5>Step 4: Update Workflow Credentials</h5>
                   <p>Double-click the HTTP Request nodes in n8n and update:
-                    <ul>
-                      <li>The URL containing your <code>Phone Number ID</code>.</li>
-                      <li>The Authorization Header containing your <code>Permanent Access Token</code>.</li>
-                      <li>Update the website URLs in the JSON body payloads to point to your live site (e.g., replacement of <code>https://www.yourcybercafewebsite.com</code> with your domain).</li>
-                    </ul>
+                  <ul>
+                    <li>The URL containing your <code>Phone Number ID</code>.</li>
+                    <li>The Authorization Header containing your <code>Permanent Access Token</code>.</li>
+                    <li>Update the website URLs in the JSON body payloads to point to your live site (e.g., replacement
+                      of <code>https://www.yourcybercafewebsite.com</code> with your domain).</li>
+                  </ul>
                   </p>
-                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> n8n workflow me jo HTTP nodes hain, unme <code>YOUR_PHONE_NUMBER_ID</code> aur Authorization header me <code>YOUR_PERMANENT_ACCESS_TOKEN</code> daal kar update karein. Saath hi details me website url ko apne real web-app URL se change kar dein.</p>
+                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> n8n workflow
+                    me jo HTTP nodes hain, unme <code>YOUR_PHONE_NUMBER_ID</code> aur Authorization header me
+                    <code>YOUR_PERMANENT_ACCESS_TOKEN</code> daal kar update karein. Saath hi details me website url ko
+                    apne real web-app URL se change kar dein.
+                  </p>
                 </div>
               </div>
 
@@ -399,8 +451,15 @@
                 <div class="step-num">5</div>
                 <div class="step-content">
                   <h5>Step 5: Setup Webhooks in Meta Developer Dashboard</h5>
-                  <p>In n8n, activate the workflow. Copy the <strong>Production Webhook URL</strong> from the Webhook node (e.g., <code>https://n8n.domain.com/webhook/whatsapp-webhook</code>). In your Meta App Dashboard under WhatsApp Configuration, paste this URL and set your Verify Token (e.g., <code>cybercafe_token</code>). Finally, subscribe to <code>messages</code> in the Webhooks list.</p>
-                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> n8n Webhook Node ka live URL copy karke Meta Developer Portal ke Webhooks Configuration me paste karein. Verify token jo set kiya hai wahi daalein. Configuration approve hone par **messages** event ko subscribe kar lein. Chatbot live ho jayega!</p>
+                  <p>In n8n, activate the workflow. Copy the <strong>Production Webhook URL</strong> from the Webhook
+                    node (e.g., <code>https://n8n.domain.com/webhook/whatsapp-webhook</code>). In your Meta App
+                    Dashboard under WhatsApp Configuration, paste this URL and set your Verify Token (e.g.,
+                    <code>cybercafe_token</code>). Finally, subscribe to <code>messages</code> in the Webhooks list.
+                  </p>
+                  <p class="hinglish-text"><i class="fa-solid fa-language"></i> <strong>Hinglish:</strong> n8n Webhook
+                    Node ka live URL copy karke Meta Developer Portal ke Webhooks Configuration me paste karein. Verify
+                    token jo set kiya hai wahi daalein. Configuration approve hone par **messages** event ko subscribe
+                    kar lein. Chatbot live ho jayega!</p>
                 </div>
               </div>
 
@@ -421,7 +480,7 @@
         <button class="modal-close" id="modal-close-btn">&times;</button>
       </div>
       <div class="modal-body">
-        
+
         <div class="requirements-box">
           <h4><i class="fa-solid fa-circle-info"></i> Required Documents:</h4>
           <ul id="modal-requirements-list">
@@ -446,7 +505,8 @@
 
           <div class="form-group">
             <label for="client-notes">Additional Instructions / Details (Notes)</label>
-            <textarea id="client-notes" rows="2" placeholder="Example: Need correction in Father's Name, etc. (Optional)"></textarea>
+            <textarea id="client-notes" rows="2"
+              placeholder="Example: Need correction in Father's Name, etc. (Optional)"></textarea>
           </div>
 
           <div class="form-group">
@@ -488,4 +548,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>

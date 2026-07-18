@@ -56,8 +56,66 @@ let shopSettings = {};
 let selectedFiles = [];
 let adminPassword = sessionStorage.getItem('adminPassword') || '';
 
+function initThemeSwitcher() {
+  const themeSelect = document.getElementById("theme-select");
+  const savedTheme = localStorage.getItem("theme") || "system";
+
+  const applyTheme = (theme) => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", theme);
+    if (theme === "system") {
+      const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+      root.style.colorScheme = prefersLight ? "light" : "dark";
+    } else {
+      root.style.colorScheme = theme;
+    }
+    if (themeSelect) {
+      themeSelect.value = theme;
+    }
+  };
+
+  applyTheme(savedTheme);
+
+  if (themeSelect) {
+    themeSelect.addEventListener("change", (event) => {
+      const nextTheme = event.target.value;
+      localStorage.setItem("theme", nextTheme);
+      applyTheme(nextTheme);
+    });
+
+    window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+      if ((localStorage.getItem("theme") || "system") === "system") {
+        applyTheme("system");
+      }
+    });
+  }
+}
+
+function initMobileMenu() {
+  const menuToggle = document.getElementById("menu-toggle");
+  const navLinks = document.getElementById("nav-links");
+
+  if (!menuToggle || !navLinks) return;
+
+  menuToggle.addEventListener("click", () => {
+    const isOpen = navLinks.classList.toggle("open");
+    menuToggle.classList.toggle("active", isOpen);
+    menuToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  navLinks.querySelectorAll(".nav-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      navLinks.classList.remove("open");
+      menuToggle.classList.remove("active");
+      menuToggle.setAttribute("aria-expanded", "false");
+    });
+  });
+}
+
 // Initialize Page
 document.addEventListener("DOMContentLoaded", () => {
+  initThemeSwitcher();
+  initMobileMenu();
   initTabs();
   fetchSettings();
   renderServices();
@@ -74,7 +132,7 @@ function showToast(message, type = "success") {
 
   toast.className = `toast show ${type}`;
   toastMsg.textContent = message;
-  
+
   if (type === "success") {
     toastIcon.className = "fa-solid fa-circle-check toast-icon";
   } else {
@@ -159,9 +217,9 @@ function updateUIWithSettings() {
   document.getElementById("hero-shop-name").textContent = shopSettings.shopName;
   document.getElementById("footer-shop-name").textContent = shopSettings.shopName;
   document.getElementById("sim-shop-name").textContent = shopSettings.shopName;
-  
+
   document.getElementById("info-address").textContent = shopSettings.shopAddress;
-  
+
   const phoneLink = document.getElementById("info-phone-link");
   phoneLink.href = `https://wa.me/${shopSettings.shopPhone}`;
   phoneLink.textContent = `+${shopSettings.shopPhone}`;
@@ -191,7 +249,7 @@ function renderServices() {
       </div>
       <button class="btn btn-primary btn-card" data-service-id="${service.id}"><i class="fa-solid fa-cloud-arrow-up"></i> Apply Now</button>
     `;
-    
+
     // Clicking anywhere on card opens modal
     card.addEventListener("click", () => openUploadModal(service.id));
     grid.appendChild(card);
@@ -211,7 +269,7 @@ function openUploadModal(serviceId) {
   document.getElementById("modal-service-title").innerHTML = `<i class="${service.icon}"></i> Apply for ${service.title}`;
   document.getElementById("form-service-type").value = service.id;
   document.getElementById("form-service-name").value = service.title;
-  
+
   const reqList = document.getElementById("modal-requirements-list");
   reqList.innerHTML = service.requirements.map(req => `<li>${req}</li>`).join('');
 
@@ -274,17 +332,17 @@ function renderFilePreview() {
   selectedFiles.forEach((file, index) => {
     const item = document.createElement("div");
     item.className = "file-preview-item";
-    
+
     const sizeKB = (file.size / 1024).toFixed(1);
     const icon = file.type === "application/pdf" ? "fa-solid fa-file-pdf" : "fa-solid fa-file-image";
-    
+
     item.innerHTML = `
       <span class="file-preview-name" title="${file.name}">
         <i class="${icon}"></i> ${file.name} (${sizeKB} KB)
       </span>
       <button type="button" class="file-preview-remove" data-index="${index}">&times;</button>
     `;
-    
+
     item.querySelector(".file-preview-remove").addEventListener("click", (e) => {
       const idx = parseInt(e.target.getAttribute("data-index"));
       selectedFiles.splice(idx, 1);
@@ -323,7 +381,7 @@ function initUploadForm() {
     formData.append("serviceType", document.getElementById("form-service-type").value);
     formData.append("serviceName", document.getElementById("form-service-name").value);
     formData.append("notes", document.getElementById("client-notes").value);
-    
+
     selectedFiles.forEach(file => {
       formData.append("documents", file);
     });
@@ -342,7 +400,7 @@ function initUploadForm() {
       form.reset();
       selectedFiles = [];
       renderFilePreview();
-      
+
       // Update admin panel lists if already logged in
       if (adminPassword) loadAdminDashboardData();
 
@@ -396,10 +454,10 @@ function initAdminDashboard() {
       if (res.ok && data.success) {
         adminPassword = password;
         sessionStorage.setItem("adminPassword", password);
-        
+
         loginCard.classList.add("hidden");
         adminPanel.classList.remove("hidden");
-        
+
         showToast("Logged in as Administrator.");
         loadAdminDashboardData();
       } else {
@@ -433,10 +491,10 @@ function initAdminDashboard() {
   adminTabBtns.forEach(btn => {
     btn.addEventListener("click", () => {
       const subTab = btn.getAttribute("data-admin-tab");
-      
+
       adminTabBtns.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      
+
       adminSubContents.forEach(content => {
         if (content.id === `admin-${subTab}`) {
           content.classList.add("active");
@@ -450,7 +508,7 @@ function initAdminDashboard() {
   // Settings Save Handler
   document.getElementById("shop-settings-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    
+
     const settingsData = {
       shopName: document.getElementById("settings-shop-name").value,
       shopOwner: document.getElementById("settings-owner").value,
@@ -477,12 +535,12 @@ function initAdminDashboard() {
 
       if (!res.ok) throw new Error("Failed to update settings");
       showToast("Shop settings saved successfully!");
-      
+
       if (newPass) {
         adminPassword = newPass;
         sessionStorage.setItem("adminPassword", newPass);
       }
-      
+
       fetchSettings(); // Refresh settings UI
       document.getElementById("settings-password").value = ""; // Clear password input
     } catch (error) {
@@ -508,11 +566,11 @@ async function loadAdminDashboardData() {
     });
     if (!resSub.ok) throw new Error("Access Denied or Failed to Load Submissions");
     loadedSubmissions = await resSub.json();
-    
+
     // 2. Fetch Settings for setting fields
     const resSet = await fetch("/api/settings");
     const rawSettings = await resSet.json();
-    
+
     // Hydrate Settings Inputs
     document.getElementById("settings-shop-name").value = rawSettings.shopName || "";
     document.getElementById("settings-owner").value = rawSettings.shopOwner || "";
@@ -617,10 +675,10 @@ function filterTable() {
   const statusFilter = document.getElementById("filter-status").value;
 
   const rows = document.querySelectorAll("#submissions-table-body tr");
-  
+
   rows.forEach(row => {
     if (row.classList.contains("loading-cell") || row.cells.length < 5) return;
-    
+
     const name = row.cells[1].querySelector(".cust-name").textContent.toLowerCase();
     const phone = row.cells[1].querySelector(".cust-phone").textContent.toLowerCase();
     const service = row.cells[2].textContent.toLowerCase();
@@ -638,7 +696,7 @@ function filterTable() {
 }
 
 // Global actions accessed by row buttons
-window.saveRow = async function(id) {
+window.saveRow = async function (id) {
   const status = document.getElementById(`status-${id}`).value;
   const remarks = document.getElementById(`remarks-${id}`).value;
 
@@ -653,7 +711,7 @@ window.saveRow = async function(id) {
     });
 
     if (!res.ok) throw new Error("Failed to save submission");
-    
+
     // Update local record
     const subIdx = loadedSubmissions.findIndex(s => s.id === id);
     if (subIdx !== -1) {
@@ -663,7 +721,7 @@ window.saveRow = async function(id) {
 
     // Refresh display status attribute for CSS filters
     document.getElementById(`row-${id}`).setAttribute("data-status", status);
-    
+
     renderStats(loadedSubmissions);
     showToast("Changes saved successfully!");
   } catch (error) {
@@ -672,7 +730,7 @@ window.saveRow = async function(id) {
   }
 };
 
-window.deleteRow = async function(id) {
+window.deleteRow = async function (id) {
   if (!confirm("Are you sure you want to delete this submission? All uploaded files will be permanently deleted from the server.")) return;
 
   try {
@@ -738,7 +796,7 @@ function addUserMessage(text) {
   const chat = document.getElementById("wa-chat-window");
   const msg = document.createElement("div");
   msg.className = "wa-msg out";
-  
+
   const timeStr = new Date().toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
@@ -749,7 +807,7 @@ function addUserMessage(text) {
     ${escapeHtml(text)}
     <span class="wa-time">${timeStr} <i class="fa-solid fa-check-double"></i></span>
   `;
-  
+
   chat.appendChild(msg);
   scrollToBottom(chat);
 }
@@ -758,7 +816,7 @@ function addBotMessage(text) {
   const chat = document.getElementById("wa-chat-window");
   const msg = document.createElement("div");
   msg.className = "wa-msg in";
-  
+
   const timeStr = new Date().toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
@@ -769,7 +827,7 @@ function addBotMessage(text) {
     ${text.replace(/\n/g, "<br>")}
     <span class="wa-time">${timeStr}</span>
   `;
-  
+
   chat.appendChild(msg);
   scrollToBottom(chat);
 }
@@ -779,7 +837,7 @@ function addBotWelcomeMenu() {
   const chat = document.getElementById("wa-chat-window");
   const card = document.createElement("div");
   card.className = "wa-interactive-card";
-  
+
   card.innerHTML = `
     <div class="wa-interactive-header">Maa Durga Jan Seva Kendra</div>
     <div class="wa-interactive-body">Hello! 🙏 Hamare Jan Seva Kendra me aapka swagat hai. Aapko jis bhi service ke baare me jaan-na hai, niche diye gaye button par click karke select karein:</div>
@@ -788,7 +846,7 @@ function addBotWelcomeMenu() {
       <i class="fa-solid fa-list-ul"></i> Services Menu 👇
     </div>
   `;
-  
+
   chat.appendChild(card);
   scrollToBottom(chat);
 
@@ -827,10 +885,10 @@ function addBotWelcomeMenu() {
 }
 
 // Open custom mock overlay on the simulated phone
-window.openWhatsAppMenuModal = function() {
+window.openWhatsAppMenuModal = function () {
   // Create modal markup inside whatsapp layout if not already created
   const container = document.querySelector(".whatsapp-container");
-  
+
   let modal = document.getElementById("wa-mock-list-modal");
   if (!modal) {
     modal = document.createElement("div");
@@ -869,15 +927,15 @@ window.openWhatsAppMenuModal = function() {
   setTimeout(() => modal.classList.add("open"), 50);
 };
 
-window.closeWhatsAppMenuModal = function() {
+window.closeWhatsAppMenuModal = function () {
   const modal = document.getElementById("wa-mock-list-modal");
   if (modal) modal.classList.remove("open");
 };
 
-window.selectWhatsAppRow = function(id, title) {
+window.selectWhatsAppRow = function (id, title) {
   closeWhatsAppMenuModal();
   addUserMessage(title);
-  
+
   // Show JSON coming FROM meta into n8n Webhook Node
   updatePayloadViewer("n8n Webhook (List Reply Input)", {
     object: "whatsapp_business_account",
@@ -913,7 +971,7 @@ window.selectWhatsAppRow = function(id, title) {
 function processIncomingUserMessage(text) {
   // Logic mimicking the Switch Node in n8n
   // Matches keywords or redirects to welcome menu
-  
+
   // Show payload incoming
   updatePayloadViewer("n8n Webhook (Text Message)", {
     messages: [{
@@ -927,7 +985,7 @@ function processIncomingUserMessage(text) {
   if (text.includes("shop") || text.includes("timing") || text.includes("address") || text.includes("location")) {
     const shopDetailsMsg = `📍 *Hamari Shop ki Details:*\n\n🏠 *Address:* ${shopSettings.shopAddress || "123, Main Market, Sector 5, Mumbai"}\n⏰ *Timing:* ${shopSettings.shopTimings || "Subah 10:00 AM se Raat 9:00 PM tak (Sunday Closed)"}`;
     addBotMessage(shopDetailsMsg);
-    
+
     updatePayloadViewer("n8n: HTTP Request (Shop Details)", {
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -941,7 +999,7 @@ function processIncomingUserMessage(text) {
   } else if (text.includes("website") || text.includes("link") || text.includes("upload")) {
     const websiteMsg = `🌐 *Hamari Website:*\n\nAap niche diye gaye link par click karke hamare products dekh sakte hain aur documents upload kar sakte hain:\n\n👉 ${window.location.origin}/#portal`;
     addBotMessage(websiteMsg);
-    
+
     updatePayloadViewer("n8n: HTTP Request (Website Link)", {
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -971,11 +1029,11 @@ function processIncomingUserMessage(text) {
 
 function processBotMenuChoice(id) {
   const origin = window.location.origin;
-  
+
   if (id === "srv_pancard") {
     const panMsg = `💳 *Pan Card Banane Ke Liye Zaroori Documents:*\n\n1️⃣ Aadhar Card (Mobile No. Link hona chahiye)\n2️⃣ Ek Passport Size Photo\n3️⃣ Ek Signature (White Paper par)\n\n👇 *Document Upload Karein:*\nNiche diye gaye link par click karke apne documents upload karein aur form fill karein:\n👉 ${origin}/#portal`;
     addBotMessage(panMsg);
-    
+
     updatePayloadViewer("n8n: HTTP Request (Pan Card Reply)", {
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -1003,7 +1061,7 @@ function processBotMenuChoice(id) {
   } else if (id === "srv_voterid") {
     const voterMsg = `🗳️ *Voter ID Card Banane Ke Liye Documents:*\n\n1️⃣ Aadhar Card / Age Proof (Age 18+ hona chahiye)\n2️⃣ Ek Passport Size Photo\n3️⃣ Address Proof (Electricity bill / Family member ka Voter ID card)\n\n👇 *Document Upload Link:*\nNiche diye gaye link par upload karein:\n👉 ${origin}/#portal`;
     addBotMessage(voterMsg);
-    
+
     updatePayloadViewer("n8n: HTTP Request (Voter ID Reply)", {
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -1017,7 +1075,7 @@ function processBotMenuChoice(id) {
   } else if (id === "srv_caste") {
     const casteMsg = `👥 *Caste Certificate (Jati Praman Patra) Ke Documents:*\n\n1️⃣ Aadhar Card\n2️⃣ Passport Size Photo\n3️⃣ Father ka Jati Praman Patra (Mandatory proof)\n4️⃣ Address/Registry copy\n\n👇 *Document Upload Link:*\nDocuments upload karne ke liye click karein:\n👉 ${origin}/#portal`;
     addBotMessage(casteMsg);
-    
+
     updatePayloadViewer("n8n: HTTP Request (Caste Cert Reply)", {
       messaging_product: "whatsapp",
       recipient_type: "individual",

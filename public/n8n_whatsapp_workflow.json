@@ -1,0 +1,485 @@
+{
+  "name": "WhatsApp Cyber Cafe Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "1d8b7d90-bdf1-4328-868d-327ef3e8b090",
+      "name": "Webhook (Meta WhatsApp Input)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.headers['x-forwarded-method'] || $json.query['hub.challenge'] ? 'GET' : 'POST' }}",
+              "value2": "GET"
+            }
+          ]
+        }
+      },
+      "id": "2db4e3a4-84ab-45bc-98c4-a69074ee9458",
+      "name": "IF Meta Verification",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        420,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "id": "31ad6bde-e7bc-4995-bb04-c36195fb2912",
+      "name": "Respond to Meta Challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        640,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].interactive?.list_reply?.id || $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
+                    "rightValue": "srv_pancard",
+                    "operator": "equal"
+                  }
+                ]
+              },
+              "outputIndex": 0
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].interactive?.list_reply?.id || $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
+                    "rightValue": "srv_voterid",
+                    "operator": "equal"
+                  }
+                ]
+              },
+              "outputIndex": 1
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].interactive?.list_reply?.id || $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
+                    "rightValue": "srv_income",
+                    "operator": "equal"
+                  }
+                ]
+              },
+              "outputIndex": 2
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].interactive?.list_reply?.id || $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
+                    "rightValue": "srv_caste",
+                    "operator": "equal"
+                  }
+                ]
+              },
+              "outputIndex": 3
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
+                    "rightValue": "shop",
+                    "operator": "contains"
+                  },
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
+                    "rightValue": "timing",
+                    "operator": "contains"
+                  },
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
+                    "rightValue": "address",
+                    "operator": "contains"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "outputIndex": 4
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
+                    "rightValue": "website",
+                    "operator": "contains"
+                  },
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
+                    "rightValue": "link",
+                    "operator": "contains"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "outputIndex": 5
+            }
+          ],
+          "fallbackOutput": 6
+        }
+      },
+      "id": "cb1e5b8e-e2b4-4b5a-ba3d-ee4b036cf189",
+      "name": "Switch Service Input",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        640,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": []
+        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"💳 *Pan Card Banane Ke Liye Zaroori Documents:*\\n\\n1️⃣ Aadhar Card (Mobile No. Link hona chahiye)\\n2️⃣ Ek Passport Size Photo\\n3️⃣ Ek Signature (White Paper par)\\n\\n👇 *Document Upload Karein:*\\nNiche diye gaye link par click karke apne documents upload karein aur form fill karein:\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
+      },
+      "id": "ea49b068-15cf-4be3-b09e-324dcd93b5a1",
+      "name": "Send PAN Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"🗳️ *Voter ID Card Banane Ke Liye Documents:*\\n\\n1️⃣ Aadhar Card / Age Proof (Age 18+ hona chahiye)\\n2️⃣ Ek Passport Size Photo\\n3️⃣ Address Proof (Electricity bill / Family member ka Voter ID card)\\n\\n👇 *Document Upload Link:*\\nNiche diye gaye link par upload karein:\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
+      },
+      "id": "fa21b068-15cf-4be3-b09e-324dcd93b5a2",
+      "name": "Send Voter ID Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"📄 *Income Certificate (Aay Praman Patra) Ke Liye Documents:*\\n\\n1️⃣ Aadhar Card\\n2️⃣ Ek Passport Size Photo\\n3️⃣ Purana Income Certificate (Agar ho toh)\\n4️⃣ Pradhan ya Corporator ka Swasthya/Aay Ghoshna Patra\\n\\n👇 *Document Upload Karein:*\\nNiche diye gaye link par click karke apne documents upload karein:\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
+      },
+      "id": "6a49b068-15cf-4be3-b09e-324dcd93b5a3",
+      "name": "Send Income Cert Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"👥 *Caste Certificate (Jati Praman Patra) Ke Documents:*\\n\\n1️⃣ Aadhar Card\\n2️⃣ Passport Size Photo\\n3️⃣ Father ka Jati Praman Patra (Mandatory proof)\\n4️⃣ Address/Registry copy\\n\\n👇 *Document Upload Link:*\\nDocuments upload karne ke liye click karein:\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
+      },
+      "id": "7a49b068-15cf-4be3-b09e-324dcd93b5a4",
+      "name": "Send Caste Cert Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": \"📍 *Hamari Shop ki Details:*\\n\\n🏠 *Address:* 123, Main Market, Sector 5, Mumbai\\n⏰ *Timing:* Subah 10:00 AM se Raat 9:00 PM tak (Sunday Closed)\"\n  }\n}"
+      },
+      "id": "8a49b068-15cf-4be3-b09e-324dcd93b5a5",
+      "name": "Send Shop Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"🌐 *Hamari Website:*\\n\\nAap niche diye gaye link par click karke hamare products dekh sakte hain aur documents upload kar sakte hain:\\n\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
+      },
+      "id": "9a49b068-15cf-4be3-b09e-324dcd93b5a6",
+      "name": "Send Website Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"Cyber Cafe Online Services\"\n    },\n    \"body\": {\n      \"text\": \"Hello! 🙏 Hamare Cyber Cafe me aapka swagat hai. Aapko jis bhi service ke baare me jaan-na hai, niche diye gaye button par click karke select karein:\"\n    },\n    \"footer\": {\n      \"text\": \"Chunein aur aage badhein\"\n    },\n    \"action\": {\n      \"button\": \"Services Menu 👇\",\n      \"sections\": [\n        {\n          \"title\": \"Government ID Cards\",\n          \"rows\": [\n            {\n              \"id\": \"srv_pancard\",\n              \"title\": \"Pan Card Apply\",\n              \"description\": \"Naya Pan Card ya Correction\"\n            },\n            {\n              \"id\": \"srv_voterid\",\n              \"title\": \"Voter ID Card\",\n              \"description\": \"Naya Voter ID card banayein\"\n            }\n          ]\n        },\n        {\n          \"title\": \"Certificates & Others\",\n          \"rows\": [\n            {\n              \"id\": \"srv_income\",\n              \"title\": \"Income Certificate\",\n              \"description\": \"Aay Praman Patra\"\n            },\n            {\n              \"id\": \"srv_caste\",\n              \"title\": \"Caste Certificate\",\n              \"description\": \"Jati Praman Patra\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}"
+      },
+      "id": "aa49b068-15cf-4be3-b09e-324dcd93b5a7",
+      "name": "Send Welcome List Menu",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        920
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {}
+      },
+      "id": "bb49b068-15cf-4be3-b09e-324dcd93b5a8",
+      "name": "Respond Webhook OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        640,
+        540
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (Meta WhatsApp Input)": {
+      "main": [
+        [
+          {
+            "node": "IF Meta Verification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Meta Verification": {
+      "main": [
+        [
+          {
+            "node": "Respond to Meta Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch Service Input",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond Webhook OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Service Input": {
+      "main": [
+        [
+          {
+            "node": "Send PAN Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Voter ID Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Income Cert Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Caste Cert Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Shop Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Website Link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Welcome List Menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {}
+}

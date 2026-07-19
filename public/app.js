@@ -66,6 +66,7 @@ function initThemeSwitcher() {
     if (theme === "system") {
       const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
       root.style.colorScheme = prefersLight ? "light" : "dark";
+      
     } else {
       root.style.colorScheme = theme;
     }
@@ -144,6 +145,23 @@ function showToast(message, type = "success") {
   }, 4000);
 }
 
+async function parseJsonResponse(response, fallbackMessage = "Unexpected server response") {
+  const text = await response.text();
+  if (!text) {
+    if (!response.ok) {
+      throw new Error(fallbackMessage);
+    }
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Expected JSON but received:", text.slice(0, 250));
+    throw new Error(fallbackMessage);
+  }
+}
+
 // --- CORE: Tab Router ---
 function initTabs() {
   const navItems = document.querySelectorAll(".nav-item");
@@ -194,8 +212,9 @@ function initTabs() {
 async function fetchSettings() {
   try {
     const res = await fetch("/api/settings");
-    if (!res.ok) throw new Error("Failed to load settings");
-    shopSettings = await res.json();
+    const data = await parseJsonResponse(res, "Failed to load settings");
+    if (!res.ok) throw new Error(data?.message || "Failed to load settings");
+    shopSettings = data || {};
     updateUIWithSettings();
   } catch (error) {
     console.error("Settings load error:", error);
@@ -392,8 +411,8 @@ function initUploadForm() {
         body: formData
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to submit application");
+      const data = await parseJsonResponse(res, "Failed to submit application");
+      if (!res.ok) throw new Error(data?.message || "Failed to submit application");
 
       showToast("Application submitted successfully! Shop owner will contact you shortly.");
       closeUploadModal();
@@ -449,9 +468,9 @@ function initAdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password })
       });
-      const data = await res.json();
+      const data = await parseJsonResponse(res, "Unable to sign in. Please try again.");
 
-      if (res.ok && data.success) {
+      if (res.ok && data?.success) {
         adminPassword = password;
         sessionStorage.setItem("adminPassword", password);
 
@@ -461,7 +480,7 @@ function initAdminDashboard() {
         showToast("Logged in as Administrator.");
         loadAdminDashboardData();
       } else {
-        throw new Error(data.message || "Incorrect password");
+        throw new Error(data?.message || "Incorrect password");
       }
     } catch (error) {
       loginError.textContent = error.message;
@@ -564,20 +583,21 @@ async function loadAdminDashboardData() {
     const resSub = await fetch("/api/submissions", {
       headers: { "x-admin-password": adminPassword }
     });
-    if (!resSub.ok) throw new Error("Access Denied or Failed to Load Submissions");
-    loadedSubmissions = await resSub.json();
+    const submissionsData = await parseJsonResponse(resSub, "Access Denied or Failed to Load Submissions");
+    if (!resSub.ok) throw new Error(submissionsData?.message || "Access Denied or Failed to Load Submissions");
+    loadedSubmissions = submissionsData || [];
 
     // 2. Fetch Settings for setting fields
     const resSet = await fetch("/api/settings");
-    const rawSettings = await resSet.json();
+    const rawSettings = await parseJsonResponse(resSet, "Failed to load settings");
 
     // Hydrate Settings Inputs
-    document.getElementById("settings-shop-name").value = rawSettings.shopName || "";
-    document.getElementById("settings-owner").value = rawSettings.shopOwner || "";
-    document.getElementById("settings-phone").value = rawSettings.shopPhone || "";
-    document.getElementById("settings-email").value = rawSettings.shopEmail || "";
-    document.getElementById("settings-address").value = rawSettings.shopAddress || "";
-    document.getElementById("settings-timings").value = rawSettings.shopTimings || "";
+    document.getElementById("settings-shop-name").value = rawSettings?.shopName || "";
+    document.getElementById("settings-owner").value = rawSettings?.shopOwner || "";
+    document.getElementById("settings-phone").value = rawSettings?.shopPhone || "";
+    document.getElementById("settings-email").value = rawSettings?.shopEmail || "";
+    document.getElementById("settings-address").value = rawSettings?.shopAddress || "";
+    document.getElementById("settings-timings").value = rawSettings?.shopTimings || "";
 
     // Render stats and tables
     renderStats(loadedSubmissions);

@@ -2,7 +2,8 @@
 const SERVICES = {
   srv_pancard: {
     id: "srv_pancard",
-    title: "Pan Card Apply",
+    title: "PAN Card Apply",
+    hindiTitle: "पैन कार्ड (नया एवं संशोधन)",
     description: "Apply for a new PAN card or make corrections in your existing PAN card details.",
     icon: "fa-solid fa-address-card",
     requirements: [
@@ -15,6 +16,7 @@ const SERVICES = {
   srv_voterid: {
     id: "srv_voterid",
     title: "Voter ID Card",
+    hindiTitle: "वोटर आईडी (मतदाता पहचान पत्र)",
     description: "Register as a new voter, download your digital voter card, or apply for corrections.",
     icon: "fa-solid fa-id-card-clip",
     requirements: [
@@ -27,6 +29,7 @@ const SERVICES = {
   srv_income: {
     id: "srv_income",
     title: "Income Certificate",
+    hindiTitle: "आय प्रमाण पत्र (Income Certificate)",
     description: "Get your official Income Certificate (Aay Praman Patra) processed.",
     icon: "fa-solid fa-file-invoice-dollar",
     requirements: [
@@ -40,6 +43,7 @@ const SERVICES = {
   srv_caste: {
     id: "srv_caste",
     title: "Caste Certificate",
+    hindiTitle: "जाति प्रमाण पत्र (Caste Certificate)",
     description: "Apply for Caste Certificate (Jati Praman Patra) for SC/ST/OBC categories.",
     icon: "fa-solid fa-users",
     requirements: [
@@ -266,6 +270,7 @@ function renderServices() {
         <span class="service-badge">Online Process</span>
       </div>
       <h3 class="service-title">${service.title}</h3>
+      <p class="service-hindi-title" style="font-size: 0.95rem; font-weight: 600; color: var(--primary-color); margin-top: -6px; margin-bottom: 8px;"><i class="fa-solid fa-language"></i> ${service.hindiTitle}</p>
       <p class="service-desc">${service.description}</p>
       <div class="service-requirements-preview">
         <h5>Required:</h5>

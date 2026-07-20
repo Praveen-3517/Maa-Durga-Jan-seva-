@@ -239,9 +239,17 @@ function updateUIWithSettings() {
 
   document.getElementById("info-address").textContent = shopSettings.shopAddress;
 
+  const cleanPhone = String(shopSettings.shopPhone || '').replace(/[^0-9]/g, '');
   const phoneLink = document.getElementById("info-phone-link");
-  phoneLink.href = `https://wa.me/${shopSettings.shopPhone}`;
-  phoneLink.textContent = `+${shopSettings.shopPhone}`;
+  if (phoneLink) {
+    phoneLink.href = `https://wa.me/${cleanPhone}`;
+    phoneLink.textContent = `+${cleanPhone}`;
+  }
+
+  const floatBtn = document.getElementById("floating-whatsapp-btn");
+  if (floatBtn) {
+    floatBtn.href = `https://wa.me/${cleanPhone}?text=Hello%20${encodeURIComponent(shopSettings.shopName)},%20I%20have%20an%20inquiry.`;
+  }
 }
 
 // --- PORTAL: Render Services ---

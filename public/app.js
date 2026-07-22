@@ -58,7 +58,7 @@ const SERVICES = {
 
 let shopSettings = {};
 let selectedFiles = [];
-let adminPassword = sessionStorage.getItem('adminPassword') || '';
+let adminToken = sessionStorage.getItem('adminToken') || '';
 
 function initThemeSwitcher() {
   const themeSelect = document.getElementById("theme-select");
@@ -195,7 +195,7 @@ function initTabs() {
     });
 
     // Run actions depending on tab
-    if (hash === 'admin' && adminPassword) {
+    if (hash === 'admin' && adminToken) {
       loadAdminDashboardData();
     }
   };
@@ -236,7 +236,8 @@ async function fetchSettings() {
 }
 
 function updateUIWithSettings() {
-  document.getElementById("shop-status-text").textContent = `Timing: ${shopSettings.shopTimings}`;
+  const timingsEl = document.getElementById("info-timings");
+  if (timingsEl) timingsEl.textContent = shopSettings.shopTimings;
   document.getElementById("hero-shop-name").textContent = shopSettings.shopName;
   document.getElementById("footer-shop-name").textContent = shopSettings.shopName;
   document.getElementById("sim-shop-name").textContent = shopSettings.shopName;
@@ -344,18 +345,17 @@ fileInput.addEventListener("change", () => {
 
 function handleFilesSelection(files) {
   const validFiles = files.filter(file => {
-    // Validate sizes and types
+    // Validate types (no size limit)
     const isValidType = file.type.startsWith("image/") || file.type === "application/pdf";
-    const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
-    return isValidType && isValidSize;
+    return isValidType;
   });
 
   if (validFiles.length < files.length) {
-    showToast("Some files were skipped. Only Images & PDFs under 10MB are supported.", "error");
+    showToast("Some files were skipped. Only Images & PDFs are supported.", "error");
   }
 
-  // Combine and enforce max 5 files
-  selectedFiles = [...selectedFiles, ...validFiles].slice(0, 5);
+  // Combine and enforce max 10 files
+  selectedFiles = [...selectedFiles, ...validFiles].slice(0, 10);
   renderFilePreview();
 }
 
@@ -427,14 +427,18 @@ function initUploadForm() {
       const data = await parseJsonResponse(res, "Failed to submit application");
       if (!res.ok) throw new Error(data?.message || "Failed to submit application");
 
-      showToast("Application submitted successfully! Shop owner will contact you shortly.");
+      showToast("Application submitted successfully! Opening your official receipt...");
       closeUploadModal();
       form.reset();
       selectedFiles = [];
       renderFilePreview();
 
+      if (data && data.id) {
+        window.open(`/api/submissions/${encodeURIComponent(data.id)}/receipt`, '_blank');
+      }
+
       // Update admin panel lists if already logged in
-      if (adminPassword) loadAdminDashboardData();
+      if (adminToken) loadAdminDashboardData();
 
     } catch (error) {
       console.error("Submission error:", error);
@@ -483,9 +487,9 @@ function initAdminDashboard() {
       });
       const data = await parseJsonResponse(res, "Unable to sign in. Please try again.");
 
-      if (res.ok && data?.success) {
-        adminPassword = password;
-        sessionStorage.setItem("adminPassword", password);
+      if (res.ok && data?.success && data?.token) {
+        adminToken = data.token;
+        sessionStorage.setItem("adminToken", data.token);
 
         loginCard.classList.add("hidden");
         adminPanel.classList.remove("hidden");
@@ -502,15 +506,15 @@ function initAdminDashboard() {
 
   // Logout handler
   logoutBtn.addEventListener("click", () => {
-    adminPassword = '';
-    sessionStorage.removeItem("adminPassword");
+    adminToken = '';
+    sessionStorage.removeItem("adminToken");
     adminPanel.classList.add("hidden");
     loginCard.classList.remove("hidden");
     loginForm.reset();
   });
 
   // Auto-login if session exists
-  if (adminPassword) {
+  if (adminToken) {
     loginCard.classList.add("hidden");
     adminPanel.classList.remove("hidden");
     loadAdminDashboardData();
@@ -560,18 +564,13 @@ function initAdminDashboard() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-password": adminPassword
+          "Authorization": "Bearer " + adminToken
         },
         body: JSON.stringify(settingsData)
       });
 
       if (!res.ok) throw new Error("Failed to update settings");
       showToast("Shop settings saved successfully!");
-
-      if (newPass) {
-        adminPassword = newPass;
-        sessionStorage.setItem("adminPassword", newPass);
-      }
 
       fetchSettings(); // Refresh settings UI
       document.getElementById("settings-password").value = ""; // Clear password input
@@ -589,12 +588,12 @@ function initAdminDashboard() {
 let loadedSubmissions = [];
 
 async function loadAdminDashboardData() {
-  if (!adminPassword) return;
+  if (!adminToken) return;
 
   try {
     // 1. Fetch Submissions
     const resSub = await fetch("/api/submissions", {
-      headers: { "x-admin-password": adminPassword }
+      headers: { "Authorization": "Bearer " + adminToken }
     });
     const submissionsData = await parseJsonResponse(resSub, "Access Denied or Failed to Load Submissions");
     if (!resSub.ok) throw new Error(submissionsData?.message || "Access Denied or Failed to Load Submissions");
@@ -692,6 +691,12 @@ function renderSubmissionsTable(submissions) {
           <button class="btn btn-primary btn-icon btn-save-row" title="Save status/remarks" onclick="saveRow('${sub.id}')">
             <i class="fa-solid fa-floppy-disk"></i>
           </button>
+          <a href="/api/submissions/${encodeURIComponent(sub.id)}/receipt" target="_blank" class="btn btn-outline btn-icon" title="View & Print Receipt">
+            <i class="fa-solid fa-file-pdf"></i>
+          </a>
+          <a href="/api/admin/submissions/${encodeURIComponent(sub.id)}/download" target="_blank" class="btn btn-outline btn-icon" title="Download Complete ZIP Package (PDF + Documents)">
+            <i class="fa-solid fa-file-zipper"></i>
+          </a>
           <button class="btn btn-delete-row btn-icon" title="Delete submission" onclick="deleteRow('${sub.id}')">
             <i class="fa-solid fa-trash-can"></i>
           </button>
@@ -738,7 +743,7 @@ window.saveRow = async function (id) {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-password": adminPassword
+        "Authorization": "Bearer " + adminToken
       },
       body: JSON.stringify({ status, remarks })
     });
@@ -769,7 +774,7 @@ window.deleteRow = async function (id) {
   try {
     const res = await fetch(`/api/submissions/${id}`, {
       method: "DELETE",
-      headers: { "x-admin-password": adminPassword }
+      headers: { "Authorization": "Bearer " + adminToken }
     });
 
     if (!res.ok) throw new Error("Failed to delete submission");

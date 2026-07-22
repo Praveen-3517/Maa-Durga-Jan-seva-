@@ -32,6 +32,10 @@ const createZipArchive = (options) => {
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
+
+// Trust proxy is REQUIRED for rate-limiting to work correctly when deployed behind 
+// reverse proxies (like Render, Railway, or Heroku), otherwise all requests share one IP.
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // ── FIX 1: Helmet — HTTP Security Headers ────────────────────────────────────

@@ -163,7 +163,7 @@ const getSettings = () => {
     shopAddress: "Bindwaliya near ghazipur ghat, ghazipur uttar pradesh 233001",
     shopTimings: "Monday to Saturday: 09:00 AM - 08:00 PM (Sunday Closed)",
     adminPasswordHash: "", // bcrypt hash stored here
-    adminPassword: "admin123"  // legacy plaintext fallback (migrated on first login)
+    adminPassword: process.env.ADMIN_PASSWORD || "admin123"  // legacy plaintext fallback (migrated on first login)
   };
 
   if (!fs.existsSync(SETTINGS_FILE)) {

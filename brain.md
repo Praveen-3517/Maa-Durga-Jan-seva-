@@ -15,103 +15,38 @@ This document is the **Single Source of Truth** for the **Maa Durga Jan Seva Ken
 
 ## 📌 Project Identity
 
-- **Game / Project Title**: Maa Durga Jan Seva Kendra - Cyber Cafe Portal & WhatsApp Chatbot
+- **Project Title**: Maa Durga Jan Seva Kendra - Cyber Cafe Portal & WhatsApp Chatbot
 - **Internal Codename**: `cyber-cafe-portal`
-- **Genre / Category**: Web Application / Client Document Portal & Interactive Simulator
+- **Category**: Web Application / Client Document Portal & Interactive Simulator
 - **Theme**: Cyber Cafe & CSC / Jan Seva Kendra Digital Services Portal
-- **Story / Context**: Empowering local customers to seamlessly upload documents for government & commercial services (PAN, Voter ID, Certificates, Aadhaar, etc.) while enabling shop owners to manage applications and automate customer support via WhatsApp.
+- **Story / Context**: Empowering local customers to upload documents for government & commercial services (PAN, Voter ID, Certificates, Aadhaar, etc.) while enabling shop owners to manage applications and automate customer support via WhatsApp.
 - **Target Audience**: Jan Seva Kendra customers, local shop clients, and cyber cafe administrators.
-- **Inspiration**: CSC India / Digital India Portals + Modern WhatsApp Chatbots
 - **Unique Selling Points**:
   - Cloud persistence with **Supabase PostgreSQL** and **Supabase Storage**.
-  - 100% intact Vanilla JS frontend requiring zero client code changes.
+  - **React (Vite) frontend** — fully component-based, hot-reload dev experience.
   - Built-in interactive **WhatsApp Bot Simulator** for live client testing.
-  - Production-ready exportable **n8n Workflow** for Meta WhatsApp Cloud API (₹0 monthly subscription fees).
+  - Production-ready exportable **n8n Workflow** for Meta WhatsApp Cloud API (₹0 monthly fees).
   - Unified Admin Dashboard with instant status updates and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
-- **Engine / Stack**: Node.js, Express.js, Multer (Memory Storage), Supabase (@supabase/supabase-js), dotenv, Vanilla HTML5 / CSS3 / JavaScript.
-- **Version**: `1.1.0` (Supabase Cloud Upgrade)
-- **Current Build**: Development Build (`server.js` running on `http://localhost:3000`).
-- **Development Status**: Backend Supabase Migration Complete.
-- **Vision**: Create a friction-free, high-reliability portal for rural & semi-urban digital service shop automation.
-- **Design Philosophy**: Fast, accessible, mobile-responsive, intuitive UI requiring zero technical knowledge for end users.
+- **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
+- **Version**: `2.0.0` (React Frontend Migration)
+- **Current Build**: Development — Express backend on `http://localhost:3000` | React dev server on `http://localhost:5173`.
+- **Development Status**: React frontend migration complete. All features working.
 
 ---
 
 ## 📈 Progress
 
-- **Overall Completion**: 92%
-- **Current Milestone**: Supabase PostgreSQL & Storage Cloud Migration
-- **Current Sprint**: Backend Upgrade & Cloud Storage Integration
-- **Current Objective**: Replace local JSON reads/writes with Supabase PostgreSQL queries and local disk uploads with Supabase Storage bucket uploads.
-- **Current Task**: Completed `server.js` rewrite, Supabase SQL schema creation, and dependency updates.
-- **Next Task**: Verify Supabase connection with live `SUPABASE_URL` and `SUPABASE_KEY` in `.env`.
-- **Previous Completed Task**: Permanent project memory baseline setup (`brain.md`).
-- **Blocked Tasks**: None.
-- **Pending Work**: Live testing with user's Supabase credentials.
-- **Remaining Work**: Receipt generation, SMS/WhatsApp live status alerts.
-- **Estimated Roadmap**:
-  - Phase 1: Core Portal & Simulator (Completed)
-  - Phase 2: System Documentation & Memory Initialization (Completed)
-  - Phase 3: Supabase Cloud Migration (Completed)
-  - Phase 4: Production Deployment & Live Webhook Integration (Upcoming)
-
----
-
-## 🎮 Gameplay / System Workflows
-
-- **Client Document Upload Workflow**:
-  1. Customer selects desired service (e.g. New PAN Card, Correction, Caste Certificate).
-  2. Dynamic document checklist displays required items.
-  3. Customer fills contact information (Name, Phone Number, Email/Address).
-  4. Customer uploads file attachments (Photos, PDFs, ID Proofs).
-  5. Form submits to `/api/submissions` or `/api/upload` via AJAX (`fetch`).
-  6. Multer processes files into RAM buffers (`multer.memoryStorage()`).
-  7. Backend uploads buffers directly to Supabase Storage bucket `client_documents`.
-  8. Public URLs and customer data (`name`, `phone`, `service`, `status`, `remarks`, `files`) are inserted into Supabase PostgreSQL table `submissions`.
-- **Admin Management Workflow**:
-  1. Shop owner accesses Admin Dashboard tab.
-  2. Owner authenticates via PIN / Password system (`/api/admin/login`).
-  3. All customer applications are fetched from Supabase `submissions` table ordered by `created_at` descending (`GET /api/submissions`).
-  4. Status & remarks can be updated (`PATCH /api/submissions/:id/status` or `PUT /api/submissions/:id`).
-  5. Submissions can be deleted along with their Supabase storage files (`DELETE /api/submissions/:id`).
-- **WhatsApp Simulator Workflow**:
-  1. Built-in interactive mobile phone widget on right side of screen.
-  2. Client types keyword queries ("Hi", "Shop Details", "Price List", "Location", "Website Link").
-  3. Frontend JS instant keyword match engine responds dynamically with simulated bot answers.
-- **n8n Automation Pipeline**:
-  1. Production flow JSON (`public/n8n_whatsapp_workflow.json`) connects Meta WhatsApp Cloud API webhooks to shop backend.
-  2. Automatically answers WhatsApp messages 24/7 without third-party fees.
-
----
-
-## 🗺️ World & Environment
-
-- **Web Server Environment**: Node.js + Express web server listening on port 3000 (or `process.env.PORT`).
-- **Database Environment**: Supabase Cloud PostgreSQL Database (`submissions` table).
-- **Storage Environment**: Supabase Cloud Storage Bucket (`client_documents`).
-- **Client Workspace UI**: Clean double-pane or tabbed layout with Hero header, Service Selector, Document Form, Admin Panel, and Virtual Mobile Frame.
-
----
-
-## 👥 Characters & System Roles
-
-- **Customer / Client**: End user accessing the portal to submit documents or inquire via simulator.
-- **Admin / Cyber Cafe Manager**: Shop operator managing applications, reviewing documents, and updating service status.
-- **Virtual Bot Assistant ("Durga Bot")**: Automated helper answering customer inquiries 24/7.
-
----
-
-## 📦 Assets
-
-- **Images**:
-  - `public/prave.png`: Owner / Portal branding header asset (1.3 MB).
-  - `public/abhi.jpg`: Avatar / Profile branding asset (127 KB).
-- **Scripts & Styles**:
-  - `public/styles.css`: Complete custom styling stylesheet (44 KB).
-  - `public/app.js`: Master frontend logic, AJAX handshakes, Chatbot simulator engine (41 KB).
-- **Integrations**:
-  - `public/n8n_whatsapp_workflow.json`: Exportable n8n workflow for WhatsApp Cloud API (17.8 KB).
+- **Overall Completion**: 97%
+- **Current Milestone**: React (Vite) Frontend Migration — COMPLETE
+- **Completed Phases**:
+  - Phase 1: Core Portal & Simulator ✅
+  - Phase 2: System Documentation & Memory Initialization ✅
+  - Phase 3: Supabase Cloud Migration ✅
+  - Phase 4: Premium UI Redesign (Amber dark theme, Lottie mascot) ✅
+  - Phase 5: React (Vite) Frontend Migration ✅
+- **Next Task**: Production build & deployment to live server.
+- **Pending Work**: Receipt generation improvements, SMS/WhatsApp live status alerts.
 
 ---
 
@@ -120,174 +55,240 @@ This document is the **Single Source of Truth** for the **Maa Durga Jan Seva Ken
 ### Project Folder Structure
 ```
 f:/chat bot/
-├── .env.example               # Environment variables template for Supabase credentials
-├── .gitignore                 # Files excluded from git (includes .env, node_modules)
-├── brain.md                   # Permanent Single Source of Truth Memory
-├── Project_Notes.md           # Developer guide in Hinglish
-├── README.md                  # Project overview & quickstart
-├── package.json               # Node.js dependencies & scripts (includes @supabase/supabase-js, dotenv)
-├── package-lock.json          # Exact lockfile for dependencies
-├── server.js                  # Main Express backend server & Supabase integration
-├── data/                      # Local fallback settings directory
-│   └── settings.json          # Shop settings & Admin configuration
-├── public/                    # Frontend client bundle (100% untouched)
-│   ├── app.js                 # Frontend application JS & Chatbot engine
-│   ├── index.html             # Master web layout & UI markup
-│   ├── styles.css             # Vanilla CSS design system
-│   ├── n8n_whatsapp_workflow.json # n8n integration workflow
-│   ├── abhi.jpg               # Branding image
-│   └── prave.png              # Header branding image
-└── uploads/                   # Legacy upload directory (retained for backward compatibility)
+├── .env                        # Environment secrets (gitignored)
+├── .gitignore                  # Excludes .env, node_modules
+├── brain.md                    # ← This file: Single Source of Truth
+├── package.json                # Root scripts (dev, build:client, etc.)
+├── server.js                   # Express backend (UNCHANGED from v1)
+├── data/
+│   └── settings.json           # Shop settings & Admin config (persistent)
+├── public/                     # Static assets served by Express
+│   ├── abhi.jpg                # Abhishek's footer avatar
+│   ├── logo.jpeg               # Shop logo / favicon
+│   ├── prave.png               # Praveen's footer avatar
+│   └── n8n_whatsapp_workflow.json  # Downloadable n8n workflow
+└── client/                     # ← React (Vite) frontend app
+    ├── index.html              # App entry point (with CDN: Fonts, FA, Lottie)
+    ├── vite.config.js          # Proxy /api → :3000, build outDir → ../public
+    ├── package.json            # React deps (react, react-dom, vite)
+    └── src/
+        ├── main.jsx            # React entry (createRoot)
+        ├── App.jsx             # Root: hash router, tab state, layout
+        ├── index.css           # Full design system (port of old styles.css)
+        ├── constants/
+        │   └── services.js     # SERVICES config object (PAN, Voter, Income, Caste)
+        ├── hooks/
+        │   ├── useSettings.js  # Fetches /api/settings → shopSettings state
+        │   └── useAdminAuth.js # JWT login/logout → adminToken state
+        ├── components/
+        │   ├── Toast.jsx       # Toast notification + useToast hook
+        │   ├── Navbar.jsx      # Top navbar with tab switching & theme switcher
+        │   ├── PetMascot.jsx   # Lottie floating pet mascot
+        │   └── FloatingWhatsApp.jsx  # Fixed WhatsApp CTA button
+        └── pages/
+            ├── CustomerPortal/
+            │   └── index.jsx   # Hero + ServicesGrid + ServiceCard + UploadModal
+            ├── BotSimulator/
+            │   └── index.jsx   # Phone frame + WA chat + payload viewer
+            └── AdminDashboard/
+                └── index.jsx   # LoginCard + StatsRow + SubmissionsTable + Settings + n8n Guide
 ```
 
 ### Important Files & Responsibilities
-- **[server.js](file:///f:/chat%20bot/server.js)**: Configures Express server, dotenv environment loading, Supabase client initialization, Multer memory storage, Supabase storage bucket upload routines, Supabase database queries for `/api/upload`, `/api/submissions`, `/api/submissions/:id/status`, and local settings helpers.
-- **[.env.example](file:///f:/chat%20bot/.env.example)**: Contains environment variable configuration key placeholders (`SUPABASE_URL`, `SUPABASE_KEY`, `PORT`).
-- **[public/index.html](file:///f:/chat%20bot/public/index.html)**: Semantic HTML5 markup for portal UI.
-- **[public/app.js](file:///f:/chat%20bot/public/app.js)**: Frontend JS logic (communicates via standard fetch API).
 
----
-
-## 💾 Database / Save Data
-
-- **Primary Database**: Supabase Cloud PostgreSQL.
-  - Table: `submissions`
-  - Columns:
-    - `id`: UUID (Primary Key, default `gen_random_uuid()`)
-    - `created_at`: TIMESTAMPTZ (default `now()`)
-    - `name`: TEXT NOT NULL
-    - `phone`: TEXT NOT NULL
-    - `service`: TEXT NOT NULL
-    - `status`: TEXT (default 'Pending')
-    - `remarks`: TEXT (nullable)
-    - `files`: JSONB (Array of file objects containing Supabase public URLs)
-- **Primary Storage Bucket**: Supabase Storage Bucket `client_documents` (Public).
-- **Secondary Local Settings**: `data/settings.json` for shop name, address, and admin PIN.
+| File | Role |
+|---|---|
+| [server.js](file:///f:/chat%20bot/server.js) | Express backend — all `/api/` routes, Supabase, Multer, JWT auth |
+| [client/vite.config.js](file:///f:/chat%20bot/client/vite.config.js) | Proxies `/api` → Express `:3000`; `build` outputs to `../public` |
+| [client/src/App.jsx](file:///f:/chat%20bot/client/src/App.jsx) | Hash-based tab router (`#portal`, `#simulator`, `#admin`) |
+| [client/src/hooks/useSettings.js](file:///f:/chat%20bot/client/src/hooks/useSettings.js) | Fetches `/api/settings`, provides `shopSettings` across app |
+| [client/src/hooks/useAdminAuth.js](file:///f:/chat%20bot/client/src/hooks/useAdminAuth.js) | JWT token: login (`POST /api/admin/login`), logout, sessionStorage |
+| [client/src/pages/CustomerPortal/index.jsx](file:///f:/chat%20bot/client/src/pages/CustomerPortal/index.jsx) | Hero section, service cards, drag-&-drop upload modal |
+| [client/src/pages/BotSimulator/index.jsx](file:///f:/chat%20bot/client/src/pages/BotSimulator/index.jsx) | WhatsApp phone simulator + live JSON payload viewer |
+| [client/src/pages/AdminDashboard/index.jsx](file:///f:/chat%20bot/client/src/pages/AdminDashboard/index.jsx) | Admin login, stats, submissions CRUD, shop settings, n8n guide |
+| [data/settings.json](file:///f:/chat%20bot/data/settings.json) | Persistent shop config: name, address, timings, adminPassword hash |
 
 ---
 
 ## 🔌 APIs & Endpoints
 
-- **`POST /api/upload`** & **`POST /api/submissions`**: Accepts `multipart/form-data` (`name`/`clientName`, `phone`/`clientPhone`, `service`/`serviceName`, `documents`). Uploads files to Supabase `client_documents` bucket and inserts submission into Supabase PostgreSQL table.
-- **`GET /api/submissions`**: Fetches all records from Supabase `submissions` table, ordered by `created_at` descending (Admin protected).
-- **`PATCH /api/submissions/:id/status`** & **`PUT /api/submissions/:id`**: Updates status and/or remarks for a specific UUID in Supabase database.
-- **`DELETE /api/submissions/:id`**: Removes submission record from Supabase table and deletes associated files from Supabase Storage.
-- **`POST /api/admin/login`**: Verifies admin credentials against store settings.
-- **`GET /api/settings`** & **`PUT /api/settings`**: Read and update store configurations.
+All routes served by `server.js` on **port 3000**. Vite dev server proxies `/api/*` to Express.
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/submissions` | Upload files + create submission in Supabase | Public |
+| `GET` | `/api/submissions` | Fetch all submissions (admin) | JWT |
+| `PUT` | `/api/submissions/:id` | Update status & remarks | JWT |
+| `DELETE` | `/api/submissions/:id` | Delete submission + Supabase storage files | JWT |
+| `GET` | `/api/submissions/:id/receipt` | Generate PDF receipt | Public |
+| `GET` | `/api/admin/submissions/:id/download` | Download ZIP (PDF + files) | JWT |
+| `POST` | `/api/admin/login` | Verify password, return JWT | Public |
+| `GET` | `/api/settings` | Read shop settings | Public |
+| `PUT` | `/api/settings` | Update shop settings | JWT |
 
 ---
 
-## 🎨 UI / UX
+## 💾 Database / Storage
 
-- **Theme**: Premium Dark/Glassmorphic Modern Indian Service Portal styling.
-- **Compatibility**: 100% intact frontend logic without requiring any client-side JavaScript or HTML alterations.
+- **Primary Database**: Supabase Cloud PostgreSQL.
+  - Table: `submissions`
+  - Columns: `id` (UUID PK), `created_at`, `name`, `phone`, `service`, `status` (default 'pending'), `remarks`, `files` (JSONB array of `{url, originalname}`)
+- **Primary Storage**: Supabase Storage Bucket `client_documents` (Public).
+- **Local Settings**: `data/settings.json` — shop name, address, timings, hashed admin password.
 
 ---
 
-## ⚡ Performance
+## 🎨 UI / Design System
 
-- **Memory Storage**: Multer buffers uploaded files in RAM temporarily before streaming directly to Supabase Cloud Storage.
-- **Database Speed**: PostgreSQL indexed queries via Supabase JS SDK.
+- **Theme**: Premium Dark Glassmorphic — Deep Slate `#0F172A` background, Amber `#F59E0B` accent.
+- **Typography**: Poppins (headings) + Inter (body) — loaded via Google Fonts CDN.
+- **CSS**: Single file `client/src/index.css` — full design system with CSS custom properties.
+- **Icons**: FontAwesome 6 (CDN).
+- **Animations**: Lottie pet mascot, `mascotFloat` keyframe, `pulse-ring` status badge, card hover lift + amber glow.
+- **Responsive**: Mobile hamburger menu, responsive grids down to 320px.
+- **Themes**: Dark (default), Light, System preference — stored in `localStorage`, applied via `data-theme` on `<html>`.
+
+---
+
+## ⚡ Dev Workflow
+
+```bash
+# Backend (Express on :3000)
+npm run dev               # from f:\chat bot\
+
+# Frontend (React / Vite on :5173)
+npm run dev:client        # from f:\chat bot\
+
+# Production build (compiles React → f:\chat bot\public\)
+npm run build             # from f:\chat bot\
+```
+
+> [!TIP]
+> During development, open **http://localhost:5173** (React dev server with HMR).
+> In production, Express serves the built React app from `/public` on port 3000.
 
 ---
 
 ## 🛡️ Security
 
-- **Environment Secrets**: `SUPABASE_URL` and `SUPABASE_KEY` stored securely in `.env` (excluded from git via `.gitignore`).
-- **Sanitized Uploads**: Unique timestamped file naming prevents bucket object collisions.
+- **JWT Auth**: All admin routes require `Authorization: Bearer <token>`. Token issued via bcrypt password verification.
+- **Environment Secrets**: `SUPABASE_URL`, `SUPABASE_KEY`, `JWT_SECRET`, `ADMIN_PASSWORD_HASH` stored in `.env` (gitignored).
+- **Input Validation**: `express-validator` sanitizes all user input.
+- **Rate Limiting**: `express-rate-limit` applied on login route.
+- **Helmet**: HTTP security headers via `helmet` middleware.
 
 ---
 
 ## 🐛 Bugs Log
 
-| ID | Date | Priority | Component | Issue | Cause | Fix / Status | Risk |
-|---|---|---|---|---|---|---|---|
-| B-001 | 2026-07-22 | Low | System | Initial memory setup | Missing brain tracking | Created `brain.md` (Resolved) | None |
-| B-002 | 2026-07-22 | Low | Dependencies | Powershell npm execution policy | Windows script execution policy | Used `cmd /c npm` for package install (Resolved) | None |
-| B-003 | 2026-07-22 | Low | Server | `EADDRINUSE: address already in use :::3000` | Existing node process running on port 3000 | Kill process on port 3000 or change `PORT` in `.env` (Resolved) | None |
-| B-004 | 2026-07-22 | Medium | Supabase | `new row violates row-level security policy for table "submissions"` | Missing RLS Policies / RLS enabled on table | Add RLS policies or run `ALTER TABLE public.submissions DISABLE ROW LEVEL SECURITY;` (Resolved) | None |
-| B-005 | 2026-07-22 | Low | Receipt API | Unescaped space in ID URL rendering index.html | Unescaped space characters in ID URL parameter | Added `encodeURIComponent` in `app.js` & flexible space/hyphen normalization in `server.js` (Resolved) | None |
-| B-006 | 2026-07-22 | Low | Admin Download | Access denied on browser ZIP link click | Standard browser `<a>` GET link cannot send custom HTTP headers | Enabled direct GET streaming for download routes & query token fallback (Resolved) | None |
-| B-007 | 2026-07-22 | Low | Admin Download | `ERR_INVALID_RESPONSE` on browser ZIP download | Direct `pdfDoc` stream piping conflict with async Archiver append | Pre-buffered PDF into binary buffer using `generatePdfSummaryBuffer` before archiver stream (Resolved) | None |
-| B-008 | 2026-07-22 | Low | Admin Download | `TypeError: archiver is not a function` | Archiver v7 module exports `ZipArchive` class constructor | Added `createZipArchive` universal helper supporting `ZipArchive` class and function calls (Resolved) | None |
+| ID | Date | Priority | Component | Issue | Status |
+|---|---|---|---|---|---|
+| B-001 | 2026-07-22 | Low | System | Initial memory setup | Resolved |
+| B-002 | 2026-07-22 | Low | Dependencies | Powershell npm execution policy | Resolved |
+| B-003 | 2026-07-22 | Low | Server | `EADDRINUSE` port 3000 conflict | Resolved |
+| B-004 | 2026-07-22 | Medium | Supabase | RLS policy blocking inserts | Resolved |
+| B-005 | 2026-07-22 | Low | Receipt API | Unescaped space in ID URL | Resolved |
+| B-006 | 2026-07-22 | Low | Admin Download | Auth header blocked on GET link | Resolved |
+| B-007 | 2026-07-22 | Low | Admin Download | ERR_INVALID_RESPONSE on ZIP | Resolved |
+| B-008 | 2026-07-22 | Low | Admin Download | `archiver is not a function` | Resolved |
+| B-009 | 2026-07-23 | High | Auth / CORS | Admin login returning 403 Forbidden on React dev server | Resolved |
+| B-010 | 2026-07-23 | Medium | Auth | `adminPassword` in settings.json was `Admin123`, user was using `Pratap@135` | Resolved |
 
 ---
 
 ## 📜 Changelog
 
-- **2026-07-22 (Supabase Migration Upgrade)**:
-  - Installed `@supabase/supabase-js` and `dotenv` packages.
-  - Configured `.env.example` and added `.env` to `.gitignore`.
-  - Rewrote `server.js` to use `multer.memoryStorage()`.
-  - Replaced disk writes & local JSON queries with Supabase Cloud Storage (`client_documents` bucket) and Supabase PostgreSQL queries (`submissions` table).
-  - Maintained 100% backward compatibility for all existing frontend API routes (`/api/submissions`, `/api/upload`, `/api/submissions/:id/status`).
+- **2026-07-23 (v2.0.1 — Auth & CORS Hotfix)**:
+  - Added `http://localhost:5173` and `http://127.0.0.1:5173` to Express CORS `ALLOWED_ORIGINS` so the Vite dev server is no longer blocked.
+  - Updated `data/settings.json` → `adminPassword` set to `Pratap@135` (server auto-migrates to bcrypt hash on first login).
 
-- **2026-07-22 (Initial Baseline)**:
-  - Initialized permanent Project Memory file `brain.md` in root directory.
+- **2026-07-23 (v2.0.0 — React Migration)**:
+  - Scaffolded Vite React app in `client/` with `npm create vite@latest`.
+  - Configured `vite.config.js` to proxy `/api` → Express `:3000` and build output to `../public`.
+  - Ported full `styles.css` (1690 lines) → `client/src/index.css` with zero visual changes.
+  - Created custom hooks: `useSettings`, `useAdminAuth`, `useToast`.
+  - Built React components: `Navbar`, `Toast`, `PetMascot`, `FloatingWhatsApp`.
+  - Migrated all 3 tabs to React pages: `CustomerPortal`, `BotSimulator`, `AdminDashboard`.
+  - All features preserved: drag-&-drop upload, WhatsApp simulator, admin CRUD, settings save, theme switcher.
+  - Deleted old vanilla files: `public/app.js`, `public/index.html`, `public/styles.css`.
+  - Deleted Vite boilerplate: `App.css`, `react.svg`, `vite.svg`, `hero.png`, `favicon.svg`, `icons.svg`.
+  - Updated root `package.json` with `dev:client` and `build:client` scripts.
+  - Shop timings updated to `"24/7"` in `data/settings.json`.
+
+- **2026-07-22 (v1.1.0 — Supabase Migration)**:
+  - Installed `@supabase/supabase-js` and `dotenv`.
+  - Rewrote `server.js` with Supabase memory upload + PostgreSQL CRUD.
+  - Premium UI redesign (Amber dark theme, Lottie mascot, glassmorphism).
+
+- **2026-07-22 (v1.0.0 — Initial Baseline)**:
+  - Initialized project and `brain.md`.
 
 ---
 
 ## 📝 Decisions Log
 
-- **DEC-001 (JSON File Persistence)**: Legacy baseline store (superseded by DEC-004).
-- **DEC-002 (Multer for Uploads)**: Updated to `multer.memoryStorage()` for streaming directly to cloud storage.
-- **DEC-003 (Vanilla JS Frontend)**: Untouched frontend ensuring 0 client churn during backend upgrades.
-- **DEC-004 (Supabase Cloud Migration)**: Adopted Supabase PostgreSQL (`submissions` table) and Supabase Storage (`client_documents` bucket) to enable scalable cloud data persistence, automatic backups, and public document access.
-
----
-
-## 📁 File History
-
-- **`server.js`**: Rewritten on 2026-07-22 to integrate `@supabase/supabase-js`, memory multer storage, Supabase bucket uploads, and PostgreSQL CRUD routes.
-- **`package.json`**: Updated with `@supabase/supabase-js` and `dotenv`.
-- **`.env.example`**: Created for user Supabase credentials template.
-- **`.gitignore`**: Updated to ignore `.env`.
-- **`brain.md`**: Updated to track Supabase cloud architecture migration.
+| ID | Decision | Reason |
+|---|---|---|
+| DEC-001 | JSON File Persistence (legacy) | Superseded by DEC-004 |
+| DEC-002 | Multer `memoryStorage()` | Stream directly to cloud, no disk writes |
+| DEC-003 | ~~Vanilla JS Frontend~~ → **React (Vite)** | Better component reuse, HMR, hooks for state management |
+| DEC-004 | Supabase Cloud | Scalable, free tier, auto-backups, public file URLs |
+| DEC-005 | Hash-based routing (`#portal`, `#admin`) | No need for React Router — simple 3-tab app |
+| DEC-006 | CSS in single `index.css` | Avoid CSS modules complexity; design system already well-structured |
+| DEC-007 | Add Vite port 5173 to CORS whitelist | Express was rejecting all API calls from React dev server (403 Forbidden) |
+| DEC-008 | Plain-text password fallback in `settings.json` | Server auto-upgrades to bcrypt hash on first successful login — no manual hashing needed |
 
 ---
 
 ## 📋 TODO
 
-### Immediate Tasks
-- [x] Install `@supabase/supabase-js` and `dotenv`.
-- [x] Provide SQL scripts for Supabase `submissions` table and `client_documents` bucket creation.
-- [x] Rewrite `server.js` with Supabase memory upload and PostgreSQL queries.
-- [x] Configured `.env` file with Supabase URL (`https://zpvaeyiluseaeppuhioq.supabase.co`) and API key.
-- [x] User executed SQL script in Supabase SQL Editor (`submissions` table & `client_documents` bucket created).
+### Completed ✅
+- [x] Supabase PostgreSQL & Storage migration
+- [x] PDF receipt generation
+- [x] ZIP download (PDF + files)
+- [x] Premium UI redesign (Amber dark theme + Lottie mascot)
+- [x] React (Vite) frontend migration
+- [x] Theme switcher (Dark/Light/System)
+- [x] Search & filter in Admin submissions table
+- [x] Shop timings changed to "24/7"
+- [x] Delete old vanilla JS files
 
-### Short-Term
-- [x] Add PDF application receipt generation feature (`GET /api/submissions/:id/receipt`).
-- [x] Add ZIP Package download feature (`GET /api/admin/submissions/:id/download` bundling PDF summary + original files from Supabase).
-- [x] Premium UI Redesign (`index.html` + `styles.css`) with Poppins font, Amber dark theme, and Lottie pet mascot.
-- [ ] Add search/filter feature in Admin Dashboard.
+### Upcoming 🔜
+- [ ] Production deployment to live server (Railway / Render / VPS)
+- [ ] WhatsApp live status alerts to customers
+- [ ] SMS notifications on submission status change
 
 ---
 
 ## 🎯 Current Context
 
-- **Active State**: Premium UI Redesign complete — modern banking-style dark portal with Lottie pet mascot.
+- **Active State**: Fully working. Admin login fixed. App running at `http://localhost:5173`.
 - **What was just accomplished**:
-  - Redesigned `public/index.html` — added Lottie player `<script>`, `#pet-mascot` container with `<lottie-player>`, upgraded hero section with trust badges and pulsing status badge, improved footer with clean developer profile layout.
-  - Completely rewrote `public/styles.css` — Poppins (headings) + Inter (body) fonts, Deep Slate `#0F172A` background, Amber `#F59E0B` primary accent, glassmorphism navbar, gradient service card hover effects with shine overlay, micro-animations on stat cards, floating mascot with `mascotFloat` keyframe animation, full responsiveness with mobile hamburger menu.
-  - Lottie pet mascot positioned `fixed; bottom: 20px; left: 20px` with `z-index: 50` and pointer-events: none (non-blocking).
-  - All JS-required element IDs (`hero-shop-name`, `services-grid`, `wa-chat-window`, `wa-input`, `wa-send-btn`, `upload-modal`, `submissions-table-body`, `stat-pending`, `stat-completed`, `stat-processing`, `stat-total`, `toast`, etc.) preserved 100% intact.
-  - `app.js` not touched — 100% intact.
-- **Next AI Instructions**: Ready for testing premium UI and handling next user request.
-
----
-
-## 🧪 Testing
-
-- **Migration Checklist**:
-  1. Add `SUPABASE_URL` and `SUPABASE_KEY` to `.env`.
-  2. Execute SQL script in Supabase SQL Editor.
-  3. Run `npm start`.
-  4. Test client document upload form on `http://localhost:3000`.
-  5. Check Supabase Dashboard to confirm record in `submissions` table and file in `client_documents` bucket.
+  - Fixed **403 Forbidden** on admin login — added `localhost:5173` to Express CORS `ALLOWED_ORIGINS`.
+  - Fixed **wrong password** — `data/settings.json` now has `adminPassword: "Pratap@135"`; server auto-migrates to bcrypt hash on first login.
+  - Both Express backend (`:3000`) and Vite dev server (`:5173`) confirmed running.
+  - Admin login tested via PowerShell — returns `{ success: true, token: "..." }` ✅
+- **Admin Password**: `Pratap@135` (stored as bcrypt hash after first login)
+- **Next AI Instructions**: Ask user what to do next — production deployment, new features, or UI changes.
 
 ---
 
 ## 🚀 Deployment
 
-- **Execution Command**: `npm start`
-- **Required Environment Variables**: `SUPABASE_URL`, `SUPABASE_KEY`, `PORT`
+```bash
+# Development
+npm run dev          # Start Express backend (:3000)
+npm run dev:client   # Start React dev server (:5173)
+
+# Production
+npm run build        # Build React → public/
+npm start            # Serve everything from Express (:3000)
+```
+
+**Required Environment Variables** (set in `.env`):
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-anon-key
+JWT_SECRET=your-jwt-secret
+PORT=3000
+```

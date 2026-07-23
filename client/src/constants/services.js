@@ -1,0 +1,56 @@
+export const SERVICES = {
+  srv_pancard: {
+    id: 'srv_pancard',
+    title: 'PAN Card Apply',
+    hindiTitle: 'पैन कार्ड (नया एवं संशोधन)',
+    description: 'Apply for a new PAN card or make corrections in your existing PAN card details.',
+    icon: 'fa-solid fa-address-card',
+    requirements: [
+      'Aadhar Card (Mobile Number should be linked for OTP)',
+      'One Passport Size Photograph',
+      'Signature on plain white paper (photo or scan)',
+    ],
+    uploadUrl: '/upload-pancard',
+  },
+  srv_voterid: {
+    id: 'srv_voterid',
+    title: 'Voter ID Card',
+    hindiTitle: 'वोटर आईडी (मतदाता पहचान पत्र)',
+    description: 'Register as a new voter, download your digital voter card, or apply for corrections.',
+    icon: 'fa-solid fa-id-card-clip',
+    requirements: [
+      'Aadhar Card / Age Proof (Birth Certificate or 10th Marksheet)',
+      'One Passport Size Photograph',
+      'Address Proof (Electricity Bill, Water Bill, or Gas Connection)',
+    ],
+    uploadUrl: '/upload-voterid',
+  },
+  srv_income: {
+    id: 'srv_income',
+    title: 'Income Certificate',
+    hindiTitle: 'आय प्रमाण पत्र (Income Certificate)',
+    description: 'Get your official Income Certificate (Aay Praman Patra) processed.',
+    icon: 'fa-solid fa-file-invoice-dollar',
+    requirements: [
+      'Aadhar Card',
+      'One Passport Size Photograph',
+      'Self-Declaration Form (Swasthya/Aay Ghoshna Patra)',
+      'Income certificate template signed by Pradhan or Corporator',
+    ],
+    uploadUrl: '/upload-income',
+  },
+  srv_caste: {
+    id: 'srv_caste',
+    title: 'Caste Certificate',
+    hindiTitle: 'जाति प्रमाण पत्र (Caste Certificate)',
+    description: 'Apply for Caste Certificate (Jati Praman Patra) for SC/ST/OBC categories.',
+    icon: 'fa-solid fa-users',
+    requirements: [
+      'Aadhar Card',
+      'One Passport Size Photograph',
+      "Father's Caste Certificate (mandatory for verification)",
+      'Ration Card or Land Registry document showing family lineage',
+    ],
+    uploadUrl: '/upload-caste',
+  },
+};

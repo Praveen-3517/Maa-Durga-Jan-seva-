@@ -53,7 +53,7 @@ app.use(morgan('combined'));
 const ALLOWED_ORIGINS = (
   process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://127.0.0.1:3000']
+    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://127.0.0.1:5173']
 );
 app.use(cors({
   origin: (origin, callback) => {
@@ -161,7 +161,7 @@ const getSettings = () => {
     shopPhone: "918707845206",
     shopEmail: "ramesh.cybercafe@gmail.com",
     shopAddress: "Bindwaliya near ghazipur ghat, ghazipur uttar pradesh 233001",
-    shopTimings: "Monday to Saturday: 09:00 AM - 08:00 PM (Sunday Closed)",
+    shopTimings: "24/7",
     adminPasswordHash: "", // bcrypt hash stored here
     adminPassword: process.env.ADMIN_PASSWORD || "admin123"  // legacy plaintext fallback (migrated on first login)
   };

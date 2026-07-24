@@ -9,7 +9,7 @@
     "dev:client": "cd client && npm run dev",
     "build:client": "cd client && npm run build",
     "build": "cd client && npm run build",
-    "postinstall": "cd client && npm install && npm run build"
+    "postinstall": "cd client && npm install --include=dev && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

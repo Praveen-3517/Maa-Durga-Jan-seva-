@@ -208,7 +208,11 @@ const checkAdmin = (req, res, next) => {
 };
 
 // Serve static frontend assets
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve from client/dist if it exists (Vite build), otherwise fallback to public
+const distPath = path.join(__dirname, 'client', 'dist');
+const publicPath = path.join(__dirname, 'public');
+const frontendPath = fs.existsSync(distPath) ? distPath : publicPath;
+app.use(express.static(frontendPath));
 
 // --- 4. API Endpoints ---
 
@@ -992,7 +996,10 @@ app.use((req, res, next) => {
 
 // Fallback to serve index.html for client-side routing (SPA)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  const distPath = path.join(__dirname, 'client', 'dist');
+  const publicPath = path.join(__dirname, 'public');
+  const frontendPath = fs.existsSync(distPath) ? distPath : publicPath;
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // ── FIX 6 cont.: Global Error Handler — never expose stack traces ─────────────

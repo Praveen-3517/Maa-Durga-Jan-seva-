@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+// import Vortex from './components/Vortex';
 import Navbar from './components/Navbar';
 import Toast from './components/Toast';
 import PetMascot from './components/PetMascot';
@@ -9,6 +10,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import { useSettings } from './hooks/useSettings';
 import { useAdminAuth } from './hooks/useAdminAuth';
 import { useToast } from './components/Toast';
+import StarsBackground from './components/StarsBackground';
 
 const TABS = ['portal', 'simulator', 'admin'];
 
@@ -45,58 +47,65 @@ export default function App() {
   }, []);
 
   return (
-    <>
-      <Navbar activeTab={activeTab} onTabChange={switchTab} shopSettings={shopSettings} />
-      <main className="main-container">
-        {activeTab === 'portal' && (
-          <CustomerPortal
-            shopSettings={shopSettings}
-            showToast={showToast}
-            adminToken={adminToken}
-            onSubmitSuccess={isLoggedIn ? undefined : undefined}
-          />
-        )}
-        {activeTab === 'simulator' && (
-          <BotSimulator shopSettings={shopSettings} onGoToAdmin={() => switchTab('admin')} />
-        )}
-        {activeTab === 'admin' && (
-          <AdminDashboard
-            adminToken={adminToken}
-            login={login}
-            logout={logout}
-            showToast={showToast}
-            isLoggedIn={isLoggedIn}
-            onRefreshSettings={refetchSettings}
-          />
-        )}
-      </main>
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-dev">
-            <img src="/prave.png" alt="Praveen" className="footer-avatar" />
-            <div>
-              <p className="footer-dev-name">Praveen</p>
-              <p className="footer-dev-role">Lead Developer &amp; Frontend Engineer</p>
-              <p className="footer-dev-sub">MCA Student</p>
+
+   
+
+
+<StarsBackground  containeClassName="min-h-screen">
+    
+        <Navbar activeTab={activeTab} onTabChange={switchTab} shopSettings={shopSettings} />
+        <main className="main-container">
+          {activeTab === 'portal' && (
+            <CustomerPortal
+              shopSettings={shopSettings}
+              showToast={showToast}
+              adminToken={adminToken}
+              onSubmitSuccess={isLoggedIn ? undefined : undefined}
+            />
+          )}
+          {activeTab === 'simulator' && (
+            <BotSimulator shopSettings={shopSettings} onGoToAdmin={() => switchTab('admin')} />
+          )}
+          {activeTab === 'admin' && (
+            <AdminDashboard
+              adminToken={adminToken}
+              login={login}
+              logout={logout}
+              showToast={showToast}
+              isLoggedIn={isLoggedIn}
+              onRefreshSettings={refetchSettings}
+            />
+          )}
+        </main>
+        <footer className="footer">
+          <div className="footer-content">
+            <div className="footer-dev">
+              <img src="/prave.png" alt="Praveen" className="footer-avatar" />
+              <div>
+                <p className="footer-dev-name">Praveen</p>
+                <p className="footer-dev-role">Lead Developer &amp; Frontend Engineer</p>
+                <p className="footer-dev-sub">MCA Student</p>
+              </div>
+            </div>
+            <div className="footer-center">
+              <p className="footer-copy">&copy; 2026 <span>{shopSettings?.shopName || 'Maa Durga Online Center'}</span></p>
+              <p className="footer-tagline">Professional Website &amp; Bot Development</p>
+            </div>
+            <div className="footer-dev footer-dev-right">
+              <div style={{ textAlign: 'right' }}>
+                <p className="footer-dev-name">Abhishek</p>
+                <p className="footer-dev-role">Lead Developer &amp; Frontend Engineer</p>
+                <p className="footer-dev-sub">MCA Student</p>
+              </div>
+              <img src="/abhi.jpg" alt="Abhishek" className="footer-avatar" />
             </div>
           </div>
-          <div className="footer-center">
-            <p className="footer-copy">&copy; 2026 <span>{shopSettings?.shopName || 'Maa Durga Online Center'}</span></p>
-            <p className="footer-tagline">Professional Website &amp; Bot Development</p>
-          </div>
-          <div className="footer-dev footer-dev-right">
-            <div style={{ textAlign: 'right' }}>
-              <p className="footer-dev-name">Abhishek</p>
-              <p className="footer-dev-role">Lead Developer &amp; Frontend Engineer</p>
-              <p className="footer-dev-sub">MCA Student</p>
-            </div>
-            <img src="/abhi.jpg" alt="Abhishek" className="footer-avatar" />
-          </div>
-        </div>
-      </footer>
-      <FloatingWhatsApp shopSettings={shopSettings} />
-      <PetMascot />
-      <Toast message={toast.message} type={toast.type} visible={toast.visible} />
-    </>
+        </footer>
+        <FloatingWhatsApp shopSettings={shopSettings} />
+        <PetMascot />
+        <Toast message={toast.message} type={toast.type} visible={toast.visible} />
+      
+  
+</StarsBackground>
   );
 }

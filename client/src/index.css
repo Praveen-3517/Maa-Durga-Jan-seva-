@@ -532,7 +532,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .step-content ul { padding-left: 1.2rem; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
 
 /* FOOTER */
-.footer { margin-top: 6rem; padding: 2.5rem 0; background: rgba(10,14,23,0.85); border-top: 1px solid var(--border-color); }
+/* FOOTER */
+.footer { margin-top: 6rem; padding: 2.5rem 0; background: var(--surface-overlay); border-top: 1px solid var(--border-color); }
 .footer-content { max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 2rem; }
 .footer-dev { display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 180px; }
 .footer-dev-right { justify-content: flex-end; }

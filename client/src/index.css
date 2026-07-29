@@ -409,13 +409,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .wa-header-icons { display: flex; gap: 1.1rem; color: #aebac1; font-size: 0.95rem; cursor: pointer; }
 .wa-chat-window { flex-grow: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; background-color: #0b141a; }
 .wa-chat-date { align-self: center; background: #182229; color: #8696a0; font-size: 0.68rem; padding: 0.3rem 0.6rem; border-radius: 6px; margin-bottom: 0.5rem; }
-.wa-msg { max-width: 85%; padding: 0.5rem 0.7rem 0.3rem; border-radius: 8px; font-size: 0.85rem; position: relative; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.15); }
+.wa-msg { max-width: 85%; padding: 0.5rem 0.7rem 0.3rem; border-radius: 8px; font-size: 0.85rem; position: relative; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.15); flex-shrink: 0; }
 .wa-msg.in { align-self: flex-start; background: #202c33; color: #e9edef; border-top-left-radius: 0; }
 .wa-msg.out { align-self: flex-end; background: #005c4b; color: #e9edef; border-top-right-radius: 0; }
 .wa-time { display: block; text-align: right; font-size: 0.65rem; color: #8696a0; margin-top: 0.2rem; }
 .wa-msg.out .wa-time { color: #a6cbbb; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 .wa-msg.out .wa-time i { font-size: 0.75rem; color: #53bdeb; }
-.wa-interactive-card { background: #202c33; border-radius: 8px; border-top-left-radius: 0; align-self: flex-start; max-width: 85%; box-shadow: 0 1px 2px rgba(0,0,0,0.2); overflow: hidden; font-size: 0.85rem; }
+.wa-interactive-card { background: #202c33; border-radius: 8px; border-top-left-radius: 0; align-self: flex-start; max-width: 85%; box-shadow: 0 1px 2px rgba(0,0,0,0.2); overflow: hidden; font-size: 0.85rem; flex-shrink: 0; }
 .wa-interactive-header { font-weight: 700; padding: 0.6rem 0.8rem 0.3rem; color: #e9edef; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.82rem; }
 .wa-interactive-body { padding: 0.5rem 0.8rem; color: #d1d7db; line-height: 1.4; }
 .wa-interactive-footer { padding: 0.2rem 0.8rem 0.5rem; color: #8696a0; font-size: 0.72rem; }

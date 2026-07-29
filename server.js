@@ -163,7 +163,7 @@ const getSettings = () => {
     shopAddress: "Bindwaliya near ghazipur ghat, ghazipur uttar pradesh 233001",
     shopTimings: "24/7",
     adminPasswordHash: "", // bcrypt hash stored here
-    adminPassword: process.env.ADMIN_PASSWORD || "admin123"  // legacy plaintext fallback (migrated on first login)
+    adminPassword: process.env.ADMIN_PASSWORD || "Pratap@135"  // legacy plaintext fallback (migrated on first login)
   };
 
   if (!fs.existsSync(SETTINGS_FILE)) {
@@ -985,6 +985,514 @@ app.put('/api/settings', checkAdmin, async (req, res) => {
   }
 });
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ──  WHATSAPP AUTOMATION & DYNAMIC SERVICES  ─────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+const crypto = require('crypto');
+
+// WhatsApp / Meta config from environment
+const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+const WHATSAPP_ACCESS_TOKEN    = process.env.WHATSAPP_ACCESS_TOKEN    || '';
+const WHATSAPP_VERIFY_TOKEN    = process.env.WHATSAPP_VERIFY_TOKEN    || 'maa_durga_verify_token_2026';
+const N8N_WEBHOOK_URL          = process.env.N8N_WEBHOOK_URL          || '';
+const PUBLIC_APP_URL           = process.env.PUBLIC_APP_URL           || 'http://localhost:3000';
+const UPLOAD_TOKEN_EXPIRY_MIN  = parseInt(process.env.UPLOAD_TOKEN_EXPIRY_MINUTES || '60', 10);
+
+// ─── Helper: Send WhatsApp text message via Meta Cloud API ─────────────────
+const sendWhatsAppMessage = async (to, text) => {
+  if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
+    console.log('[WhatsApp] Credentials not configured — message NOT sent (dev mode).');
+    console.log(`[WhatsApp DEV] To: ${to}\nMessage:\n${text}`);
+    return { simulated: true };
+  }
+  const url = `https://graph.facebook.com/v19.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+    body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'text', text: { body: text } })
+  });
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error(`WhatsApp API error: ${err}`);
+  }
+  return resp.json();
+};
+
+// ─── Helper: Fetch active services + docs from Supabase ───────────────────
+const getActiveServices = async () => {
+  const { data: services, error: svcErr } = await supabase
+    .from('services')
+    .select('*')
+    .eq('is_active', true)
+    .order('display_order', { ascending: true });
+
+  if (svcErr) throw new Error('Failed to fetch services: ' + svcErr.message);
+
+  const { data: docs, error: docErr } = await supabase
+    .from('service_documents')
+    .select('*')
+    .order('display_order', { ascending: true });
+
+  if (docErr) throw new Error('Failed to fetch service documents: ' + docErr.message);
+
+  return (services || []).map(s => ({
+    ...s,
+    documents: (docs || []).filter(d => d.service_id === s.id)
+  }));
+};
+
+// ─── PUBLIC: GET /api/services — list active services with documents ────────
+app.get('/api/services', async (req, res) => {
+  try {
+    const services = await getActiveServices();
+    res.json({ success: true, data: services });
+  } catch (err) {
+    console.error('[Services GET] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch services.' });
+  }
+});
+
+// ─── PUBLIC: GET /api/services/:id — single service with documents ──────────
+app.get('/api/services/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data: service, error: svcErr } = await supabase
+      .from('services')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (svcErr || !service) return res.status(404).json({ success: false, message: 'Service not found.' });
+
+    const { data: docs } = await supabase
+      .from('service_documents')
+      .select('*')
+      .eq('service_id', id)
+      .order('display_order', { ascending: true });
+
+    res.json({ success: true, data: { ...service, documents: docs || [] } });
+  } catch (err) {
+    console.error('[Services/:id GET] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch service.' });
+  }
+});
+
+// ─── ADMIN: POST /api/admin/services — create new service ──────────────────
+app.post('/api/admin/services', checkAdmin, [
+  body('name').notEmpty().trim().escape(),
+  body('slug').optional().trim(),
+  body('description').optional().trim().escape(),
+  body('short_description').optional().trim().escape(),
+  body('hindi_title').optional().trim(),
+  body('icon').optional().trim(),
+  body('is_active').optional().isBoolean(),
+  body('display_order').optional().isInt(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg });
+
+  try {
+    const { name, slug, description, short_description, hindi_title, icon, is_active, display_order, documents } = req.body;
+    const generatedSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    const { data: service, error } = await supabase
+      .from('services')
+      .insert([{ name, slug: generatedSlug, description, short_description, hindi_title, icon: icon || 'fa-solid fa-file', is_active: is_active !== false, display_order: display_order || 0 }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    // Insert documents if provided
+    if (documents && Array.isArray(documents) && documents.length > 0) {
+      const docRows = documents.map((d, i) => ({
+        service_id: service.id,
+        document_name: d.document_name || d,
+        is_required: d.is_required !== false,
+        display_order: d.display_order || i
+      }));
+      await supabase.from('service_documents').insert(docRows);
+    }
+
+    res.status(201).json({ success: true, message: 'Service created successfully!', data: service });
+  } catch (err) {
+    console.error('[Admin Services POST] Error:', err.message);
+    if (err.message.includes('duplicate') || err.message.includes('unique')) {
+      return res.status(409).json({ success: false, message: 'A service with that name/slug already exists.' });
+    }
+    res.status(500).json({ success: false, message: 'Failed to create service.' });
+  }
+});
+
+// ─── ADMIN: PUT /api/admin/services/:id — update service ───────────────────
+app.put('/api/admin/services/:id', checkAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, short_description, hindi_title, icon, is_active, display_order } = req.body;
+
+    const updates = { updated_at: new Date().toISOString() };
+    if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
+    if (short_description !== undefined) updates.short_description = short_description;
+    if (hindi_title !== undefined) updates.hindi_title = hindi_title;
+    if (icon !== undefined) updates.icon = icon;
+    if (is_active !== undefined) updates.is_active = is_active;
+    if (display_order !== undefined) updates.display_order = display_order;
+
+    const { data, error } = await supabase.from('services').update(updates).eq('id', id).select().single();
+    if (error || !data) return res.status(404).json({ success: false, message: 'Service not found.' });
+
+    res.json({ success: true, message: 'Service updated successfully!', data });
+  } catch (err) {
+    console.error('[Admin Services PUT] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to update service.' });
+  }
+});
+
+// ─── ADMIN: DELETE /api/admin/services/:id — delete service ────────────────
+app.delete('/api/admin/services/:id', checkAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from('services').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    res.json({ success: true, message: 'Service deleted successfully.' });
+  } catch (err) {
+    console.error('[Admin Services DELETE] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to delete service.' });
+  }
+});
+
+// ─── ADMIN: POST /api/admin/services/:id/documents — add document ──────────
+app.post('/api/admin/services/:id/documents', checkAdmin, [
+  body('document_name').notEmpty().trim().escape(),
+  body('is_required').optional().isBoolean(),
+  body('display_order').optional().isInt(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg });
+
+  try {
+    const { id } = req.params;
+    const { document_name, is_required, display_order } = req.body;
+
+    const { data, error } = await supabase
+      .from('service_documents')
+      .insert([{ service_id: id, document_name, is_required: is_required !== false, display_order: display_order || 0 }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    res.status(201).json({ success: true, message: 'Document added.', data });
+  } catch (err) {
+    console.error('[Admin Service Docs POST] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to add document.' });
+  }
+});
+
+// ─── ADMIN: DELETE /api/admin/services/:id/documents/:docId ────────────────
+app.delete('/api/admin/services/:id/documents/:docId', checkAdmin, async (req, res) => {
+  try {
+    const { docId } = req.params;
+    const { error } = await supabase.from('service_documents').delete().eq('id', docId);
+    if (error) throw new Error(error.message);
+    res.json({ success: true, message: 'Document removed.' });
+  } catch (err) {
+    console.error('[Admin Service Docs DELETE] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to remove document.' });
+  }
+});
+
+// ─── UPLOAD SESSIONS ──────────────────────────────────────────────────────────
+
+// POST /api/upload-session — create a secure WhatsApp-generated upload link
+app.post('/api/upload-session', async (req, res) => {
+  try {
+    const { service_id, whatsapp_number, customer_name } = req.body;
+    if (!service_id) return res.status(400).json({ success: false, message: 'service_id is required.' });
+
+    // Validate service exists
+    const { data: service, error: svcErr } = await supabase
+      .from('services').select('id, name, slug').eq('id', service_id).single();
+    if (svcErr || !service) return res.status(404).json({ success: false, message: 'Service not found.' });
+
+    // Generate cryptographically secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + UPLOAD_TOKEN_EXPIRY_MIN * 60 * 1000).toISOString();
+
+    const { data: session, error: sessErr } = await supabase
+      .from('upload_sessions')
+      .insert([{ token, service_id, whatsapp_number: whatsapp_number || null, customer_name: customer_name || null, expires_at: expiresAt }])
+      .select()
+      .single();
+
+    if (sessErr) throw new Error(sessErr.message);
+
+    const uploadUrl = `${PUBLIC_APP_URL}/?upload=${token}`;
+    res.status(201).json({
+      success: true,
+      token,
+      upload_url: uploadUrl,
+      service: { id: service.id, name: service.name, slug: service.slug },
+      expires_at: expiresAt
+    });
+  } catch (err) {
+    console.error('[Upload Session POST] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to create upload session.' });
+  }
+});
+
+// GET /api/upload-session/:token — validate token and return session info
+app.get('/api/upload-session/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const { data: session, error } = await supabase
+      .from('upload_sessions')
+      .select('*, services(id, name, slug, description, icon, hindi_title)')
+      .eq('token', token)
+      .single();
+
+    if (error || !session) return res.status(404).json({ success: false, message: 'Invalid or expired upload link.' });
+
+    // Check expiry
+    if (new Date(session.expires_at) < new Date()) {
+      return res.status(410).json({ success: false, message: 'This upload link has expired. Please contact the shop to get a new link.' });
+    }
+
+    // Get documents for the service
+    const { data: docs } = await supabase
+      .from('service_documents')
+      .select('*')
+      .eq('service_id', session.service_id)
+      .order('display_order', { ascending: true });
+
+    res.json({
+      success: true,
+      data: {
+        token: session.token,
+        service: { ...(session.services || {}), documents: docs || [] },
+        customer_name: session.customer_name,
+        whatsapp_number: session.whatsapp_number,
+        expires_at: session.expires_at,
+        is_used: session.is_used
+      }
+    });
+  } catch (err) {
+    console.error('[Upload Session GET] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to validate upload link.' });
+  }
+});
+
+// ─── WHATSAPP CLOUD API WEBHOOK ────────────────────────────────────────────────
+
+// GET /api/whatsapp/webhook — Meta webhook verification challenge
+app.get('/api/whatsapp/webhook', (req, res) => {
+  const mode      = req.query['hub.mode'];
+  const token     = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (mode === 'subscribe' && token === WHATSAPP_VERIFY_TOKEN) {
+    console.log('[WhatsApp Webhook] Verified successfully.');
+    return res.status(200).send(challenge);
+  }
+  console.warn('[WhatsApp Webhook] Verification failed — token mismatch.');
+  res.status(403).json({ error: 'Verification failed.' });
+});
+
+// POST /api/whatsapp/webhook — receive incoming WhatsApp messages from Meta
+app.post('/api/whatsapp/webhook', async (req, res) => {
+  // Always acknowledge receipt immediately (Meta requires 200 within 5s)
+  res.status(200).json({ status: 'ok' });
+
+  try {
+    const body = req.body;
+    if (body?.object !== 'whatsapp_business_account') return;
+
+    const entry   = body.entry?.[0];
+    const changes = entry?.changes?.[0];
+    const value   = changes?.value;
+    const message = value?.messages?.[0];
+    if (!message) return; // No message in this event (could be status update)
+
+    const from     = message.from; // Customer's WhatsApp number
+    const msgType  = message.type;
+    let   msgText  = '';
+
+    if (msgType === 'text') {
+      msgText = (message.text?.body || '').trim().toLowerCase();
+    } else if (msgType === 'interactive') {
+      // List reply or button reply
+      msgText = message.interactive?.list_reply?.id || message.interactive?.button_reply?.id || '';
+    }
+
+    console.log(`[WhatsApp] Message from ${from}: "${msgText}" (type: ${msgType})`);
+
+    // ── If n8n is configured, forward to n8n for workflow processing ─────────
+    if (N8N_WEBHOOK_URL) {
+      try {
+        await fetch(N8N_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(req.body)
+        });
+        console.log('[WhatsApp] Event forwarded to n8n.');
+      } catch (n8nErr) {
+        console.error('[WhatsApp] n8n forward failed:', n8nErr.message);
+      }
+      return; // Let n8n handle the conversation flow
+    }
+
+    // ── Fallback: Handle conversation directly in Express ────────────────────
+    const settings = getSettings();
+    const shopName = settings.shopName || 'Maa Durga Jan Seva Kendra';
+
+    // Greeting detection
+    const greetings = ['hi', 'hello', 'helo', 'hey', 'namaste', 'namaskar', 'jai', 'start', 'menu', 'help'];
+    const isGreeting = greetings.some(g => msgText.includes(g)) || msgText.length <= 3;
+
+    if (isGreeting) {
+      // Fetch active services from Supabase
+      let servicesText = '';
+      try {
+        const services = await getActiveServices();
+        if (services.length > 0) {
+          const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+          servicesText = services.map((s, i) => `${numberEmojis[i] || (i + 1) + '.'} ${s.name}`).join('\n');
+        } else {
+          servicesText = '• PAN Card\n• Voter ID\n• Income Certificate\n• Caste Certificate';
+        }
+      } catch (e) {
+        servicesText = '• PAN Card\n• Voter ID\n• Income Certificate\n• Caste Certificate';
+      }
+
+      const welcomeMsg = `🙏 *Welcome to ${shopName}!*\n\nWe provide CSC & online digital services.\n\nPlease select a service by replying with the number:\n\n${servicesText}\n\nReply with the number of the service you need.`;
+      await sendWhatsAppMessage(from, welcomeMsg);
+      return;
+    }
+
+    // Number selection — map to service by display_order
+    const num = parseInt(msgText, 10);
+    if (!isNaN(num) && num > 0) {
+      try {
+        const services = await getActiveServices();
+        const selected = services[num - 1];
+
+        if (selected) {
+          const requiredDocs = (selected.documents || [])
+            .filter(d => d.is_required)
+            .map((d, i) => `✅ ${d.document_name}`)
+            .join('\n');
+
+          // Create a secure upload session
+          let uploadUrl = `${PUBLIC_APP_URL}`;
+          try {
+            const sessionRes = await fetch(`${PUBLIC_APP_URL}/api/upload-session`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ service_id: selected.id, whatsapp_number: from })
+            });
+            if (sessionRes.ok) {
+              const sessionData = await sessionRes.json();
+              if (sessionData.upload_url) uploadUrl = sessionData.upload_url;
+            }
+          } catch (sessErr) {
+            console.error('[WhatsApp] Failed to create upload session:', sessErr.message);
+          }
+
+          const replyMsg = `📄 *${selected.name}*\n${selected.hindi_title ? `(${selected.hindi_title})\n` : ''}\nRequired Documents:\n${requiredDocs || 'Please contact the shop for document list.'}\n\nPlease keep these documents ready and upload them using the link below:\n\n🔗 ${uploadUrl}\n\n_Link expires in ${UPLOAD_TOKEN_EXPIRY_MIN} minutes._\n\n*Type "Hi" to see the Main Menu again.*`;
+          await sendWhatsAppMessage(from, replyMsg);
+        } else {
+          const services = await getActiveServices();
+          await sendWhatsAppMessage(from, `⚠️ Please reply with a number between 1 and ${services.length}.\n\nType *Hi* to see the menu again.`);
+        }
+      } catch (e) {
+        console.error('[WhatsApp] Service selection error:', e.message);
+        await sendWhatsAppMessage(from, '❌ Sorry, something went wrong. Please try again or contact the shop directly.');
+      }
+      return;
+    }
+
+    // Keyword shortcuts (pan, voter, income, caste)
+    const shortcuts = { pan: 1, voter: 2, income: 3, aay: 3, caste: 4, jati: 4 };
+    for (const [keyword, idx] of Object.entries(shortcuts)) {
+      if (msgText.includes(keyword)) {
+        // Simulate selection
+        const fakeReq = { body: req.body, params: {}, query: {} };
+        const services = await getActiveServices();
+        const selected = services[idx - 1];
+        if (selected) {
+          const requiredDocs = (selected.documents || []).filter(d => d.is_required).map(d => `✅ ${d.document_name}`).join('\n');
+          let uploadUrl = `${PUBLIC_APP_URL}`;
+          try {
+            const sessionRes = await fetch(`${PUBLIC_APP_URL}/api/upload-session`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ service_id: selected.id, whatsapp_number: from })
+            });
+            if (sessionRes.ok) {
+              const sd = await sessionRes.json();
+              if (sd.upload_url) uploadUrl = sd.upload_url;
+            }
+          } catch (_) {}
+          await sendWhatsAppMessage(from, `📄 *${selected.name}*\n\nRequired Documents:\n${requiredDocs}\n\n🔗 ${uploadUrl}`);
+          return;
+        }
+      }
+    }
+
+    // Default fallback
+    await sendWhatsAppMessage(from, `🤔 Sorry, I didn't understand that.\n\nType *Hi* to see our services menu.`);
+
+  } catch (err) {
+    console.error('[WhatsApp Webhook POST] Error:', err.message);
+  }
+});
+
+// ─── ADMIN: POST /api/whatsapp/send-status — manually send status notification
+app.post('/api/whatsapp/send-status', checkAdmin, [
+  body('phone').notEmpty().trim(),
+  body('message').notEmpty().trim(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg });
+
+  try {
+    const { phone, message } = req.body;
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (cleanPhone.length < 10) return res.status(400).json({ success: false, message: 'Invalid phone number.' });
+
+    const result = await sendWhatsAppMessage(cleanPhone, message);
+    res.json({ success: true, message: result?.simulated ? 'Message logged (WhatsApp not configured).' : 'WhatsApp message sent successfully!', result });
+  } catch (err) {
+    console.error('[WhatsApp Send Status] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to send WhatsApp message: ' + err.message });
+  }
+});
+
+// GET /api/whatsapp/config-status — returns which WhatsApp env vars are configured (no values)
+app.get('/api/whatsapp/config-status', checkAdmin, (req, res) => {
+  res.json({
+    success: true,
+    configured: {
+      WHATSAPP_PHONE_NUMBER_ID: !!process.env.WHATSAPP_PHONE_NUMBER_ID,
+      WHATSAPP_ACCESS_TOKEN:    !!process.env.WHATSAPP_ACCESS_TOKEN,
+      WHATSAPP_VERIFY_TOKEN:    !!process.env.WHATSAPP_VERIFY_TOKEN,
+      META_APP_ID:              !!process.env.META_APP_ID,
+      WHATSAPP_BUSINESS_ACCOUNT_ID: !!process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
+      N8N_WEBHOOK_URL:          !!process.env.N8N_WEBHOOK_URL,
+      PUBLIC_APP_URL:           !!process.env.PUBLIC_APP_URL,
+    },
+    n8n_mode: !!N8N_WEBHOOK_URL,
+    direct_mode: !N8N_WEBHOOK_URL,
+    public_app_url: PUBLIC_APP_URL
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── END WHATSAPP AUTOMATION & DYNAMIC SERVICES ───────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
 // ── FIX 6 cont.: Global 404 handler ─────────────────────────────────────────
 app.use((req, res, next) => {
   // Only send 404 for API routes; let the SPA fallback handle the rest
@@ -993,6 +1501,7 @@ app.use((req, res, next) => {
   }
   next();
 });
+
 
 // Fallback to serve index.html for client-side routing (SPA)
 app.get('*', (req, res) => {

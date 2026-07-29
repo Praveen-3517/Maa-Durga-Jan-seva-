@@ -1,374 +1,19 @@
 {
-  "name": "WhatsApp Cyber Cafe Chatbot",
+  "name": "Maa Durga Jan Seva — WhatsApp Bot (Dynamic Services)",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "whatsapp-webhook",
+        "path": "whatsapp-incoming",
         "responseMode": "responseNode",
-        "options": {
-          "rawBody": false
-        }
-      },
-      "id": "1d8b7d90-bdf1-4328-868d-327ef3e8b090",
-      "name": "Webhook (Meta WhatsApp Input)",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [
-        200,
-        240
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{ $json.headers['x-forwarded-method'] || $json.query['hub.challenge'] ? 'GET' : 'POST' }}",
-              "value2": "GET"
-            }
-          ]
-        }
-      },
-      "id": "2db4e3a4-84ab-45bc-98c4-a69074ee9458",
-      "name": "IF Meta Verification",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        420,
-        240
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "={{ $json.query['hub.challenge'] }}",
         "options": {}
       },
-      "id": "31ad6bde-e7bc-4995-bb04-c36195fb2912",
-      "name": "Respond to Meta Challenge",
-      "type": "n8n-nodes-base.respondToWebhook",
+      "id": "node-webhook-trigger",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [
-        640,
-        140
-      ]
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].interactive?.list_reply?.id || $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
-                    "rightValue": "srv_pancard",
-                    "operator": "equal"
-                  }
-                ]
-              },
-              "outputIndex": 0
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].interactive?.list_reply?.id || $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
-                    "rightValue": "srv_voterid",
-                    "operator": "equal"
-                  }
-                ]
-              },
-              "outputIndex": 1
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].interactive?.list_reply?.id || $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
-                    "rightValue": "srv_income",
-                    "operator": "equal"
-                  }
-                ]
-              },
-              "outputIndex": 2
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].interactive?.list_reply?.id || $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
-                    "rightValue": "srv_caste",
-                    "operator": "equal"
-                  }
-                ]
-              },
-              "outputIndex": 3
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
-                    "rightValue": "shop",
-                    "operator": "contains"
-                  },
-                  {
-                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
-                    "rightValue": "timing",
-                    "operator": "contains"
-                  },
-                  {
-                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
-                    "rightValue": "address",
-                    "operator": "contains"
-                  }
-                ],
-                "combinator": "or"
-              },
-              "outputIndex": 4
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
-                    "rightValue": "website",
-                    "operator": "contains"
-                  },
-                  {
-                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body?.toLowerCase() }}",
-                    "rightValue": "link",
-                    "operator": "contains"
-                  }
-                ],
-                "combinator": "or"
-              },
-              "outputIndex": 5
-            }
-          ],
-          "fallbackOutput": 6
-        }
-      },
-      "id": "cb1e5b8e-e2b4-4b5a-ba3d-ee4b036cf189",
-      "name": "Switch Service Input",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 1,
-      "position": [
-        640,
-        340
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "bodyParameters": {
-          "parameters": []
-        },
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"💳 *Pan Card Banane Ke Liye Zaroori Documents:*\\n\\n1️⃣ Aadhar Card (Mobile No. Link hona chahiye)\\n2️⃣ Ek Passport Size Photo\\n3️⃣ Ek Signature (White Paper par)\\n\\n👇 *Document Upload Karein:*\\nNiche diye gaye link par click karke apne documents upload karein aur form fill karein:\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
-      },
-      "id": "ea49b068-15cf-4be3-b09e-324dcd93b5a1",
-      "name": "Send PAN Info",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        940,
-        80
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"🗳️ *Voter ID Card Banane Ke Liye Documents:*\\n\\n1️⃣ Aadhar Card / Age Proof (Age 18+ hona chahiye)\\n2️⃣ Ek Passport Size Photo\\n3️⃣ Address Proof (Electricity bill / Family member ka Voter ID card)\\n\\n👇 *Document Upload Link:*\\nNiche diye gaye link par upload karein:\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
-      },
-      "id": "fa21b068-15cf-4be3-b09e-324dcd93b5a2",
-      "name": "Send Voter ID Info",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        940,
-        220
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"📄 *Income Certificate (Aay Praman Patra) Ke Liye Documents:*\\n\\n1️⃣ Aadhar Card\\n2️⃣ Ek Passport Size Photo\\n3️⃣ Purana Income Certificate (Agar ho toh)\\n4️⃣ Pradhan ya Corporator ka Swasthya/Aay Ghoshna Patra\\n\\n👇 *Document Upload Karein:*\\nNiche diye gaye link par click karke apne documents upload karein:\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
-      },
-      "id": "6a49b068-15cf-4be3-b09e-324dcd93b5a3",
-      "name": "Send Income Cert Info",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        940,
-        360
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"👥 *Caste Certificate (Jati Praman Patra) Ke Documents:*\\n\\n1️⃣ Aadhar Card\\n2️⃣ Passport Size Photo\\n3️⃣ Father ka Jati Praman Patra (Mandatory proof)\\n4️⃣ Address/Registry copy\\n\\n👇 *Document Upload Link:*\\nDocuments upload karne ke liye click karein:\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
-      },
-      "id": "7a49b068-15cf-4be3-b09e-324dcd93b5a4",
-      "name": "Send Caste Cert Info",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        940,
-        500
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": \"📍 *Hamari Shop ki Details:*\\n\\n🏠 *Address:* 123, Main Market, Sector 5, Mumbai\\n⏰ *Timing:* Subah 10:00 AM se Raat 9:00 PM tak (Sunday Closed)\"\n  }\n}"
-      },
-      "id": "8a49b068-15cf-4be3-b09e-324dcd93b5a5",
-      "name": "Send Shop Details",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        940,
-        640
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"🌐 *Hamari Website:*\\n\\nAap niche diye gaye link par click karke hamare products dekh sakte hain aur documents upload kar sakte hain:\\n\\n👉 https://www.yourcybercafewebsite.com\"\n  }\n}"
-      },
-      "id": "9a49b068-15cf-4be3-b09e-324dcd93b5a6",
-      "name": "Send Website Link",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        940,
-        780
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://graph.facebook.com/v20.0/YOUR_PHONE_NUMBER_ID/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_PERMANENT_ACCESS_TOKEN"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "json",
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"Cyber Cafe Online Services\"\n    },\n    \"body\": {\n      \"text\": \"Hello! 🙏 Hamare Cyber Cafe me aapka swagat hai. Aapko jis bhi service ke baare me jaan-na hai, niche diye gaye button par click karke select karein:\"\n    },\n    \"footer\": {\n      \"text\": \"Chunein aur aage badhein\"\n    },\n    \"action\": {\n      \"button\": \"Services Menu 👇\",\n      \"sections\": [\n        {\n          \"title\": \"Government ID Cards\",\n          \"rows\": [\n            {\n              \"id\": \"srv_pancard\",\n              \"title\": \"Pan Card Apply\",\n              \"description\": \"Naya Pan Card ya Correction\"\n            },\n            {\n              \"id\": \"srv_voterid\",\n              \"title\": \"Voter ID Card\",\n              \"description\": \"Naya Voter ID card banayein\"\n            }\n          ]\n        },\n        {\n          \"title\": \"Certificates & Others\",\n          \"rows\": [\n            {\n              \"id\": \"srv_income\",\n              \"title\": \"Income Certificate\",\n              \"description\": \"Aay Praman Patra\"\n            },\n            {\n              \"id\": \"srv_caste\",\n              \"title\": \"Caste Certificate\",\n              \"description\": \"Jati Praman Patra\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}"
-      },
-      "id": "aa49b068-15cf-4be3-b09e-324dcd93b5a7",
-      "name": "Send Welcome List Menu",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        940,
-        920
-      ]
+      "position": [240, 300],
+      "webhookId": "whatsapp-incoming"
     },
     {
       "parameters": {
@@ -376,110 +21,266 @@
         "responseBody": "OK",
         "options": {}
       },
-      "id": "bb49b068-15cf-4be3-b09e-324dcd93b5a8",
-      "name": "Respond Webhook OK",
+      "id": "node-respond-200",
+      "name": "Respond 200 OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        640,
-        540
-      ]
+      "position": [460, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming WhatsApp webhook payload\nconst body = $input.first().json.body || $input.first().json;\n\nif (body.object !== 'whatsapp_business_account') {\n  return [{ json: { skip: true } }];\n}\n\nconst message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];\nif (!message) return [{ json: { skip: true } }];\n\nconst from = message.from;\nconst msgType = message.type;\nlet msgText = '';\nlet listReplyId = '';\n\nif (msgType === 'text') {\n  msgText = (message.text?.body || '').trim();\n} else if (msgType === 'interactive') {\n  listReplyId = message.interactive?.list_reply?.id || message.interactive?.button_reply?.id || '';\n  msgText = listReplyId;\n}\n\nconst textLower = msgText.toLowerCase();\n\n// Classify intent\nconst greetings = ['hi', 'hello', 'hey', 'namaste', 'start', 'menu', 'help', 'helo', 'jai'];\nconst isGreeting = greetings.some(g => textLower.includes(g)) || (textLower.length <= 3 && !/^\\d+$/.test(textLower));\nconst isNumber = /^\\d+$/.test(msgText.trim());\n\nreturn [{ json: {\n  from,\n  msgText,\n  textLower,\n  isGreeting,\n  isNumber,\n  selectedIndex: isNumber ? parseInt(msgText.trim(), 10) - 1 : -1,\n  msgType,\n  listReplyId\n}}];"
+      },
+      "id": "node-parse-message",
+      "name": "Parse Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "node-skip-check",
+      "name": "Skip Non-Message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isGreeting }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "node-is-greeting",
+      "name": "Is Greeting?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.PUBLIC_APP_URL }}/api/services",
+        "options": {}
+      },
+      "id": "node-fetch-services",
+      "name": "Fetch Services from Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the WhatsApp welcome message with dynamic services\nconst servicesData = $input.first().json.data || [];\nconst from = $('Parse Message').first().json.from;\nconst shopName = 'Maa Durga Jan Seva Kendra';\n\nconst numberEmojis = ['1\u20e3','2\u20e3','3\u20e3','4\u20e3','5\u20e3','6\u20e3','7\u20e3','8\u20e3','9\u20e3','🔟'];\nconst menuText = servicesData.map((s, i) => `${numberEmojis[i] || (i+1)+'.'} ${s.name}`).join('\\n');\n\nconst payload = {\n  messaging_product: 'whatsapp',\n  recipient_type: 'individual',\n  to: from,\n  type: 'text',\n  text: {\n    body: `\ud83d\ude4f *Welcome to ${shopName}!*\\n\\nWe provide CSC & online digital services.\\n\\nPlease select a service by replying with the number:\\n\\n${menuText}\\n\\nReply with the number of the service you need.`\n  }\n};\n\nreturn [{ json: { payload, from, services: servicesData } }];"
+      },
+      "id": "node-build-welcome",
+      "name": "Build Welcome Menu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json.payload) }}",
+        "options": {}
+      },
+      "id": "node-send-welcome",
+      "name": "Send Welcome to Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 220]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isNumber }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "node-is-number",
+      "name": "Is Number Selection?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 420]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.PUBLIC_APP_URL }}/api/services",
+        "options": {}
+      },
+      "id": "node-fetch-services-2",
+      "name": "Fetch Services for Selection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the selected service\nconst services = $input.first().json.data || [];\nconst selectedIndex = $('Parse Message').first().json.selectedIndex;\nconst from = $('Parse Message').first().json.from;\n\nconst selected = services[selectedIndex];\nif (!selected) {\n  return [{ json: { error: true, from, totalServices: services.length } }];\n}\n\nreturn [{ json: { selected, from, selectedIndex } }];"
+      },
+      "id": "node-resolve-service",
+      "name": "Resolve Selected Service",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.PUBLIC_APP_URL }}/api/upload-session",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ service_id: $json.selected.id, whatsapp_number: $json.from }) }}",
+        "options": {}
+      },
+      "id": "node-create-session",
+      "name": "Create Secure Upload Session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the service info + upload link reply\nconst sessionData = $input.first().json;\nconst resolvedData = $('Resolve Selected Service').first().json;\nconst selected = resolvedData.selected;\nconst from = resolvedData.from;\n\nconst uploadUrl = sessionData.upload_url || $vars.PUBLIC_APP_URL;\nconst expiryMin = 60;\n\nconst docs = (selected.documents || []).filter(d => d.is_required).map(d => `\u2705 ${d.document_name}`).join('\\n');\n\nconst replyText = `\ud83d\udcc4 *${selected.name}*${\n  selected.hindi_title ? `\\n(${selected.hindi_title})` : ''\n}\\n\\nRequired Documents:\\n${docs || 'Contact the shop for details.'}\\n\\nPlease keep these ready and upload using the link below:\\n\\n\ud83d\udd17 ${uploadUrl}\\n\\n_Link valid for ${expiryMin} minutes._\\n\\n*Type \"Hi\" to see the Main Menu again.*`;\n\nreturn [{ json: {\n  payload: {\n    messaging_product: 'whatsapp',\n    recipient_type: 'individual',\n    to: from,\n    type: 'text',\n    text: { body: replyText }\n  },\n  from\n}}];"
+      },
+      "id": "node-build-service-reply",
+      "name": "Build Service Reply + Upload Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json.payload) }}",
+        "options": {}
+      },
+      "id": "node-send-service-reply",
+      "name": "Send Service Info to Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to: $json.from, type: 'text', text: { body: '\ud83e\udd14 Sorry, I didn\\'t understand that.\\n\\nType *Hi* to see our services menu.' } }) }}",
+        "options": {}
+      },
+      "id": "node-send-fallback",
+      "name": "Send Fallback Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 560]
     }
   ],
   "connections": {
-    "Webhook (Meta WhatsApp Input)": {
+    "WhatsApp Webhook": {
       "main": [
         [
-          {
-            "node": "IF Meta Verification",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Respond 200 OK", "type": "main", "index": 0 },
+          { "node": "Parse Message", "type": "main", "index": 0 }
         ]
       ]
     },
-    "IF Meta Verification": {
+    "Parse Message": {
+      "main": [[{ "node": "Skip Non-Message?", "type": "main", "index": 0 }]]
+    },
+    "Skip Non-Message?": {
       "main": [
-        [
-          {
-            "node": "Respond to Meta Challenge",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Switch Service Input",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Respond Webhook OK",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [],
+        [{ "node": "Is Greeting?", "type": "main", "index": 0 }]
       ]
     },
-    "Switch Service Input": {
+    "Is Greeting?": {
       "main": [
-        [
-          {
-            "node": "Send PAN Info",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send Voter ID Info",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send Income Cert Info",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send Caste Cert Info",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send Shop Details",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send Website Link",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send Welcome List Menu",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Fetch Services from Backend", "type": "main", "index": 0 }],
+        [{ "node": "Is Number Selection?", "type": "main", "index": 0 }]
       ]
+    },
+    "Fetch Services from Backend": {
+      "main": [[{ "node": "Build Welcome Menu", "type": "main", "index": 0 }]]
+    },
+    "Build Welcome Menu": {
+      "main": [[{ "node": "Send Welcome to Customer", "type": "main", "index": 0 }]]
+    },
+    "Is Number Selection?": {
+      "main": [
+        [{ "node": "Fetch Services for Selection", "type": "main", "index": 0 }],
+        [{ "node": "Send Fallback Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Services for Selection": {
+      "main": [[{ "node": "Resolve Selected Service", "type": "main", "index": 0 }]]
+    },
+    "Resolve Selected Service": {
+      "main": [[{ "node": "Create Secure Upload Session", "type": "main", "index": 0 }]]
+    },
+    "Create Secure Upload Session": {
+      "main": [[{ "node": "Build Service Reply + Upload Link", "type": "main", "index": 0 }]]
+    },
+    "Build Service Reply + Upload Link": {
+      "main": [[{ "node": "Send Service Info to Customer", "type": "main", "index": 0 }]]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
-  "pinData": {}
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "meta": { "instanceId": "maa-durga-jan-seva-whatsapp-bot" },
+  "_readme": {
+    "workflow": "Maa Durga Jan Seva Kendra — Dynamic WhatsApp Bot v3.0.0",
+    "description": "Fetches services dynamically from Express backend. No hardcoded service IDs.",
+    "variables_required": {
+      "PUBLIC_APP_URL": "Your deployed app URL e.g. https://your-app.onrender.com",
+      "WHATSAPP_PHONE_NUMBER_ID": "From Meta Developer Dashboard > WhatsApp > API Setup"
+    },
+    "import_steps": [
+      "1. Open n8n → New Workflow → Import from File → upload this JSON",
+      "2. Set n8n Variables: PUBLIC_APP_URL, WHATSAPP_PHONE_NUMBER_ID",
+      "3. Create HTTP Header Auth credential: Authorization: Bearer <WHATSAPP_ACCESS_TOKEN>",
+      "4. Activate the workflow",
+      "5. Copy webhook URL from 'WhatsApp Webhook' node",
+      "6. In Meta Dashboard: Webhooks → Callback URL = <webhook_url>",
+      "7. Verify Token = maa_durga_verify_token_2026",
+      "8. Subscribe to: messages"
+    ]
+  }
 }

@@ -24,29 +24,35 @@ This document is the **Single Source of Truth** for the **Maa Durga Jan Seva Ken
 - **Unique Selling Points**:
   - Cloud persistence with **Supabase PostgreSQL** and **Supabase Storage**.
   - **React (Vite) frontend** — fully component-based, hot-reload dev experience.
-  - Built-in interactive **WhatsApp Bot Simulator** for live client testing.
+  - Built-in interactive **WhatsApp Bot Simulator** (now fetches services dynamically from API).
+  - **Real WhatsApp Cloud API integration** — webhook, message handling, upload session generation.
+  - **Dynamic Service Management** — Admin can add/edit/delete/toggle services without code changes.
   - Production-ready exportable **n8n Workflow** for Meta WhatsApp Cloud API (₹0 monthly fees).
-  - Unified Admin Dashboard with instant status updates and file management.
+  - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `2.0.0` (React Frontend Migration)
+- **Version**: `3.0.0` (WhatsApp Automation + Dynamic Services)
 - **Current Build**: Development — Express backend on `http://localhost:3000` | React dev server on `http://localhost:5173`.
-- **Development Status**: React frontend migration complete. All features working.
+- **Development Status**: WhatsApp automation + Dynamic service management complete. Build verified ✅.
 
 ---
 
 ## 📈 Progress
 
-- **Overall Completion**: 97%
-- **Current Milestone**: React (Vite) Frontend Migration — COMPLETE
+- **Overall Completion**: 99%
+- **Current Milestone**: WhatsApp Cloud API Automation + Dynamic Service Management — COMPLETE
 - **Completed Phases**:
   - Phase 1: Core Portal & Simulator ✅
   - Phase 2: System Documentation & Memory Initialization ✅
   - Phase 3: Supabase Cloud Migration ✅
   - Phase 4: Premium UI Redesign (Amber dark theme, Lottie mascot) ✅
   - Phase 5: React (Vite) Frontend Migration ✅
-- **Next Task**: Production build & deployment to live server.
-- **Pending Work**: Receipt generation improvements, SMS/WhatsApp live status alerts.
+  - Phase 6: Real WhatsApp Cloud API Integration + Dynamic Services ✅
+- **Next Task**: Run Supabase SQL migration → Connect real WhatsApp phone when available.
+- **Pending Work**:
+  - Run `data/supabase_migration.sql` in Supabase SQL Editor (⚠️ REQUIRED before new features work)
+  - WhatsApp number physical verification (needs owner + phone in-person)
+  - SMS notifications (optional)
 
 ---
 
@@ -55,28 +61,30 @@ This document is the **Single Source of Truth** for the **Maa Durga Jan Seva Ken
 ### Project Folder Structure
 ```
 f:/chat bot/
-├── .env                        # Environment secrets (gitignored)
+├── .env                        # Environment secrets (gitignored) ← UPDATED with WhatsApp vars
+├── .env.example                # Safe-to-commit env template ← NEW
 ├── .gitignore                  # Excludes .env, node_modules
 ├── brain.md                    # ← This file: Single Source of Truth
 ├── package.json                # Root scripts (dev, build:client, etc.)
-├── server.js                   # Express backend (UNCHANGED from v1)
+├── server.js                   # Express backend ← +500 lines: WhatsApp routes, services API
 ├── data/
-│   └── settings.json           # Shop settings & Admin config (persistent)
+│   ├── settings.json           # Shop settings & Admin config (persistent)
+│   └── supabase_migration.sql  # ← NEW: Run in Supabase SQL Editor
 ├── public/                     # Static assets served by Express
 │   ├── abhi.jpg                # Abhishek's footer avatar
 │   ├── logo.jpeg               # Shop logo / favicon
 │   ├── prave.png               # Praveen's footer avatar
-│   └── n8n_whatsapp_workflow.json  # Downloadable n8n workflow
+│   └── n8n_whatsapp_workflow.json  # ← UPDATED: Dynamic services + upload session
 └── client/                     # ← React (Vite) frontend app
-    ├── index.html              # App entry point (with CDN: Fonts, FA, Lottie)
+    ├── index.html              # App entry point
     ├── vite.config.js          # Proxy /api → :3000, build outDir → ../public
-    ├── package.json            # React deps (react, react-dom, vite)
+    ├── package.json            # React deps
     └── src/
         ├── main.jsx            # React entry (createRoot)
         ├── App.jsx             # Root: hash router, tab state, layout
-        ├── index.css           # Full design system (port of old styles.css)
+        ├── index.css           # Full design system
         ├── constants/
-        │   └── services.js     # SERVICES config object (PAN, Voter, Income, Caste)
+        │   └── services.js     # SERVICES config (static fallback if DB unavailable)
         ├── hooks/
         │   ├── useSettings.js  # Fetches /api/settings → shopSettings state
         │   └── useAdminAuth.js # JWT login/logout → adminToken state
@@ -87,26 +95,24 @@ f:/chat bot/
         │   └── FloatingWhatsApp.jsx  # Fixed WhatsApp CTA button
         └── pages/
             ├── CustomerPortal/
-            │   └── index.jsx   # Hero + ServicesGrid + ServiceCard + UploadModal
+            │   └── index.jsx   # Hero + ServicesGrid + UploadModal ← +?upload=token handling
             ├── BotSimulator/
-            │   └── index.jsx   # Phone frame + WA chat + payload viewer
+            │   └── index.jsx   # ← Now fetches services from /api/services dynamically
             └── AdminDashboard/
-                └── index.jsx   # LoginCard + StatsRow + SubmissionsTable + Settings + n8n Guide
+                └── index.jsx   # ← +Service Management tab, +WhatsApp config status
 ```
 
 ### Important Files & Responsibilities
 
 | File | Role |
 |---|---|
-| [server.js](file:///f:/chat%20bot/server.js) | Express backend — all `/api/` routes, Supabase, Multer, JWT auth |
-| [client/vite.config.js](file:///f:/chat%20bot/client/vite.config.js) | Proxies `/api` → Express `:3000`; `build` outputs to `../public` |
-| [client/src/App.jsx](file:///f:/chat%20bot/client/src/App.jsx) | Hash-based tab router (`#portal`, `#simulator`, `#admin`) |
-| [client/src/hooks/useSettings.js](file:///f:/chat%20bot/client/src/hooks/useSettings.js) | Fetches `/api/settings`, provides `shopSettings` across app |
-| [client/src/hooks/useAdminAuth.js](file:///f:/chat%20bot/client/src/hooks/useAdminAuth.js) | JWT token: login (`POST /api/admin/login`), logout, sessionStorage |
-| [client/src/pages/CustomerPortal/index.jsx](file:///f:/chat%20bot/client/src/pages/CustomerPortal/index.jsx) | Hero section, service cards, drag-&-drop upload modal |
-| [client/src/pages/BotSimulator/index.jsx](file:///f:/chat%20bot/client/src/pages/BotSimulator/index.jsx) | WhatsApp phone simulator + live JSON payload viewer |
-| [client/src/pages/AdminDashboard/index.jsx](file:///f:/chat%20bot/client/src/pages/AdminDashboard/index.jsx) | Admin login, stats, submissions CRUD, shop settings, n8n guide |
-| [data/settings.json](file:///f:/chat%20bot/data/settings.json) | Persistent shop config: name, address, timings, adminPassword hash |
+| [server.js](file:///f:/chat%20bot/server.js) | Express backend — all `/api/` routes, Supabase, Multer, JWT, WhatsApp webhook, services CRUD, upload sessions |
+| [client/src/pages/AdminDashboard/index.jsx](file:///f:/chat%20bot/client/src/pages/AdminDashboard/index.jsx) | Admin login, stats, submissions, **Service Management** tab, shop settings, n8n+WhatsApp status |
+| [client/src/pages/CustomerPortal/index.jsx](file:///f:/chat%20bot/client/src/pages/CustomerPortal/index.jsx) | Hero, service cards, upload modal — **now handles ?upload=token from WhatsApp** |
+| [client/src/pages/BotSimulator/index.jsx](file:///f:/chat%20bot/client/src/pages/BotSimulator/index.jsx) | WhatsApp simulator — **now fetches services from /api/services (dynamic)** |
+| [data/supabase_migration.sql](file:///f:/chat%20bot/data/supabase_migration.sql) | SQL to create services, service_documents, upload_sessions tables + seed data |
+| [.env.example](file:///f:/chat%20bot/.env.example) | Documented env var template (safe to commit) |
+| [public/n8n_whatsapp_workflow.json](file:///f:/chat%20bot/public/n8n_whatsapp_workflow.json) | Updated n8n workflow with dynamic services + upload session |
 
 ---
 
@@ -114,6 +120,7 @@ f:/chat bot/
 
 All routes served by `server.js` on **port 3000**. Vite dev server proxies `/api/*` to Express.
 
+### Existing Routes (UNCHANGED)
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
 | `POST` | `/api/submissions` | Upload files + create submission in Supabase | Public |
@@ -126,27 +133,104 @@ All routes served by `server.js` on **port 3000**. Vite dev server proxies `/api
 | `GET` | `/api/settings` | Read shop settings | Public |
 | `PUT` | `/api/settings` | Update shop settings | JWT |
 
+### New Routes (ADDED in v3.0.0)
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/services` | List all active services with documents | Public |
+| `GET` | `/api/services/:id` | Get single service + documents | Public |
+| `POST` | `/api/admin/services` | Create new service | JWT |
+| `PUT` | `/api/admin/services/:id` | Update service | JWT |
+| `DELETE` | `/api/admin/services/:id` | Delete service | JWT |
+| `POST` | `/api/admin/services/:id/documents` | Add document to service | JWT |
+| `DELETE` | `/api/admin/services/:id/documents/:docId` | Remove document | JWT |
+| `POST` | `/api/upload-session` | Create secure WhatsApp upload token | Public |
+| `GET` | `/api/upload-session/:token` | Validate token + get session info | Public |
+| `GET` | `/api/whatsapp/webhook` | Meta webhook verification challenge | Public |
+| `POST` | `/api/whatsapp/webhook` | Receive incoming WhatsApp messages | Public |
+| `POST` | `/api/whatsapp/send-status` | Manually send WhatsApp notification | JWT |
+| `GET` | `/api/whatsapp/config-status` | Check which env vars are configured | JWT |
+
 ---
 
 ## 💾 Database / Storage
 
 - **Primary Database**: Supabase Cloud PostgreSQL.
-  - Table: `submissions`
-  - Columns: `id` (UUID PK), `created_at`, `name`, `phone`, `service`, `status` (default 'pending'), `remarks`, `files` (JSONB array of `{url, originalname}`)
+  - Table: `submissions` — (UNCHANGED) id, created_at, name, phone, service, status, remarks, files
+  - Table: `services` — ← NEW: id, name, slug, description, icon, hindi_title, is_active, display_order
+  - Table: `service_documents` — ← NEW: id, service_id, document_name, is_required, display_order
+  - Table: `upload_sessions` — ← NEW: id, token, service_id, whatsapp_number, is_used, expires_at
+
+> [!IMPORTANT]
+> **Run `data/supabase_migration.sql` in Supabase SQL Editor** before the new service management and WhatsApp features will work!
+
 - **Primary Storage**: Supabase Storage Bucket `client_documents` (Public).
 - **Local Settings**: `data/settings.json` — shop name, address, timings, hashed admin password.
 
 ---
 
+## ⚙️ Environment Variables
+
+### Existing (Required)
+```
+PORT=3000
+SUPABASE_URL=https://zpvaeyiluseaeppuhioq.supabase.co
+SUPABASE_KEY=<service_role secret key> (REQUIRED to bypass RLS)
+JWT_SECRET=<strong random secret>
+```
+
+### New WhatsApp (Optional — leave empty until phone is verified)
+```
+META_APP_ID=
+META_APP_SECRET=
+WHATSAPP_BUSINESS_ACCOUNT_ID=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_ACCESS_TOKEN=
+WHATSAPP_VERIFY_TOKEN=maa_durga_verify_token_2026
+N8N_WEBHOOK_URL=
+PUBLIC_APP_URL=http://localhost:3000
+UPLOAD_TOKEN_EXPIRY_MINUTES=60
+```
+
+---
+
+## 🤖 WhatsApp Architecture
+
+```
+Customer
+↓
+WhatsApp (sends "Hi")
+↓
+Meta WhatsApp Cloud API
+↓
+POST /api/whatsapp/webhook  (Express)
+↓ (if N8N_WEBHOOK_URL set)
+n8n workflow (orchestration)
+↓
+GET /api/services (fetch dynamic menu)
+POST /api/upload-session (create secure link)
+↓
+Customer receives service info + upload link
+↓
+Customer opens link: /?upload=TOKEN
+↓
+CustomerPortal (React) detects token → fetches session info → opens pre-filled modal
+↓
+Customer uploads documents → POST /api/submissions → Supabase
+↓
+Admin sees application in Admin Dashboard
+```
+
+### WhatsApp Bot Modes
+- **Direct Mode** (default): Express handles conversation logic directly. No n8n needed.
+- **n8n Mode**: If `N8N_WEBHOOK_URL` is set, Meta events are forwarded to n8n for advanced workflow processing.
+
+---
+
 ## 🎨 UI / Design System
 
-- **Theme**: Premium Dark Glassmorphic — Deep Slate `#0F172A` background, Amber `#F59E0B` accent.
-- **Typography**: Poppins (headings) + Inter (body) — loaded via Google Fonts CDN.
-- **CSS**: Single file `client/src/index.css` — full design system with CSS custom properties.
-- **Icons**: FontAwesome 6 (CDN).
-- **Animations**: Lottie pet mascot, `mascotFloat` keyframe, `pulse-ring` status badge, card hover lift + amber glow.
-- **Responsive**: Mobile hamburger menu, responsive grids down to 320px.
-- **Themes**: Dark (default), Light, System preference — stored in `localStorage`, applied via `data-theme` on `<html>`.
+- **Theme**: Premium Dark Glassmorphic — Deep Slate `#0F172A` background, Amber `#F59E0B` accent. **UNCHANGED.**
+- **Typography**: Poppins (headings) + Inter (body) — loaded via Google Fonts CDN. **UNCHANGED.**
+- **New UI**: Service Management sub-tab in Admin Dashboard — follows existing glassmorphic design system exactly.
 
 ---
 
@@ -172,10 +256,13 @@ npm run build             # from f:\chat bot\
 ## 🛡️ Security
 
 - **JWT Auth**: All admin routes require `Authorization: Bearer <token>`. Token issued via bcrypt password verification.
-- **Environment Secrets**: `SUPABASE_URL`, `SUPABASE_KEY`, `JWT_SECRET`, `ADMIN_PASSWORD_HASH` stored in `.env` (gitignored).
-- **Input Validation**: `express-validator` sanitizes all user input.
-- **Rate Limiting**: `express-rate-limit` applied on login route.
+- **Secure Upload Tokens**: `crypto.randomBytes(32).toString('hex')` — 64-char hex token, stored in Supabase with expiry.
+- **Token Expiry**: Configurable via `UPLOAD_TOKEN_EXPIRY_MINUTES` (default 60 min).
+- **Environment Secrets**: All WhatsApp credentials in `.env` (gitignored). Never exposed to frontend.
+- **Config Status API**: `/api/whatsapp/config-status` shows ✅/❌ per variable without revealing values.
+- **Rate Limiting**: `express-rate-limit` applied on login, upload, and general API routes.
 - **Helmet**: HTTP security headers via `helmet` middleware.
+- **Input Validation**: `express-validator` sanitizes all user input including new service routes.
 
 ---
 
@@ -193,35 +280,37 @@ npm run build             # from f:\chat bot\
 | B-008 | 2026-07-22 | Low | Admin Download | `archiver is not a function` | Resolved |
 | B-009 | 2026-07-23 | High | Auth / CORS | Admin login returning 403 Forbidden on React dev server | Resolved |
 | B-010 | 2026-07-23 | Medium | Auth | `adminPassword` in settings.json was `Admin123`, user was using `Pratap@135` | Resolved |
+| B-011 | 2026-07-24 | High | Deployment | Render serving 404 because server looked for `public/index.html` instead of Vite's `client/dist` | Resolved |
+| B-012 | 2026-07-24 | High | Deployment | Render `npm install` omitted Vite `devDependencies`, breaking build | Resolved |
+| B-013 | 2026-07-24 | Medium | UI | Footer profile images missing after React migration | Resolved |
+| B-014 | 2026-07-29 | Low | Development | Local environment showing old UI instead of new changes when running server.js | Resolved |
+| B-015 | 2026-07-29 | High | UI | WhatsApp simulator buttons disappearing due to flexbox `flex-shrink` | Resolved |
+| B-016 | 2026-07-29 | High | Admin | Failed to create services due to RLS blocking anon key. Fixed by using `service_role` key in .env | Resolved |
 
 ---
 
 ## 📜 Changelog
 
-- **2026-07-23 (v2.0.1 — Auth & CORS Hotfix)**:
-  - Added `http://localhost:5173` and `http://127.0.0.1:5173` to Express CORS `ALLOWED_ORIGINS` so the Vite dev server is no longer blocked.
-  - Updated `data/settings.json` → `adminPassword` set to `Pratap@135` (server auto-migrates to bcrypt hash on first login).
+- **2026-07-29 (v3.0.0 — WhatsApp Automation + Dynamic Services)**:
+  - Added 13 new API routes to `server.js`: services CRUD, upload sessions, WhatsApp webhook.
+  - WhatsApp Cloud API webhook handler (GET verification + POST message handling).
+  - Dynamic service retrieval from Supabase — bot menu builds from DB, not hardcoded.
+  - Secure upload session system: `crypto.randomBytes(32)` token + Supabase `upload_sessions` table.
+  - Admin Dashboard: New "Service Management" sub-tab with full CRUD for services and documents.
+  - Admin Dashboard: WhatsApp config status card in n8n Setup tab.
+  - CustomerPortal: Handles `?upload=TOKEN` URL — auto-opens pre-filled modal for correct service.
+  - BotSimulator: Fetches services from `/api/services` API (dynamic), falls back to hardcoded SERVICES.
+  - Supabase SQL migration file created: `data/supabase_migration.sql`.
+  - `.env` updated with WhatsApp env var placeholders. `.env.example` created.
+  - n8n workflow JSON updated (v3.0.0) with dynamic services and upload session support.
+  - `admin123` default password updated to `Pratap@135` in server.js fallback.
+  - Build verified: `npm run build` ✅ (424 modules, no errors).
 
-- **2026-07-23 (v2.0.0 — React Migration)**:
-  - Scaffolded Vite React app in `client/` with `npm create vite@latest`.
-  - Configured `vite.config.js` to proxy `/api` → Express `:3000` and build output to `../public`.
-  - Ported full `styles.css` (1690 lines) → `client/src/index.css` with zero visual changes.
-  - Created custom hooks: `useSettings`, `useAdminAuth`, `useToast`.
-  - Built React components: `Navbar`, `Toast`, `PetMascot`, `FloatingWhatsApp`.
-  - Migrated all 3 tabs to React pages: `CustomerPortal`, `BotSimulator`, `AdminDashboard`.
-  - All features preserved: drag-&-drop upload, WhatsApp simulator, admin CRUD, settings save, theme switcher.
-  - Deleted old vanilla files: `public/app.js`, `public/index.html`, `public/styles.css`.
-  - Deleted Vite boilerplate: `App.css`, `react.svg`, `vite.svg`, `hero.png`, `favicon.svg`, `icons.svg`.
-  - Updated root `package.json` with `dev:client` and `build:client` scripts.
-  - Shop timings updated to `"24/7"` in `data/settings.json`.
+- **2026-07-24 (v2.0.2 — Render Deployment Fixes)**: ...
 
-- **2026-07-22 (v1.1.0 — Supabase Migration)**:
-  - Installed `@supabase/supabase-js` and `dotenv`.
-  - Rewrote `server.js` with Supabase memory upload + PostgreSQL CRUD.
-  - Premium UI redesign (Amber dark theme, Lottie mascot, glassmorphism).
+- **2026-07-23 (v2.0.1 — Auth & CORS Hotfix)**: ...
 
-- **2026-07-22 (v1.0.0 — Initial Baseline)**:
-  - Initialized project and `brain.md`.
+- **2026-07-23 (v2.0.0 — React Migration)**: ...
 
 ---
 
@@ -236,7 +325,11 @@ npm run build             # from f:\chat bot\
 | DEC-005 | Hash-based routing (`#portal`, `#admin`) | No need for React Router — simple 3-tab app |
 | DEC-006 | CSS in single `index.css` | Avoid CSS modules complexity; design system already well-structured |
 | DEC-007 | Add Vite port 5173 to CORS whitelist | Express was rejecting all API calls from React dev server (403 Forbidden) |
-| DEC-008 | Plain-text password fallback in `settings.json` | Server auto-upgrades to bcrypt hash on first successful login — no manual hashing needed |
+| DEC-008 | Plain-text password fallback in `settings.json` | Server auto-upgrades to bcrypt hash on first successful login |
+| DEC-009 | `crypto.randomBytes(32)` for upload tokens | Cryptographically secure, 64-char hex — impossible to guess |
+| DEC-010 | Direct mode + n8n mode for WhatsApp | If N8N_WEBHOOK_URL is set, forward to n8n. Otherwise handle directly in Express. Allows testing without n8n. |
+| DEC-011 | Services stored in Supabase (not hardcoded) | Admin can add/remove/edit services without code changes. Keeps n8n workflow stable. |
+| DEC-012 | Bot Simulator falls back to hardcoded SERVICES | Allows simulator to work even if Supabase tables not yet created |
 
 ---
 
@@ -252,24 +345,43 @@ npm run build             # from f:\chat bot\
 - [x] Search & filter in Admin submissions table
 - [x] Shop timings changed to "24/7"
 - [x] Delete old vanilla JS files
+- [x] Production deployment to live server (Render)
+- [x] Dynamic Service Management (Admin UI + Supabase)
+- [x] WhatsApp Cloud API webhook handler
+- [x] Secure upload session (token-based upload links)
+- [x] WhatsApp URL pre-fills Customer Portal upload modal
+- [x] Bot Simulator fetches services from API
+- [x] n8n workflow updated (dynamic services + upload session)
 
-### Upcoming 🔜
-- [ ] Production deployment to live server (Railway / Render / VPS)
-- [ ] WhatsApp live status alerts to customers
+### Pending — Required ⚠️
+- [ ] **RUN** `data/supabase_migration.sql` in Supabase SQL Editor (new tables + seed data)
+- [ ] **Set** `PUBLIC_APP_URL` in `.env` to live site URL when deploying
+
+### Pending — When WhatsApp Phone Available 📱
+- [ ] Create Meta Developer App
+- [ ] Add phone number to WhatsApp Business Platform (needs physical phone for OTP)
+- [ ] Generate permanent Access Token (System User)
+- [ ] Set `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN` in `.env`
+- [ ] Configure webhook in Meta Dashboard: `https://your-app.onrender.com/api/whatsapp/webhook`
+- [ ] Verify token: `maa_durga_verify_token_2026`
+- [ ] Test with real "Hi" message
+
+### Optional 🔜
+- [ ] WhatsApp status notification automation when admin changes status
 - [ ] SMS notifications on submission status change
 
 ---
 
 ## 🎯 Current Context
 
-- **Active State**: Fully working. Admin login fixed. App running at `http://localhost:5173`.
+- **Active State**: All features built and verified. Supabase connected securely with service role key. WhatsApp Setup Guide ready for admin onboarding.
 - **What was just accomplished**:
-  - Fixed **403 Forbidden** on admin login — added `localhost:5173` to Express CORS `ALLOWED_ORIGINS`.
-  - Fixed **wrong password** — `data/settings.json` now has `adminPassword: "Pratap@135"`; server auto-migrates to bcrypt hash on first login.
-  - Both Express backend (`:3000`) and Vite dev server (`:5173`) confirmed running.
-  - Admin login tested via PowerShell — returns `{ success: true, token: "..." }` ✅
-- **Admin Password**: `Pratap@135` (stored as bcrypt hash after first login)
-- **Next AI Instructions**: Ask user what to do next — production deployment, new features, or UI changes.
+  - Fixed CSS `flex-shrink` bug causing chat simulator buttons to disappear.
+  - Fixed Supabase RLS issue by migrating backend to use `service_role` key instead of anon key.
+  - Created comprehensive `whatsapp_setup_guide.md` artifact.
+- **Admin Password**: `Pratap@135`
+- **WhatsApp Verify Token**: `maa_durga_verify_token_2026`
+- **Next Step**: Follow WhatsApp Setup Guide when ready to connect real Meta WhatsApp Cloud API.
 
 ---
 
@@ -285,10 +397,30 @@ npm run build        # Build React → public/
 npm start            # Serve everything from Express (:3000)
 ```
 
-**Required Environment Variables** (set in `.env`):
+**Required Environment Variables** (set in `.env` and Render Environment):
 ```
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-anon-key
 JWT_SECRET=your-jwt-secret
 PORT=3000
+PUBLIC_APP_URL=https://your-app.onrender.com
+
+# WhatsApp (fill when phone is ready)
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_ACCESS_TOKEN=
+WHATSAPP_VERIFY_TOKEN=maa_durga_verify_token_2026
 ```
+
+## 📱 WhatsApp Setup Checklist (When Phone is Ready)
+
+1. ✅ Meta Developer App — create at developers.facebook.com
+2. ✅ Add WhatsApp Business Platform product
+3. ⏳ Add phone number → verify with OTP (**PHYSICAL PHONE REQUIRED**)
+4. ⏳ Generate System User permanent Access Token
+5. ⏳ Set `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN` in `.env`
+6. ⏳ Set `PUBLIC_APP_URL` to live Render URL
+7. ⏳ Configure Webhook in Meta Dashboard:
+   - URL: `https://your-app.onrender.com/api/whatsapp/webhook`
+   - Verify Token: `maa_durga_verify_token_2026`
+   - Subscribe to: `messages`
+8. ⏳ Test: Send "Hi" from any WhatsApp → bot should reply with service menu

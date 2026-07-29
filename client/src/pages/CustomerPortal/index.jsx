@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { SERVICES } from '../../constants/services';
 
 function ServiceCard({ service, onApply }) {
@@ -20,7 +20,7 @@ function ServiceCard({ service, onApply }) {
             <li key={i}><i className="fa-solid fa-check"></i> {req}</li>
           ))}
           {service.requirements.length > 2 && (
-            <li><i className="fa-solid fa-ellipsis"></i> & {service.requirements.length - 2} more...</li>
+            <li><i className="fa-solid fa-ellipsis"></i> &amp; {service.requirements.length - 2} more...</li>
           )}
         </ul>
       </div>
@@ -31,11 +31,10 @@ function ServiceCard({ service, onApply }) {
   );
 }
 
-function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess }) {
+function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess, prefilledName, prefilledPhone, uploadToken }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPass, setShowPass] = useState(false);
   const fileInputRef = useRef();
   const nameRef = useRef();
   const phoneRef = useRef();
@@ -58,9 +57,10 @@ function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess 
     const formData = new FormData();
     formData.append('clientName', nameRef.current.value);
     formData.append('clientPhone', phoneRef.current.value);
-    formData.append('serviceType', service.id);
-    formData.append('serviceName', service.title);
+    formData.append('serviceType', service.id || service.slug || service.name);
+    formData.append('serviceName', service.title || service.name);
     formData.append('notes', notesRef.current.value);
+    if (uploadToken) formData.append('upload_token', uploadToken);
     selectedFiles.forEach(f => formData.append('documents', f));
     try {
       const res = await fetch('/api/submissions', { method: 'POST', body: formData });
@@ -78,27 +78,36 @@ function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess 
     }
   };
 
+  // Determine the requirements list (works for both old SERVICES format and new DB format)
+  const requirementsList = service.requirements || (service.documents || []).map(d => d.document_name);
+
   return (
     <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-content">
         <div className="modal-header">
-          <h3><i className={service.icon}></i> Apply for {service.title}</h3>
+          <h3><i className={service.icon || 'fa-solid fa-file'}></i> Apply for {service.title || service.name}</h3>
           <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
+          {uploadToken && (
+            <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: '#4ade80' }}>
+              <i className="fa-brands fa-whatsapp" style={{ fontSize: '1.1rem' }}></i>
+              <span>This form was pre-loaded from your <strong>WhatsApp conversation</strong>. Your service is already selected!</span>
+            </div>
+          )}
           <div className="requirements-box">
             <h4><i className="fa-solid fa-circle-info"></i> Required Documents:</h4>
-            <ul>{service.requirements.map((r, i) => <li key={i}>{r}</li>)}</ul>
+            <ul>{requirementsList.map((r, i) => <li key={i}>{r}</li>)}</ul>
           </div>
           <form onSubmit={handleSubmit}>
             <div className="form-grid-2">
               <div className="form-group">
                 <label>Your Full Name (English)</label>
-                <input type="text" ref={nameRef} placeholder="Enter your full name" required />
+                <input type="text" ref={nameRef} placeholder="Enter your full name" required defaultValue={prefilledName || ''} />
               </div>
               <div className="form-group">
                 <label>Your Mobile Number (WhatsApp Number)</label>
-                <input type="tel" ref={phoneRef} placeholder="Enter your WhatsApp number" required />
+                <input type="tel" ref={phoneRef} placeholder="Enter your WhatsApp number" required defaultValue={prefilledPhone || ''} />
               </div>
             </div>
             <div className="form-group">
@@ -106,7 +115,7 @@ function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess 
               <textarea ref={notesRef} rows="2" placeholder="Example: Need correction in Father's Name, etc. (Optional)"></textarea>
             </div>
             <div className="form-group">
-              <label>Select & Upload Documents (Max 10 files, any image size allowed - auto compressed)</label>
+              <label>Select &amp; Upload Documents (Max 10 files, any image size allowed - auto compressed)</label>
               <div
                 className={`file-drop-area ${isDragOver ? 'drag-over' : ''}`}
                 onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
@@ -115,7 +124,7 @@ function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess 
                 onClick={() => fileInputRef.current?.click()}
               >
                 <i className="fa-solid fa-cloud-arrow-up file-icon"></i>
-                <p>Drag & drop files here, or <span className="file-browse">browse files</span></p>
+                <p>Drag &amp; drop files here, or <span className="file-browse">browse files</span></p>
                 <input type="file" ref={fileInputRef} multiple accept="image/*,application/pdf"
                   style={{ display: 'none' }}
                   onChange={e => handleFiles(e.target.files)} />
@@ -150,7 +159,63 @@ function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess 
 
 export default function CustomerPortal({ shopSettings, showToast, adminToken, onSubmitSuccess }) {
   const [modalService, setModalService] = useState(null);
+  const [uploadToken, setUploadToken] = useState(null);
+  const [prefilledName, setPrefilledName] = useState('');
+  const [prefilledPhone, setPrefilledPhone] = useState('');
   const cleanPhone = String(shopSettings?.shopPhone || '918707845206').replace(/[^0-9]/g, '');
+
+  // Check for ?upload=TOKEN in URL (WhatsApp-generated secure link)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('upload');
+    if (!token) return;
+
+    setUploadToken(token);
+
+    fetch(`/api/upload-session/${token}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.success) {
+          showToast(data.message || 'This upload link is invalid or has expired.', 'error');
+          return;
+        }
+        const session = data.data;
+        const svc = session.service;
+        if (!svc) return;
+
+        // Build a service object compatible with UploadModal
+        const builtService = {
+          id: svc.id,
+          slug: svc.slug,
+          title: svc.name,
+          name: svc.name,
+          icon: svc.icon || 'fa-solid fa-file',
+          hindiTitle: svc.hindi_title || '',
+          description: svc.description || '',
+          requirements: (svc.documents || []).filter(d => d.is_required).map(d => d.document_name),
+          documents: svc.documents || [],
+        };
+
+        setPrefilledName(session.customer_name || '');
+        setPrefilledPhone(session.whatsapp_number || '');
+        setModalService(builtService);
+
+        // Clean URL without reload
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', cleanUrl);
+      })
+      .catch(err => {
+        console.error('[Upload Token] Error:', err);
+        showToast('Failed to load your pre-filled application. Please select a service manually.', 'error');
+      });
+  }, []);
+
+  const handleApply = (serviceId) => {
+    setUploadToken(null);
+    setPrefilledName('');
+    setPrefilledPhone('');
+    setModalService(SERVICES[serviceId]);
+  };
 
   return (
     <section className="tab-content active">
@@ -185,18 +250,21 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
         </div>
         <div className="services-grid">
           {Object.values(SERVICES).map(service => (
-            <ServiceCard key={service.id} service={service} onApply={setModalService} />
+            <ServiceCard key={service.id} service={service} onApply={handleApply} />
           ))}
         </div>
       </div>
 
       {modalService && (
         <UploadModal
-          service={SERVICES[modalService]}
-          onClose={() => setModalService(null)}
+          service={modalService}
+          onClose={() => { setModalService(null); setUploadToken(null); }}
           showToast={showToast}
           adminToken={adminToken}
           onSubmitSuccess={onSubmitSuccess}
+          prefilledName={prefilledName}
+          prefilledPhone={prefilledPhone}
+          uploadToken={uploadToken}
         />
       )}
     </section>

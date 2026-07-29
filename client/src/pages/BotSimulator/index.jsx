@@ -12,16 +12,51 @@ function timeStr() {
   return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
+// Convert DB service format to simulator-compatible format
+function normalizeService(svc) {
+  return {
+    id: svc.id || svc.slug,
+    title: svc.name || svc.title,
+    name: svc.name || svc.title,
+    icon: svc.icon || 'fa-solid fa-file',
+    hindiTitle: svc.hindi_title || svc.hindiTitle || '',
+    description: svc.description || '',
+    requirements: svc.requirements || (svc.documents || []).filter(d => d.is_required).map(d => d.document_name),
+    slug: svc.slug || '',
+  };
+}
+
 export default function BotSimulator({ shopSettings, onGoToAdmin }) {
   const [messages, setMessages] = useState([]);
   const [inputVal, setInputVal] = useState('');
   const [payloadNode, setPayloadNode] = useState('Waiting...');
   const [payloadCode, setPayloadCode] = useState('// Send a message to see the WhatsApp Graph API JSON payloads in real-time.');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dynamicServices, setDynamicServices] = useState([]);
   const chatRef = useRef();
 
   const shopName = shopSettings?.shopName || 'Maa Durga Jan Seva Kendra';
   const origin = window.location.origin;
+
+  // Fetch services from API (same source as real WhatsApp bot)
+  useEffect(() => {
+    fetch('/api/services')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.data && data.data.length > 0) {
+          setDynamicServices(data.data.map(normalizeService));
+        } else {
+          // Fallback to hardcoded services
+          setDynamicServices(Object.values(SERVICES));
+        }
+      })
+      .catch(() => {
+        setDynamicServices(Object.values(SERVICES));
+      });
+  }, []);
+
+  // Use dynamic or fallback services
+  const activeServices = dynamicServices.length > 0 ? dynamicServices : Object.values(SERVICES);
 
   const addMsg = (type, html) => {
     setMessages(prev => [...prev, { type, html, time: timeStr() }]);
@@ -36,35 +71,90 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
     setMessages(prev => [...prev, { type: 'menu', time: timeStr() }]);
     updatePayload('n8n: HTTP Request (Welcome Menu)', {
       messaging_product: 'whatsapp', recipient_type: 'individual', to: 'CUSTOMER_PHONE_NUMBER', type: 'interactive',
-      interactive: { type: 'list', header: { type: 'text', text: 'Cyber Cafe Online Services' }, body: { text: 'Hello! 🙏 Hamare Cyber Cafe me aapka swagat hai.' }, footer: { text: 'Chunein aur aage badhein' }, action: { button: 'Services Menu 👇' } }
+      interactive: {
+        type: 'list',
+        header: { type: 'text', text: 'Cyber Cafe Online Services' },
+        body: { text: `Hello! 🙏 ${shopName} me aapka swagat hai. Service select karein:` },
+        footer: { text: 'Chunein aur aage badhein' },
+        action: {
+          button: 'Services Menu 👇',
+          sections: [{ title: 'Available Services', rows: activeServices.map((s, i) => ({ id: s.id, title: s.title || s.name, description: s.hindiTitle || s.description?.substring(0, 60) || '' })) }]
+        }
+      }
     });
   };
 
-  const processBotMenuChoice = (id) => {
-    const msgs = {
-      srv_pancard: `💳 *Pan Card Banane Ke Liye Zaroori Documents:*\n\n1️⃣ Aadhar Card\n2️⃣ Ek Passport Size Photo\n3️⃣ Signature (White Paper par)\n\n👇 *Document Upload Karein:*\n👉 ${origin}/#portal`,
-      srv_income: `📄 *Income Certificate Ke Liye Documents:*\n\n1️⃣ Aadhar Card\n2️⃣ Passport Photo\n3️⃣ Pradhan ka Ghoshna Patra\n\n👉 ${origin}/#portal`,
-      srv_voterid: `🗳️ *Voter ID Ke Liye Documents:*\n\n1️⃣ Aadhar Card / Age Proof\n2️⃣ Passport Photo\n3️⃣ Address Proof\n\n👉 ${origin}/#portal`,
-      srv_caste: `👥 *Caste Certificate Ke Documents:*\n\n1️⃣ Aadhar Card\n2️⃣ Passport Photo\n3️⃣ Father ka Jati Praman Patra\n\n👉 ${origin}/#portal`,
-    };
-    addMsg('bot', msgs[id] || 'Kripya menu se option select karein.');
+  const processBotMenuChoice = (svc) => {
+    const requirements = (svc.requirements || []).map((r, i) => `${i + 1}️⃣ ${r}`).join('\n');
+    const simToken = 'sim-demo-' + Math.random().toString(36).substring(2, 10);
+    const uploadLink = `${origin}/?upload=${simToken}`;
+
+    setMessages(prev => [...prev, { 
+      type: 'service_reply', 
+      html: `📄 *${svc.title || svc.name}*${svc.hindiTitle ? `\n(${svc.hindiTitle})` : ''}\n\n` +
+            `Required Documents:\n${requirements}\n\n` +
+            `Please upload your documents here:\n🔗 ${uploadLink}\n\n` +
+            `_[Simulated link — expires in 60 min in production]_`,
+      time: timeStr() 
+    }]);
+
+    updatePayload('n8n: HTTP Request (Service Info + Upload Link)', {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: 'CUSTOMER_PHONE_NUMBER',
+      type: 'text',
+      text: {
+        body: `📄 ${svc.title || svc.name}\n\nRequired Documents:\n${(svc.requirements || []).join(', ')}\n\nUpload link: ${uploadLink}`
+      },
+      _meta: {
+        service_id: svc.id,
+        upload_token: simToken,
+        upload_url: uploadLink,
+        source: 'n8n_via_express_api'
+      }
+    });
   };
 
   const processMessage = (text) => {
-    const t = text.toLowerCase();
+    const t = text.toLowerCase().trim();
     updatePayload('n8n Webhook (Text Message)', { messages: [{ from: 'CUSTOMER_PHONE', type: 'text', text: { body: text } }] });
+
+    // Shop info queries
     if (t.includes('shop') || t.includes('timing') || t.includes('address') || t.includes('location')) {
       addMsg('bot', `📍 *Shop Details:*\n🏠 ${shopSettings?.shopAddress || ''}\n⏰ ${shopSettings?.shopTimings || '24/7'}`);
-    } else if (t.includes('website') || t.includes('link') || t.includes('upload')) {
-      addMsg('bot', `🌐 *Hamari Website:*\n👉 ${origin}/#portal`);
-    } else if (t.includes('pan')) { processBotMenuChoice('srv_pancard'); }
-    else if (t.includes('income') || t.includes('aay')) { processBotMenuChoice('srv_income'); }
-    else if (t.includes('voter')) { processBotMenuChoice('srv_voterid'); }
-    else if (t.includes('caste') || t.includes('jati')) { processBotMenuChoice('srv_caste'); }
-    else {
-      addMsg('bot', 'Main aapka message samajh nahi paya. Kripya menu se option select karein:');
-      setTimeout(addBotWelcomeMenu, 500);
+      return;
     }
+    if (t.includes('website') || t.includes('link') || t.includes('upload')) {
+      addMsg('bot', `🌐 *Hamari Website:*\n👉 ${origin}/#portal`);
+      return;
+    }
+
+    // Greeting detection — same logic as real WhatsApp bot
+    const greetings = ['hi', 'hello', 'helo', 'hey', 'namaste', 'namaskar', 'jai', 'start', 'menu', 'help'];
+    const isGreeting = greetings.some(g => t.includes(g)) || t.length <= 3;
+    if (isGreeting) {
+      addBotWelcomeMenu();
+      return;
+    }
+
+    // Try keyword match first
+    const keywords = { pan: 'pan', voter: 'voter', income: 'income', aay: 'income', caste: 'caste', jati: 'caste' };
+    for (const [kw, slug] of Object.entries(keywords)) {
+      if (t.includes(kw)) {
+        const found = activeServices.find(s => (s.slug || s.id || '').includes(slug) || (s.title || s.name || '').toLowerCase().includes(kw));
+        if (found) { processBotMenuChoice(found); return; }
+      }
+    }
+
+    // Try number selection
+    const num = parseInt(t, 10);
+    if (!isNaN(num) && num > 0 && num <= activeServices.length) {
+      processBotMenuChoice(activeServices[num - 1]);
+      return;
+    }
+
+    addMsg('bot', 'Main aapka message samajh nahi paya. Kripya menu se option select karein:');
+    setTimeout(addBotWelcomeMenu, 500);
   };
 
   const sendMessage = () => {
@@ -76,21 +166,24 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
   };
 
   useEffect(() => {
+    if (activeServices.length === 0) return;
     setTimeout(() => {
       addMsg('bot', `Hi! ${shopName} me aapka swagat hai. Main aapki kya madad kar sakta hoon?`);
       setTimeout(addBotWelcomeMenu, 600);
     }, 1000);
-  }, []);
+  }, [activeServices.length]);
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages]);
 
-  const selectRow = (id, title) => {
+  const selectRow = (svc) => {
     setMenuOpen(false);
-    addMsg('user', title);
-    updatePayload('n8n Webhook (List Reply Input)', { messages: [{ type: 'interactive', interactive: { type: 'list_reply', list_reply: { id, title } } }] });
-    setTimeout(() => processBotMenuChoice(id), 1000);
+    addMsg('user', svc.title || svc.name);
+    updatePayload('n8n Webhook (List Reply Input)', {
+      messages: [{ type: 'interactive', interactive: { type: 'list_reply', list_reply: { id: svc.id, title: svc.title || svc.name } } }]
+    });
+    setTimeout(() => processBotMenuChoice(svc), 1000);
   };
 
   return (
@@ -127,6 +220,14 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
                       </div>
                     </div>
                   );
+                  if (m.type === 'service_reply') return (
+                    <div key={i} className="wa-interactive-card">
+                      <div className="wa-interactive-body" dangerouslySetInnerHTML={{ __html: m.html.replace(/\n/g, '<br>') }} />
+                      <div className="wa-interactive-action-btn" onClick={() => setMenuOpen(true)}>
+                        <i className="fa-solid fa-bars"></i> Main Menu
+                      </div>
+                    </div>
+                  );
                   return (
                     <div key={i} className={`wa-msg ${m.type === 'user' ? 'out' : 'in'}`}>
                       <span dangerouslySetInnerHTML={{ __html: m.html.replace(/\n/g, '<br>') }} />
@@ -138,7 +239,7 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
                   );
                 })}
 
-                {/* Service menu modal inside phone */}
+                {/* Dynamic service menu modal inside phone */}
                 {menuOpen && (
                   <div className="wa-mock-menu-modal open">
                     <div className="wa-mock-menu-header">
@@ -146,24 +247,15 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
                       <button className="wa-mock-menu-close" onClick={() => setMenuOpen(false)}>&times;</button>
                     </div>
                     <div className="wa-mock-menu-body">
-                      <div className="wa-mock-menu-section-title">Government ID Cards</div>
-                      <div className="wa-mock-menu-row" onClick={() => selectRow('srv_pancard', 'Pan Card Apply')}>
-                        <div className="wa-mock-menu-row-title">Pan Card Apply</div>
-                        <div className="wa-mock-menu-row-desc">Naya Pan Card ya Correction</div>
-                      </div>
-                      <div className="wa-mock-menu-row" onClick={() => selectRow('srv_voterid', 'Voter ID Card')}>
-                        <div className="wa-mock-menu-row-title">Voter ID Card</div>
-                        <div className="wa-mock-menu-row-desc">Naya Voter ID card banayein</div>
-                      </div>
-                      <div className="wa-mock-menu-section-title">Certificates &amp; Others</div>
-                      <div className="wa-mock-menu-row" onClick={() => selectRow('srv_income', 'Income Certificate')}>
-                        <div className="wa-mock-menu-row-title">Income Certificate</div>
-                        <div className="wa-mock-menu-row-desc">Aay Praman Patra (आय प्रमाण पत्र)</div>
-                      </div>
-                      <div className="wa-mock-menu-row" onClick={() => selectRow('srv_caste', 'Caste Certificate')}>
-                        <div className="wa-mock-menu-row-title">Caste Certificate</div>
-                        <div className="wa-mock-menu-row-desc">Jati Praman Patra (जाति प्रमाण पत्र)</div>
-                      </div>
+                      <div className="wa-mock-menu-section-title">Available Services ({activeServices.length})</div>
+                      {activeServices.map((svc, idx) => (
+                        <div key={svc.id || idx} className="wa-mock-menu-row" onClick={() => selectRow(svc)}>
+                          <div className="wa-mock-menu-row-title">
+                            {idx + 1}. {svc.title || svc.name}
+                          </div>
+                          <div className="wa-mock-menu-row-desc">{svc.hindiTitle || svc.description?.substring(0, 50) || ''}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -187,13 +279,14 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
           </div>
           <div className="simulator-hint">
             <i className="fa-solid fa-circle-info"></i> Type <strong className="glow-text">"Hi"</strong> or <strong className="glow-text">"shop"</strong> to test!
+            {dynamicServices.length > 0 && <span style={{ marginLeft: '0.75rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>• {dynamicServices.length} services loaded from database</span>}
           </div>
         </div>
 
         {/* Right panel */}
         <div className="sim-details-panel">
           <h2><i className="fa-brands fa-whatsapp"></i> WhatsApp Cloud API &amp; n8n</h2>
-          <p>This simulator displays exactly how the self-hosted n8n workflow processes messages sent to the Meta WhatsApp Cloud API.</p>
+          <p>This simulator displays exactly how the self-hosted n8n workflow processes messages sent to the Meta WhatsApp Cloud API. <strong>Services are loaded dynamically from the database</strong> — the same source the real bot uses.</p>
           <div className="n8n-features-list">
             <div className="feature-item">
               <div className="feature-icon"><i className="fa-solid fa-network-wired"></i></div>
@@ -202,6 +295,10 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
             <div className="feature-item">
               <div className="feature-icon"><i className="fa-solid fa-code-branch"></i></div>
               <div className="feature-body"><h3>Switch Node (Logic)</h3><p>Analyzes user input, routing to the correct reply node.</p></div>
+            </div>
+            <div className="feature-item">
+              <div className="feature-icon"><i className="fa-solid fa-database"></i></div>
+              <div className="feature-body"><h3>Dynamic Service Lookup</h3><p>Bot fetches services from the backend API — admin can add/remove services without touching the n8n workflow.</p></div>
             </div>
             <div className="feature-item">
               <div className="feature-icon"><i className="fa-solid fa-paper-plane"></i></div>

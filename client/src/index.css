@@ -100,16 +100,44 @@
     --primary-subtle: rgba(217,119,6,0.08);
     --accent-color:   #D97706;
     --accent-glow:    rgba(217,119,6,0.25);
+    --accent-teal:    #0F766E;
     --border-color:   #CBD5E1;
     --glass-border:   rgba(15,23,42,0.08);
     --glass-bg:       rgba(255,255,255,0.82);
     --surface-overlay: rgba(255,255,255,0.88);
     --shadow:         0 8px 32px rgba(15,23,42,0.12);
     --shadow-card:    0 4px 20px rgba(15,23,42,0.08);
+    --wa-chat-pattern: linear-gradient(180deg, rgba(243,244,246,0.9), rgba(243,244,246,1));
+    --wa-container-bg: #f3f4f6;
+    --wa-header-surface: #075e54;
+    --wa-header-text: #ffffff;
+    --wa-incoming-bg: #ffffff;
+    --wa-outgoing-bg: #dcf8c6;
   }
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── Explicit Light Mode Overrides (applies to both light and system-light) ── */
+:root[data-theme="light"] .quick-contact-bar,
+:root[data-theme="system"] .quick-contact-bar {
+  background: #EFF6FF !important;
+  border-color: #BFDBFE !important;
+}
+:root[data-theme="light"] .quick-contact-bar span,
+:root[data-theme="system"] .quick-contact-bar span {
+  color: #334155 !important;
+}
+:root[data-theme="light"] .hero-section::before,
+:root[data-theme="system"] .hero-section::before {
+  opacity: 0.1;
+}
+:root[data-theme="light"] body,
+:root[data-theme="system"] body {
+  background-image:
+    radial-gradient(ellipse 60% 40% at 10% 0%, rgba(217,119,6,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(99,102,241,0.04) 0%, transparent 55%);
+}
+
+
 html { scroll-behavior: smooth; }
 body {
   background-color: var(--bg-primary);
@@ -260,7 +288,7 @@ code {
 .hero-subtitle { color: var(--text-secondary); font-size: 1.05rem; max-width: 650px; margin: 0 auto 2rem; line-height: 1.7; }
 .quick-contact-bar {
   display: inline-flex; align-items: center; flex-wrap: wrap;
-  background: rgba(15,23,42,0.6); border: 1px solid var(--border-color);
+  background: var(--bg-tertiary); border: 1px solid var(--border-color);
   border-radius: 50px; padding: 0.75rem 1.75rem; margin-bottom: 2rem; gap: 1.25rem;
 }
 .quick-contact-bar span { font-size: 0.88rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.45rem; }
@@ -287,9 +315,9 @@ code {
 .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
 .service-card {
   background: var(--bg-card); border: 1px solid var(--border-color);
-  border-radius: var(--border-radius); padding: 1.8rem;
+  border-radius: var(--border-radius); padding: 1.2rem;
   cursor: pointer; position: relative; overflow: hidden;
-  display: flex; flex-direction: column; height: 100%;
+  display: flex; flex-direction: column;
   transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease, border-color var(--transition-speed) ease;
 }
 .service-card:hover { transform: translateY(-6px); border-color: var(--primary-color); box-shadow: 0 16px 40px rgba(245,158,11,0.14), 0 4px 12px rgba(0,0,0,0.3); }
@@ -306,7 +334,7 @@ code {
   opacity: 0; transition: opacity var(--transition-speed); pointer-events: none;
 }
 .service-card:hover::after { opacity: 1; }
-.service-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.2rem; }
+.service-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
 .service-icon {
   font-size: 1.6rem; color: var(--primary-color); background: var(--primary-subtle);
   width: 52px; height: 52px; border-radius: 12px;
@@ -317,8 +345,8 @@ code {
 .service-card:hover .service-icon { background: rgba(245,158,11,0.15); box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
 .service-badge { background: var(--bg-tertiary); border: 1px solid var(--border-color); font-size: 0.72rem; font-weight: 500; color: var(--text-secondary); padding: 0.2rem 0.65rem; border-radius: 50px; }
 .service-title { font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary); }
-.service-desc { color: var(--text-secondary); font-size: 0.86rem; margin-bottom: 1.4rem; flex-grow: 1; line-height: 1.6; }
-.service-requirements-preview { margin-bottom: 1.4rem; }
+.service-desc { color: var(--text-secondary); font-size: 0.86rem; margin-bottom: 0.8rem; line-height: 1.5; }
+.service-requirements-preview { margin-bottom: 0.8rem; }
 .service-requirements-preview h5 { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.6px; margin-bottom: 0.5rem; }
 .service-requirements-preview ul { list-style: none; }
 .service-requirements-preview li { font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem; }
@@ -370,7 +398,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .password-input-wrapper i { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); cursor: pointer; transition: color var(--transition-speed); }
 .password-input-wrapper i:hover { color: var(--text-primary); }
 .login-error { color: var(--danger-color); font-size: 0.82rem; margin-top: 0.8rem; text-align: center; font-weight: 500; }
-.file-drop-area { border: 2px dashed var(--border-color); border-radius: var(--radius-sm); padding: 2rem 1rem; text-align: center; cursor: pointer; background: rgba(15,23,42,0.3); transition: all var(--transition-speed); position: relative; }
+.file-drop-area { border: 2px dashed var(--border-color); border-radius: var(--radius-sm); padding: 2rem 1rem; text-align: center; cursor: pointer; background: var(--bg-tertiary); transition: all var(--transition-speed); position: relative; }
 .file-drop-area:hover, .file-drop-area.drag-over { border-color: var(--primary-color); background: var(--primary-subtle); }
 .file-drop-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .file-icon { font-size: 2.5rem; color: var(--text-muted); margin-bottom: 0.6rem; transition: color var(--transition-speed); }

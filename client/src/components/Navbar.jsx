@@ -57,8 +57,8 @@ export default function Navbar({ activeTab, onTabChange, shopSettings }) {
     <header className="navbar">
       <a href="#portal" onClick={() => { onTabChange('portal'); setMenuOpen(false); }}>
         <div className="logo">
-          <div className="logo-icon-wrap">
-            <i className="fa-solid fa-laptop-code logo-icon"></i>
+          <div className="logo-icon-wrap" style={{ background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src="/logo.jpeg" alt="CSC Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '4px' }} />
           </div>
           <span className="logo-text">Cyber<span className="highlight">Cafe</span></span>
         </div>

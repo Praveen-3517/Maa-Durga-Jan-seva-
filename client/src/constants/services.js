@@ -1,4 +1,20 @@
 export const SERVICES = {
+  // Merged certificate group (FIRST PRIORITY)
+  srv_certificates: {
+    id: 'srv_certificates',
+    title: 'AAY / JAATI / NIWAS',
+    hindiTitle: 'आय / जाति / निवास प्रमाण पत्र',
+    description: 'Income Certificate (Aay), Caste Certificate (Jaati), Domicile Certificate (Niwas) — choose one to apply.',
+    icon: 'fa-solid fa-file-shield',
+    isMerged: true,
+    subServices: ['aay', 'jaati', 'niwas', 'all'],
+    requirements: [
+      'Aadhar Card',
+      'Passport Size Photo',
+      'Supporting Documents (as per certificate type)',
+    ],
+    uploadUrl: '/upload-certificates',
+  },
   srv_pancard: {
     id: 'srv_pancard',
     title: 'PAN Card Apply',
@@ -25,32 +41,101 @@ export const SERVICES = {
     ],
     uploadUrl: '/upload-voterid',
   },
-  srv_income: {
-    id: 'srv_income',
-    title: 'Income Certificate',
-    hindiTitle: 'आय प्रमाण पत्र (Income Certificate)',
-    description: 'Get your official Income Certificate (Aay Praman Patra) processed.',
+};
+
+
+// Sub-service definitions for the merged certificate group
+export const CERTIFICATE_TYPES = {
+  aay: {
+    id: 'aay',
+    label: 'आय प्रमाण पत्र',
+    sublabel: 'Income Certificate (Aay)',
     icon: 'fa-solid fa-file-invoice-dollar',
-    requirements: [
-      'Aadhar Card',
-      'One Passport Size Photograph',
-      'Self-Declaration Form (Swasthya/Aay Ghoshna Patra)',
-      'Income certificate template signed by Pradhan or Corporator',
+    color: '#f59e0b',
+    fields: [
+      { name: 'applicantName', label: 'आवेदक का नाम / Applicant Name', type: 'text', placeholder: 'पूरा नाम लिखें', required: true },
+      { name: 'fatherHusbandName', label: 'पिता / पति का नाम / Father or Husband Name', type: 'text', placeholder: 'पिता या पति का नाम', required: true },
+      { name: 'motherName', label: 'माता का नाम / Mother Name', type: 'text', placeholder: 'माता का नाम', required: true },
+      { name: 'category', label: 'जाति श्रेणी / Category', type: 'select', options: ['OBC', 'GENERAL', 'SC', 'ST', 'Any other'], required: true },
+      { name: 'district', label: 'जिला / District', type: 'text', value: 'Ghazipur', fixed: true },
+      { name: 'tahsil', label: 'तहसील / Tahsil', type: 'select', options: ['Ghazipur', 'Jakhaniya', 'Kasamabad', 'Mohamdabad', 'Saidpur', 'Sevrai', 'Jamaniya'], required: true },
+      { name: 'mobile', label: 'मोबाइल नंबर (आधार से लिंक) / Mobile (Aadhar Linked)', type: 'tel', placeholder: '10 अंक का मोबाइल नंबर', required: true },
     ],
-    uploadUrl: '/upload-income',
+    documents: [
+      'आधार कार्ड / Aadhar Card',
+      'पासपोर्ट साइज फोटो / Passport Size Photo',
+      'पिता या माता की सैलरी स्लिप / Father or Mother Salary Slip',
+    ],
   },
-  srv_caste: {
-    id: 'srv_caste',
-    title: 'Caste Certificate',
-    hindiTitle: 'जाति प्रमाण पत्र (Caste Certificate)',
-    description: 'Apply for Caste Certificate (Jati Praman Patra) for SC/ST/OBC categories.',
+  jaati: {
+    id: 'jaati',
+    label: 'जाति प्रमाण पत्र',
+    sublabel: 'Caste Certificate (Jaati)',
     icon: 'fa-solid fa-users',
-    requirements: [
-      'Aadhar Card',
-      'One Passport Size Photograph',
-      "Father's Caste Certificate (mandatory for verification)",
-      'Ration Card or Land Registry document showing family lineage',
+    color: '#8b5cf6',
+    fields: [
+      { name: 'applicantName', label: 'आवेदक का नाम / Applicant Name', type: 'text', placeholder: 'पूरा नाम लिखें', required: true },
+      { name: 'fatherHusbandName', label: 'पिता / पति का नाम / Father or Husband Name', type: 'text', placeholder: 'पिता या पति का नाम', required: true },
+      { name: 'motherName', label: 'माता का नाम / Mother Name', type: 'text', placeholder: 'माता का नाम', required: true },
+      { name: 'category', label: 'जाति श्रेणी / Category', type: 'select', options: ['OBC', 'GENERAL', 'SC', 'ST', 'Any other'], required: true },
+      { name: 'district', label: 'जिला / District', type: 'text', value: 'Ghazipur', fixed: true },
+      { name: 'tahsil', label: 'तहसील / Tahsil', type: 'select', options: ['Ghazipur', 'Jakhaniya', 'Kasamabad', 'Mohamdabad', 'Saidpur', 'Sevrai', 'Jamaniya'], required: true },
+      { name: 'jaati', label: 'जाति / Caste', type: 'text', placeholder: 'जाति का नाम लिखें', required: true },
+      { name: 'upjaati', label: 'उपजाति / Sub-Caste (अनिवार्य / Mandatory)', type: 'text', placeholder: 'उपजाति का नाम', required: true },
+      { name: 'mobile', label: 'मोबाइल नंबर (आधार से लिंक) / Mobile (Aadhar Linked)', type: 'tel', placeholder: '10 अंक का मोबाइल नंबर', required: true },
     ],
-    uploadUrl: '/upload-caste',
+    documents: [
+      'आधार कार्ड / Aadhar Card',
+      'पासपोर्ट साइज फोटो / Passport Size Photo',
+    ],
+  },
+  niwas: {
+    id: 'niwas',
+    label: 'निवास प्रमाण पत्र',
+    sublabel: 'Domicile Certificate (Niwas)',
+    icon: 'fa-solid fa-house-chimney-user',
+    color: '#10b981',
+    fields: [
+      { name: 'applicantName', label: 'आवेदक का नाम / Applicant Name', type: 'text', placeholder: 'पूरा नाम लिखें', required: true },
+      { name: 'fatherHusbandName', label: 'पति / पिता का नाम / Husband or Father Name', type: 'text', placeholder: 'पति या पिता का नाम', required: true },
+      { name: 'motherName', label: 'माता का नाम / Mother Name', type: 'text', placeholder: 'माता का नाम', required: true },
+      { name: 'thana', label: 'थाना / Police Station (Thana)', type: 'text', placeholder: 'थाने का नाम', required: true },
+      { name: 'category', label: 'जाति श्रेणी / Category', type: 'select', options: ['OBC', 'GENERAL', 'SC', 'ST', 'Any other'], required: true },
+      { name: 'district', label: 'जिला / District', type: 'text', value: 'Ghazipur', fixed: true },
+      { name: 'tahsil', label: 'तहसील / Tahsil', type: 'select', options: ['Ghazipur', 'Jakhaniya', 'Kasamabad', 'Mohamdabad', 'Saidpur', 'Sevrai', 'Jamaniya'], required: true },
+      { name: 'mobile', label: 'मोबाइल नंबर (आधार से लिंक) / Mobile (Aadhar Linked)', type: 'tel', placeholder: '10 अंक का मोबाइल नंबर', required: true },
+    ],
+    documents: [
+      'आधार कार्ड / Aadhar Card',
+      'पासपोर्ट साइज फोटो / Passport Size Photo',
+      'पति का आधार (यदि विवाहित हो) / Husband Aadhar (if married)',
+      'ग्राम प्रधान द्वारा प्रमाणित निवास / Gram Pradhan Certified Niwas',
+    ],
+  },
+  all: {
+    id: 'all',
+    label: 'सभी (आय, जाति, निवास)',
+    sublabel: 'All Certificates (Aay, Jaati, Niwas)',
+    icon: 'fa-solid fa-layer-group',
+    color: '#ef4444',
+    fields: [
+      { name: 'applicantName', label: 'आवेदक का नाम / Applicant Name', type: 'text', placeholder: 'पूरा नाम लिखें', required: true },
+      { name: 'fatherHusbandName', label: 'पिता / पति का नाम / Father or Husband Name', type: 'text', placeholder: 'पिता या पति का नाम', required: true },
+      { name: 'motherName', label: 'माता का नाम / Mother Name', type: 'text', placeholder: 'माता का नाम', required: true },
+      { name: 'thana', label: 'थाना / Police Station (Thana)', type: 'text', placeholder: 'थाने का नाम', required: true },
+      { name: 'category', label: 'जाति श्रेणी / Category', type: 'select', options: ['OBC', 'GENERAL', 'SC', 'ST', 'Any other'], required: true },
+      { name: 'district', label: 'जिला / District', type: 'text', value: 'Ghazipur', fixed: true },
+      { name: 'tahsil', label: 'तहसील / Tahsil', type: 'select', options: ['Ghazipur', 'Jakhaniya', 'Kasamabad', 'Mohamdabad', 'Saidpur', 'Sevrai', 'Jamaniya'], required: true },
+      { name: 'jaati', label: 'जाति / Caste', type: 'text', placeholder: 'जाति का नाम लिखें', required: true },
+      { name: 'upjaati', label: 'उपजाति / Sub-Caste (अनिवार्य / Mandatory)', type: 'text', placeholder: 'उपजाति का नाम', required: true },
+      { name: 'mobile', label: 'मोबाइल नंबर (आधार से लिंक) / Mobile (Aadhar Linked)', type: 'tel', placeholder: '10 अंक का मोबाइल नंबर', required: true },
+    ],
+    documents: [
+      'आधार कार्ड / Aadhar Card',
+      'पासपोर्ट साइज फोटो / Passport Size Photo',
+      'पिता या माता की सैलरी स्लिप / Father or Mother Salary Slip',
+      'पति का आधार (यदि विवाहित हो) / Husband Aadhar (if married)',
+      'ग्राम प्रधान द्वारा प्रमाणित निवास / Gram Pradhan Certified Niwas',
+    ],
   },
 };

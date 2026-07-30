@@ -31,9 +31,9 @@ This document is the **Single Source of Truth** for the **Maa Durga Jan Seva Ken
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.0.0` (WhatsApp Automation + Dynamic Services)
+- **Version**: `3.2.0` (UI Polish, Light Mode Fix, Form Enhancements)
 - **Current Build**: Development — Express backend on `http://localhost:3000` | React dev server on `http://localhost:5173`.
-- **Development Status**: WhatsApp automation + Dynamic service management complete. Build verified ✅.
+- **Development Status**: UI polish + form enhancements complete. Build verified ✅.
 
 ---
 
@@ -291,6 +291,29 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-07-30 (v3.1.0 — Merged Certificates Flow)**:
+  - Replaced individual Income/Caste certificate services with a merged `srv_certificates` group (AAY / JAATI / NIWAS).
+  - Implemented a two-step application flow in `CustomerPortal`: `CertificatePickerModal` for type selection followed by `CertificateFormModal` for data entry.
+  - Added customized form fields specific to each certificate type (e.g., `jaati` and `upjaati` for Caste, `thana` for Domicile).
+  - Set fixed default values for specific regional fields (e.g., District and Tahsil locked to 'Ghazipur').
+
+- **2026-07-30 (v3.2.0 — UI Polish, Light Mode Fix, Form Enhancements)**:
+  - Added **"All" (सभी)** 4th certificate option combining AAY + JAATI + NIWAS requirements.
+  - Added **Category dropdown** (OBC/GENERAL/SC/ST/Any other) to all certificate forms.
+  - Changed **Tahsil** from fixed text to **dropdown** with 7 Ghazipur tehsils.
+  - Split document upload into **mandatory** (Aadhar Card + Photo — required before submit) + **other** (drag-and-drop).
+  - Replaced navbar icon with **CSC logo** (`logo.jpeg`).
+  - Made **address clickable** → Google Maps link.
+  - Full **Light Mode CSS fixes**: missing system theme variables, explicit `!important` overrides for contact bar.
+  - **Service card** spacing reduced; removed `height:100%` + `flex-grow:1` for content-driven sizing.
+  - Mobile responsiveness improvements for file upload boxes.
+  - Build verified ✅.
+
+- **2026-07-29 (v3.1.0 — Merged Certificates Flow)**:
+  - Replaced individual Income/Caste certificate services with a merged `srv_certificates` group (AAY / JAATI / NIWAS).
+  - Two-step flow: CertificatePickerModal → CertificateFormModal with dynamic fields + docs per type.
+  - Build verified ✅.
+
 - **2026-07-29 (v3.0.0 — WhatsApp Automation + Dynamic Services)**:
   - Added 13 new API routes to `server.js`: services CRUD, upload sessions, WhatsApp webhook.
   - WhatsApp Cloud API webhook handler (GET verification + POST message handling).
@@ -374,15 +397,25 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **Active State**: All features built and verified. Supabase connected securely with service role key. WhatsApp Setup Guide ready for admin onboarding. Render production environment is LIVE and fully stable with the latest environment variables.
-- **What was just accomplished**:
-  - Fixed CSS `flex-shrink` bug causing chat simulator buttons to disappear.
-  - Fixed Supabase RLS issue by migrating backend to use `service_role` key instead of anon key.
-  - Created comprehensive `whatsapp_setup_guide.md` artifact.
-  - Successfully synced new environment variables to Render and verified production deployment.
+- **Active State**: All features built and verified. UI fully polished with light/dark mode support. Form fields enhanced with Category + Tahsil dropdowns. Mandatory Aadhar/Photo upload enforced. Service cards compact and content-driven.
+- **What was just accomplished (v3.2.0 — 2026-07-30)**:
+  - **"All" Certificate Option**: Added `all` (सभी — आय, जाति, निवास) as 4th option in certificate picker, combining requirements of all three certificates.
+  - **Category Dropdown**: Added `जाति श्रेणी / Category` select field (OBC, GENERAL, SC, ST, Any other) to all 4 certificate forms.
+  - **Tahsil Dropdown**: Replaced fixed "Ghazipur" text with a proper dropdown: Ghazipur, Jakhaniya, Kasamabad, Mohamdabad, Saidpur, Sevrai, Jamaniya.
+  - **Mandatory Aadhar + Photo Upload**: Separated mandatory uploads (Aadhar Card + Passport Photo) as individual required file inputs. Form won't submit unless both are uploaded. Other supporting docs remain in drag-and-drop area.
+  - **CSC Logo in Navbar**: Replaced FontAwesome laptop icon with actual `logo.jpeg` in the navigation bar.
+  - **Address → Google Maps Link**: Address in hero section now links to `https://maps.app.goo.gl/4x7veXD2rUK5ZsP57`.
+  - **Android Mobile Responsiveness**: File upload boxes use `flexWrap` and `maxWidth: 100%` for clean mobile layout.
+  - **Light Mode Full Fix**:
+    - Added missing CSS variables (`--bg-card`, `--bg-tertiary`, WA colors, etc.) to system theme media query.
+    - Added explicit `!important` overrides for `.quick-contact-bar` in light/system themes → soft blue pill (`#EFF6FF`).
+    - Removed hardcoded `rgba(15,23,42,*)` from `.quick-contact-bar` and `.file-drop-area`.
+    - Fixed hardcoded `white` color text → `var(--text-primary)` for address + timings.
+    - Hero grid pattern opacity reduced in light mode.
+  - **Service Card Spacing**: Reduced padding (`1.8rem` → `1.2rem`), reduced margins between card sections. Removed `height: 100%` and `flex-grow: 1` so cards shrink to fit their content naturally — no more empty whitespace gaps.
 - **Admin Password**: `Pratap@135`
 - **WhatsApp Verify Token**: `maa_durga_verify_token_2026`
-- **Next Step**: Follow WhatsApp Setup Guide when ready to connect real Meta WhatsApp Cloud API.
+- **Next Step**: Run Supabase SQL migration → Connect real WhatsApp phone when available.
 
 ---
 

@@ -413,6 +413,7 @@ npm run build             # from f:\chat bot\
     - Fixed hardcoded `white` color text → `var(--text-primary)` for address + timings.
     - Hero grid pattern opacity reduced in light mode.
   - **Service Card Spacing**: Reduced padding (`1.8rem` → `1.2rem`), reduced margins between card sections. Removed `height: 100%` and `flex-grow: 1` so cards shrink to fit their content naturally — no more empty whitespace gaps.
+  - **Modal Layout**: Reverted modal layout & position back to original v3.2.0 state as requested.
 - **Admin Password**: `Pratap@135`
 - **WhatsApp Verify Token**: `maa_durga_verify_token_2026`
 - **Next Step**: Run Supabase SQL migration → Connect real WhatsApp phone when available.

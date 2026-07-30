@@ -44,10 +44,6 @@ function ServiceCard({ service, onApply }) {
 
 /* ─── Sub-Service Picker (for merged certificate card) ─── */
 function CertificatePickerModal({ onSelect, onClose }) {
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
   return (
     <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-content" style={{ maxWidth: 500 }}>
@@ -114,11 +110,6 @@ function CertificateFormModal({ certType, service, onClose, showToast, onSubmitS
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef();
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
 
   const handleChange = (name, value) => setFormValues(prev => ({ ...prev, [name]: value }));
 
@@ -312,11 +303,6 @@ function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess,
   const nameRef = useRef();
   const phoneRef = useRef();
   const notesRef = useRef();
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
 
   if (!service) return null;
 

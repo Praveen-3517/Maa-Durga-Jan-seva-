@@ -668,8 +668,16 @@ export default function AdminDashboard({ adminToken, login, logout, showToast, i
     if (!adminToken) return;
     try {
       const res = await fetch('/api/submissions', { headers: { 'Authorization': 'Bearer ' + adminToken } });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          logout();
+          showToast('Session expired. Please log in again.', 'error');
+          return;
+        }
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData?.message || 'Failed to load');
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Failed to load');
       setSubmissions(data || []);
     } catch (err) {
       showToast('Dashboard sync failed. Please check login.', 'error');

@@ -1,52 +1,67 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { SERVICES, CERTIFICATE_TYPES, OBC_SUBCASTES } from '../../constants/services';
+
+const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+  ? 'http://localhost:3000'
+  : '';
+
+const getApiUrl = (path) => `${API_BASE}${path}`;
+
+const getSubmitErrorMessage = (err) => {
+  if (!err || !err.message) return 'Server error occurred. Please try again.';
+  const lower = err.message.toLowerCase();
+  if (lower.includes('failed to fetch') || lower.includes('networkerror') || lower.includes('network request failed')) {
+    return 'Server unavailable. Please start the backend or check your connection.';
+  }
+  return err.message;
+};
 
 /* ─── Small helper ─── */
 function ServiceCard({ service, onApply }) {
   const isMerged = service.isMerged;
   return (
-    <div className="service-card" onClick={() => onApply(service.id)}>
+    <div className="service-card" role="button" onClick={() => onApply(service.id)} style={{ cursor: 'pointer' }}>
       <div className="service-header">
-        <div className="service-icon"><i className={service.icon}></i></div>
-        <span className="service-badge">{isMerged ? '3-in-1 Service' : 'Online Process'}</span>
-      </div>
-      <h3 className="service-title">{service.title}</h3>
-      <p className="service-hindi-title" style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary-color)', marginTop: '-6px', marginBottom: '8px' }}>
-        <i className="fa-solid fa-language"></i> {service.hindiTitle}
-      </p>
-      {isMerged && (
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '8px' }}>
-          {Object.values(CERTIFICATE_TYPES).map(ct => (
-            <span key={ct.id} style={{ background: ct.color + '22', color: ct.color, border: `1px solid ${ct.color}55`, borderRadius: '20px', padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600 }}>
-              <i className={ct.icon} style={{ marginRight: 4 }}></i>{ct.label}
-            </span>
-          ))}
+          <div className="service-icon"><i className={service.icon}></i></div>
+          <span className="service-badge">{isMerged ? '3-in-1 Service' : 'Online Process'}</span>
         </div>
-      )}
-      <p className="service-desc">{service.description}</p>
-      <div className="service-requirements-preview">
-        <h5>Required:</h5>
-        <ul>
-          {service.requirements.slice(0, 2).map((req, i) => (
-            <li key={i}><i className="fa-solid fa-check"></i> {req}</li>
-          ))}
-          {service.requirements.length > 2 && (
-            <li><i className="fa-solid fa-ellipsis"></i> &amp; {service.requirements.length - 2} more...</li>
-          )}
-        </ul>
+        <h3 className="service-title">{service.title}</h3>
+        <p className="service-hindi-title" style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary-color)', marginTop: '-6px', marginBottom: '8px' }}>
+          <i className="fa-solid fa-language"></i> {service.hindiTitle}
+        </p>
+        {isMerged && (
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '8px' }}>
+            {Object.values(CERTIFICATE_TYPES).map(ct => (
+              <span key={ct.id} style={{ background: ct.color + '22', color: ct.color, border: `1px solid ${ct.color}55`, borderRadius: '20px', padding: '2px 10px', fontSize: '0.78rem', fontWeight: 600 }}>
+                <i className={ct.icon} style={{ marginRight: 4 }}></i>{ct.label}
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="service-desc">{service.description}</p>
+        <div className="service-requirements-preview">
+          <h5>Required:</h5>
+          <ul>
+            {service.requirements.slice(0, 2).map((req, i) => (
+              <li key={i}><i className="fa-solid fa-check"></i> {req}</li>
+            ))}
+            {service.requirements.length > 2 && (
+              <li><i className="fa-solid fa-ellipsis"></i> &amp; {service.requirements.length - 2} more...</li>
+            )}
+          </ul>
+        </div>
+        <button className="btn btn-primary btn-card">
+          <i className="fa-solid fa-cloud-arrow-up"></i> Apply Now
+        </button>
       </div>
-      <button className="btn btn-primary btn-card">
-        <i className="fa-solid fa-cloud-arrow-up"></i> Apply Now
-      </button>
-    </div>
   );
 }
 
 /* ─── Sub-Service Picker (for merged certificate card) ─── */
-function CertificatePickerModal({ onSelect, onClose }) {
+function CertificatePickerModal({ onSelect, onClose, pageView = false }) {
   return (
-    <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content" style={{ maxWidth: 500 }}>
+    <div className={pageView ? 'page-view page-view-open' : 'modal open'} onClick={pageView ? undefined : e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content" style={{ maxWidth: pageView ? 980 : 520, width: '100%', margin: '1rem auto', maxHeight: pageView ? 'none' : 'calc(100vh - 2rem)', overflow: 'auto' }}>
         <div className="modal-header">
           <h3><i className="fa-solid fa-file-shield"></i> प्रमाण पत्र चुनें / Choose Certificate</h3>
           <button className="modal-close" onClick={onClose}>&times;</button>
@@ -97,7 +112,7 @@ function CertificatePickerModal({ onSelect, onClose }) {
 }
 
 /* ─── Certificate Form Modal (detailed fields + file upload) ─── */
-function CertificateFormModal({ certType, service, onClose, showToast, onSubmitSuccess, prefilledName, prefilledPhone, uploadToken }) {
+function CertificateFormModal({ certType, service, onClose, showToast, onSubmitSuccess, prefilledName, prefilledPhone, uploadToken, pageView = false }) {
   const [formValues, setFormValues] = useState(() => {
     const init = {};
     certType.fields.forEach(f => { init[f.name] = f.fixed ? f.value : (f.name === 'applicantName' ? (prefilledName || '') : ''); });
@@ -138,33 +153,33 @@ function CertificateFormModal({ certType, service, onClose, showToast, onSubmitS
       .join('\n');
     formData.append('notes', notesArr);
     if (uploadToken) formData.append('upload_token', uploadToken);
-    
+
     // Add specific mandatory files
     if (aadharFile) formData.append('documents', aadharFile);
     if (photoFile) formData.append('documents', photoFile);
-    
+
     // Add other generic files
     selectedFiles.forEach(f => formData.append('documents', f));
 
     try {
-      const res = await fetch('/api/submissions', { method: 'POST', body: formData });
+      const res = await fetch(getApiUrl('/api/submissions'), { method: 'POST', body: formData });
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data?.message || 'Failed to submit application');
       showToast('आवेदन सफलतापूर्वक जमा हो गया! / Application submitted successfully!');
       onClose();
-      if (data?.id) window.open(`/api/submissions/${encodeURIComponent(data.id)}/receipt`, '_blank');
+      if (data?.id) window.open(getApiUrl(`/api/submissions/${encodeURIComponent(data.id)}/receipt`), '_blank');
       if (onSubmitSuccess) onSubmitSuccess();
     } catch (err) {
-      showToast(err.message || 'Server error occurred.', 'error');
+      showToast(getSubmitErrorMessage(err), 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content" style={{ maxWidth: 620 }}>
+    <div className={pageView ? 'page-view' : 'modal open'} onClick={pageView ? undefined : e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content" style={{ maxWidth: pageView ? 980 : 700, width: '100%', margin: '1rem auto', maxHeight: pageView ? 'none' : 'calc(100vh - 2rem)', overflow: 'auto' }}>
         <div className="modal-header" style={{ borderBottom: `3px solid ${certType.color}` }}>
           <h3 style={{ color: certType.color }}>
             <i className={certType.icon}></i> {certType.label}
@@ -311,7 +326,7 @@ function CertificateFormModal({ certType, service, onClose, showToast, onSubmitS
 }
 
 /* ─── Original Upload Modal (for non-merged services) ─── */
-function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess, prefilledName, prefilledPhone, uploadToken }) {
+function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess, prefilledName, prefilledPhone, uploadToken, pageView = false }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -343,16 +358,16 @@ function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess,
     if (uploadToken) formData.append('upload_token', uploadToken);
     selectedFiles.forEach(f => formData.append('documents', f));
     try {
-      const res = await fetch('/api/submissions', { method: 'POST', body: formData });
+      const res = await fetch(getApiUrl('/api/submissions'), { method: 'POST', body: formData });
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data?.message || 'Failed to submit application');
       showToast('Application submitted successfully! Opening your official receipt...');
       onClose();
-      if (data?.id) window.open(`/api/submissions/${encodeURIComponent(data.id)}/receipt`, '_blank');
+      if (data?.id) window.open(getApiUrl(`/api/submissions/${encodeURIComponent(data.id)}/receipt`), '_blank');
       if (onSubmitSuccess) onSubmitSuccess();
     } catch (err) {
-      showToast(err.message || 'Server error occurred.', 'error');
+      showToast(getSubmitErrorMessage(err), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -361,8 +376,8 @@ function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess,
   const requirementsList = service.requirements || (service.documents || []).map(d => d.document_name);
 
   return (
-    <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content">
+    <div className={pageView ? 'page-view' : 'modal open'} onClick={pageView ? undefined : e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content" style={{ maxWidth: pageView ? 980 : 680, width: '100%', margin: '1rem auto', maxHeight: pageView ? 'none' : 'calc(100vh - 2rem)', overflow: 'auto' }}>
         <div className="modal-header">
           <h3><i className={service.icon || 'fa-solid fa-file'}></i> Apply for {service.title || service.name}</h3>
           <button className="modal-close" onClick={onClose}>&times;</button>
@@ -446,7 +461,8 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
   // For merged certificate flow
   const [showCertPicker, setShowCertPicker] = useState(false);
   const [selectedCertType, setSelectedCertType] = useState(null);
-  
+  const [openAsPage, setOpenAsPage] = useState(false);
+
   // Combine hardcoded SERVICES with dynamic services from API
   const [activeServices, setActiveServices] = useState(Object.values(SERVICES));
 
@@ -481,8 +497,8 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
               if (hardcodedSlugs.includes(svcSlug)) return false;
               if (hardcodedTitles.some(ht => ht === svcTitle || svcTitle.includes(ht) || ht.includes(svcTitle))) return false;
               if (svcTitle.includes('income') || svcTitle.includes('caste') || svcTitle.includes('domicile') ||
-                  svcTitle.includes('आय') || svcTitle.includes('जाति') || svcTitle.includes('निवास') ||
-                  svcTitle.includes('pan') || svcTitle.includes('voter') || svcTitle.includes('पैन') || svcTitle.includes('वोटर')) {
+                svcTitle.includes('आय') || svcTitle.includes('जाति') || svcTitle.includes('निवास') ||
+                svcTitle.includes('pan') || svcTitle.includes('voter') || svcTitle.includes('पैन') || svcTitle.includes('वोटर')) {
                 return false;
               }
 
@@ -572,12 +588,13 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
   }, []);
 
   const handleApply = (serviceId) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setUploadToken(null);
     setPrefilledName('');
     setPrefilledPhone('');
     const svc = activeServices.find(s => s.id === serviceId);
+    setOpenAsPage(true);
     if (svc?.isMerged) {
-      // Open the certificate picker first
       setModalService(svc);
       setShowCertPicker(true);
       setSelectedCertType(null);
@@ -598,80 +615,131 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
     setUploadToken(null);
     setShowCertPicker(false);
     setSelectedCertType(null);
+    setOpenAsPage(false);
   };
 
   return (
     <section className="tab-content active">
-      {/* Hero */}
-      <div className="hero-section">
-        <div className="hero-badge">
-          <span className="pulse-dot"></span>
-          <span>Portal Active &amp; Online</span>
-        </div>
-        <h1>Welcome to <span className="shop-title-text">{shopSettings?.shopName || 'Maa Durga Online Center'}</span></h1>
-        <p className="hero-subtitle">CSC &amp; Online Digital Services Portal. Upload your documents directly, and we will process your applications instantly!</p>
-        <div className="quick-contact-bar">
-          <span><i className="fa-solid fa-location-dot"></i> <a href="https://maps.app.goo.gl/4x7veXD2rUK5ZsP57" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>{shopSettings?.shopAddress || 'Bindwaliya Ghazipur, UP'}</a></span>
-          <div className="contact-divider"></div>
-          <span><i className="fa-solid fa-phone"></i> <a href={`https://wa.me/${cleanPhone}`}>+{cleanPhone}</a></span>
-          <div className="contact-divider"></div>
-          <span><i className="fa-solid fa-clock"></i> <span style={{ color: 'var(--text-primary)' }}>{shopSettings?.shopTimings || '24/7'}</span></span>
-        </div>
-        <div className="hero-trust-row">
-          <div className="trust-badge"><i className="fa-solid fa-shield-halved"></i> Secure Upload</div>
-          <div className="trust-badge"><i className="fa-solid fa-bolt"></i> Fast Processing</div>
-          <div className="trust-badge"><i className="fa-solid fa-headset"></i> 24/7 Support</div>
-          <div className="trust-badge"><i className="fa-solid fa-cloud"></i> Cloud Storage</div>
-        </div>
-      </div>
+      {openAsPage ? (
+        <div style={{ padding: '0.75rem 0.75rem 1rem', width: '100%', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '0.75rem' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={handleClose}
+              style={{ margin: 0, minWidth: 140 }}
+            >
+              <i className="fa-solid fa-arrow-left"></i> Back to Services
+            </button>
+          </div>
 
-      {/* Services */}
-      <div className="services-container">
-        <div className="section-header">
-          <h2 className="section-title"><i className="fa-solid fa-briefcase"></i> Our Digital Services</h2>
-          <p className="section-subtitle">Select a service below to view required documents and submit them online.</p>
+          <div style={{ padding: '0 0.5rem 1.5rem', width: '100%', margin: '0 auto' }}>
+            {showCertPicker && modalService?.isMerged && !selectedCertType && (
+              <CertificatePickerModal
+                onSelect={handleCertSelect}
+                onClose={handleClose}
+                pageView={true}
+              />
+            )}
+
+            {selectedCertType && modalService && (
+              <CertificateFormModal
+                certType={selectedCertType}
+                service={modalService}
+                onClose={handleClose}
+                showToast={showToast}
+                onSubmitSuccess={onSubmitSuccess}
+                prefilledName={prefilledName}
+                prefilledPhone={prefilledPhone}
+                uploadToken={uploadToken}
+                pageView={true}
+              />
+            )}
+
+            {modalService && !modalService.isMerged && !selectedCertType && (
+              <UploadModal
+                service={modalService}
+                onClose={handleClose}
+                showToast={showToast}
+                adminToken={adminToken}
+                onSubmitSuccess={onSubmitSuccess}
+                prefilledName={prefilledName}
+                prefilledPhone={prefilledPhone}
+                uploadToken={uploadToken}
+                pageView={true}
+              />
+            )}
+          </div>
         </div>
-        <div className="services-grid">
-          {activeServices.map(service => (
-            <ServiceCard key={service.id} service={service} onApply={handleApply} />
-          ))}
-        </div>
-      </div>
+      ) : (
+        <>
+          <div className="hero-section">
+            <div className="hero-badge">
+              <span className="pulse-dot"></span>
+              <span>Portal Active &amp; Online</span>
+            </div>
+            <h1>Welcome to <span className="shop-title-text">{shopSettings?.shopName || 'Maa Durga Online Center'}</span></h1>
+            <p className="hero-subtitle">CSC &amp; Online Digital Services Portal. Upload your documents directly, and we will process your applications instantly!</p>
+            <div className="quick-contact-bar">
+              <span><i className="fa-solid fa-location-dot"></i> <a href="https://maps.app.goo.gl/4x7veXD2rUK5ZsP57" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>{shopSettings?.shopAddress || 'Bindwaliya Ghazipur, UP'}</a></span>
+              <div className="contact-divider"></div>
+              <span><i className="fa-solid fa-phone"></i> <a href={`https://wa.me/${cleanPhone}`}>+{cleanPhone}</a></span>
+              <div className="contact-divider"></div>
+              <span><i className="fa-solid fa-clock"></i> <span style={{ color: 'var(--text-primary)' }}>{shopSettings?.shopTimings || '24/7'}</span></span>
+            </div>
+            <div className="hero-trust-row">
+              <div className="trust-badge"><i className="fa-solid fa-shield-halved"></i> Secure Upload</div>
+              <div className="trust-badge"><i className="fa-solid fa-bolt"></i> Fast Processing</div>
+              <div className="trust-badge"><i className="fa-solid fa-headset"></i> 24/7 Support</div>
+              <div className="trust-badge"><i className="fa-solid fa-cloud"></i> Cloud Storage</div>
+            </div>
+          </div>
 
-      {/* Certificate Picker Modal (step 1 for merged services) */}
-      {showCertPicker && (
-        <CertificatePickerModal
-          onSelect={handleCertSelect}
-          onClose={handleClose}
-        />
-      )}
+          <div className="services-container">
+            <div className="section-header">
+              <h2 className="section-title"><i className="fa-solid fa-briefcase"></i> Our Digital Services</h2>
+              <p className="section-subtitle">Select a service below to view required documents and submit them online.</p>
+            </div>
+            <div className="services-grid">
+              {activeServices.map(service => (
+                <ServiceCard key={service.id} service={service} onApply={handleApply} />
+              ))}
+            </div>
+          </div>
 
-      {/* Certificate Form Modal (step 2 for merged services) */}
-      {selectedCertType && modalService && (
-        <CertificateFormModal
-          certType={selectedCertType}
-          service={modalService}
-          onClose={handleClose}
-          showToast={showToast}
-          onSubmitSuccess={onSubmitSuccess}
-          prefilledName={prefilledName}
-          prefilledPhone={prefilledPhone}
-          uploadToken={uploadToken}
-        />
-      )}
+          {showCertPicker && (
+            <CertificatePickerModal
+              onSelect={handleCertSelect}
+              onClose={handleClose}
+            />
+          )}
 
-      {/* Original Upload Modal for non-merged services */}
-      {modalService && !modalService.isMerged && !selectedCertType && (
-        <UploadModal
-          service={modalService}
-          onClose={handleClose}
-          showToast={showToast}
-          adminToken={adminToken}
-          onSubmitSuccess={onSubmitSuccess}
-          prefilledName={prefilledName}
-          prefilledPhone={prefilledPhone}
-          uploadToken={uploadToken}
-        />
+          {selectedCertType && modalService && (
+            <CertificateFormModal
+              certType={selectedCertType}
+              service={modalService}
+              onClose={handleClose}
+              showToast={showToast}
+              onSubmitSuccess={onSubmitSuccess}
+              prefilledName={prefilledName}
+              prefilledPhone={prefilledPhone}
+              uploadToken={uploadToken}
+            />
+          )}
+
+          {modalService && !modalService.isMerged && !selectedCertType && (
+            <UploadModal
+              service={modalService}
+              onClose={handleClose}
+              showToast={showToast}
+              adminToken={adminToken}
+              onSubmitSuccess={onSubmitSuccess}
+              prefilledName={prefilledName}
+              prefilledPhone={prefilledPhone}
+              uploadToken={uploadToken}
+            />
+          )}
+        </>
       )}
     </section>
   );

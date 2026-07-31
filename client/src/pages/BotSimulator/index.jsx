@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { SERVICES } from '../../constants/services';
 
 function escapeHtml(text) {

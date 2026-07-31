@@ -269,15 +269,15 @@ app.post('/api/admin/login', loginLimiter, async (req, res) => {
  * and standard schema fields (name, phone, service).
  */
 const submissionValidators = [
-  body('clientName').optional().trim().escape(),
-  body('clientPhone').optional().trim().escape(),
-  body('serviceType').optional().trim().escape(),
-  body('serviceName').optional().trim().escape(),
-  body('name').optional().trim().escape(),
-  body('phone').optional().trim().escape(),
-  body('service').optional().trim().escape(),
-  body('notes').optional().trim().escape(),
-  body('remarks').optional().trim().escape()
+  body('clientName').optional().trim(),
+  body('clientPhone').optional().trim(),
+  body('serviceType').optional().trim(),
+  body('serviceName').optional().trim(),
+  body('name').optional().trim(),
+  body('phone').optional().trim(),
+  body('service').optional().trim(),
+  body('notes').optional().trim(),
+  body('remarks').optional().trim()
 ];
 
 const handleUploadAndSubmission = async (req, res) => {
@@ -617,6 +617,26 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     const submission = data[0];
     const settings = getSettings();
 
+    const normalizeText = (value) => {
+      if (!value && value !== 0) return 'N/A';
+      const str = String(value);
+      return str
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&#x2F;/g, '/')
+        .replace(/&#x2f;/g, '/')
+        .replace(/&#39;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/[\uFFFD]/g, '')
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    const fontPath = path.join(__dirname, 'C:\\Windows\\Fonts\\ARIALUNI.TTF');
+    const hasUnicodeFont = fs.existsSync(fontPath);
+
     // Set response headers for PDF streaming
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="Receipt_${submission.id}.pdf"`);
@@ -627,6 +647,11 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     // Pipe PDF directly to HTTP response stream
     doc.pipe(res);
 
+    // Register Unicode font when available
+    if (hasUnicodeFont) {
+      doc.registerFont('UnicodeFont', fontPath);
+    }
+
     // Color Palette
     const primaryColor = '#0f172a';   // Slate Dark
     const accentColor = '#2563eb';    // Royal Blue
@@ -636,18 +661,18 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
 
     // 1. Header Banner Box
     doc.rect(40, 40, 515, 65).fill(primaryColor);
-    doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text((settings.shopName || 'MAA DURGA JAN SEVA KENDRA').toUpperCase(), 55, 52);
-    doc.fontSize(9).font('Helvetica').fillColor('#94a3b8').text('CSC & ONLINE DIGITAL SERVICES PORTAL', 55, 75);
+    doc.fillColor('#ffffff').fontSize(18).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text((settings.shopName || 'MAA DURGA JAN SEVA KENDRA').toUpperCase(), 55, 52);
+    doc.fontSize(9).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica').fillColor('#94a3b8').text('CSC & ONLINE DIGITAL SERVICES PORTAL', 55, 75);
     doc.text(`Contact: ${settings.shopPhone || 'N/A'}`, 55, 87);
 
     // 2. Subheader & Receipt Badge
-    doc.fillColor(accentColor).fontSize(14).font('Helvetica-Bold').text('DIGITAL SERVICE APPLICATION RECEIPT', 40, 120);
+    doc.fillColor(accentColor).fontSize(14).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text('SERVICE APPLICATION RECEIPT', 40, 120);
 
     // Decorative Line
     doc.moveTo(40, 140).lineTo(555, 140).strokeColor(accentColor).lineWidth(2).stroke();
 
     // 3. Shop & Receipt Metadata Info
-    doc.fontSize(9).font('Helvetica').fillColor(textColor);
+    doc.fontSize(9).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica').fillColor(textColor);
     doc.text(`Shop Address: ${settings.shopAddress || 'N/A'}`, 40, 150, { width: 280 });
     
     const formattedDate = new Date(submission.created_at || submission.createdAt || Date.now()).toLocaleString('en-IN', {
@@ -655,8 +680,8 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
       timeStyle: 'short'
     });
     
-    doc.text(`Date & Time: ${formattedDate}`, 320, 150, { align: 'right' });
-    doc.text(`Receipt ID: ${submission.id}`, 320, 165, { align: 'right' });
+    doc.text(`Date and Time: ${formattedDate}`, 320, 150, { align: 'right' });
+    doc.text(`Application ID: ${submission.id}`, 320, 165, { align: 'right' });
 
     doc.moveTo(40, 185).lineTo(555, 185).strokeColor(borderColor).lineWidth(1).stroke();
 
@@ -664,12 +689,12 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     const startY = 200;
     doc.rect(40, startY, 515, 205).fillAndStroke(lightBg, borderColor);
 
-    doc.fillColor(accentColor).fontSize(11).font('Helvetica-Bold').text('APPLICATION & CUSTOMER DETAILS', 55, startY + 12);
+    doc.fillColor(accentColor).fontSize(11).font('Helvetica-Bold').text('APPLICATION AND CUSTOMER DETAILS', 55, startY + 12);
     doc.moveTo(55, startY + 28).lineTo(540, startY + 28).strokeColor(borderColor).lineWidth(1).stroke();
 
     // Helper row drawer
     const drawDetailRow = (label, value, yPos, isStatus = false) => {
-      doc.fillColor('#64748b').fontSize(10).font('Helvetica-Bold').text(label, 55, yPos);
+      doc.fillColor('#64748b').fontSize(10).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text(label, 55, yPos);
       
       if (isStatus) {
         const statusUpper = (value || 'PENDING').toUpperCase();
@@ -678,31 +703,31 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
         if (statusUpper === 'IN-PROGRESS' || statusUpper === 'IN PROGRESS') statusColor = '#2563eb';
         if (statusUpper === 'REJECTED') statusColor = '#dc2626';
 
-        doc.fillColor(statusColor).font('Helvetica-Bold').fontSize(10).text(statusUpper, 200, yPos);
+        doc.fillColor(statusColor).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').fontSize(10).text(statusUpper, 200, yPos);
       } else {
-        doc.fillColor(textColor).font('Helvetica').fontSize(10).text(value || 'N/A', 200, yPos, { width: 330 });
+        doc.fillColor(textColor).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica').fontSize(10).text(value || 'N/A', 200, yPos, { width: 330 });
       }
     };
 
-    drawDetailRow('Application ID:', submission.id, startY + 38);
-    drawDetailRow('Customer Name:', submission.name || submission.clientName, startY + 58);
-    drawDetailRow('Mobile Number:', submission.phone || submission.clientPhone, startY + 78);
-    drawDetailRow('Service Name:', submission.service || submission.serviceName, startY + 98);
-    drawDetailRow('Application Status:', submission.status, startY + 118, true);
-    drawDetailRow('Remarks / Notes:', submission.remarks || submission.notes || 'No additional remarks.', startY + 138);
+    drawDetailRow('Application ID:', normalizeText(submission.id), startY + 38);
+    drawDetailRow('Customer Name:', normalizeText(submission.name || submission.clientName), startY + 58);
+    drawDetailRow('Mobile Number:', normalizeText(submission.phone || submission.clientPhone), startY + 78);
+    drawDetailRow('Service Name:', normalizeText(submission.service || submission.serviceName), startY + 98);
+    drawDetailRow('Application Status:', normalizeText(submission.status), startY + 118, true);
+    drawDetailRow('Remarks / Notes:', normalizeText(submission.remarks || submission.notes || 'No additional remarks.'), startY + 138);
 
     const fileCount = (submission.files && Array.isArray(submission.files)) ? submission.files.length : 0;
-    drawDetailRow('Uploaded Documents:', `${fileCount} file attachment(s)`, startY + 175);
+    drawDetailRow('Uploaded Documents:', normalizeText(`${fileCount} file attachment(s)`), startY + 175);
 
     // 5. Uploaded Document List (if present)
     let currentY = startY + 220;
     if (fileCount > 0) {
-      doc.fillColor(primaryColor).fontSize(10).font('Helvetica-Bold').text('Attached File Names:', 40, currentY);
+      doc.fillColor(primaryColor).fontSize(10).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text('Attached File Names:', 40, currentY);
       currentY += 15;
 
       submission.files.forEach((f) => {
         const sizeKb = f.size ? (f.size / 1024).toFixed(1) : 'N/A';
-        doc.fillColor(textColor).fontSize(9).font('Helvetica').text(`  • ${f.originalname || f.filename} (${sizeKb} KB)`, 50, currentY);
+        doc.fillColor(textColor).fontSize(9).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica').text(`  • ${normalizeText(f.originalname || f.filename)} (${sizeKb} KB)`, 50, currentY);
         currentY += 14;
       });
       currentY += 10;
@@ -712,10 +737,9 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
 
     // 6. Customer Notice Box
     doc.rect(40, currentY, 515, 55).fillAndStroke('#eff6ff', '#bfdbfe');
-    doc.fillColor('#1e40af').fontSize(10).font('Helvetica-Bold').text('📌 Important Notice for Customer:', 55, currentY + 10);
-    doc.fillColor('#1e3a8a').fontSize(9).font('Helvetica').text(
-      'Please keep this official digital receipt for your reference. Mention your Application ID when tracking your status or inquiring via WhatsApp support.',
-      55, currentY + 24, { width: 485 }
+      doc.fillColor('#1e40af').fontSize(10).font('Helvetica-Bold').text('Important Notice for Customer:', 55, currentY + 10);
+      doc.fillColor('#1e3a8a').fontSize(9).font('Helvetica').text(
+        'Keep this digital receipt safe. Use the Application ID when you ask about your request or contact support.',
     );
 
     // 7. Footer Bar
@@ -807,12 +831,12 @@ const generatePdfSummaryBuffer = (submission, settings) => {
       drawRow('Application ID:', submission.id, startY + 38);
       drawRow('Customer Name:', submission.name || submission.clientName, startY + 58);
       drawRow('Mobile Number:', submission.phone || submission.clientPhone, startY + 78);
-      drawRow('Service Category:', submission.service || submission.serviceName, startY + 98);
-      drawRow('Application Status:', submission.status, startY + 118, true);
-      drawRow('Remarks / Notes:', submission.remarks || submission.notes || 'No additional remarks.', startY + 138);
+      drawRow('Service Name:', submission.service || submission.serviceName, startY + 98);
+      drawRow('Status:', submission.status, startY + 118, true);
+      drawRow('Remarks:', submission.remarks || submission.notes || 'None', startY + 138);
 
       const fileCount = (submission.files && Array.isArray(submission.files)) ? submission.files.length : 0;
-      drawRow('Uploaded Documents:', `${fileCount} file attachment(s)`, startY + 175);
+      drawRow('Files Uploaded:', `${fileCount} file(s)`, startY + 175);
 
       // Document List
       let currentY = startY + 220;
@@ -830,11 +854,11 @@ const generatePdfSummaryBuffer = (submission, settings) => {
         currentY += 10;
       }
 
-      // Important Notice Box (PLAIN TEXT ONLY - NO EMOJIS)
+      // Important Notice Box
       pdfDoc.rect(40, currentY, 515, 55).fillAndStroke('#eff6ff', '#bfdbfe');
-      pdfDoc.fillColor('#1e40af').fontSize(10).font('Helvetica-Bold').text('Important Notice for Customer:', 55, currentY + 10);
+      pdfDoc.fillColor('#1e40af').fontSize(10).font('Helvetica-Bold').text('Important Notice:', 55, currentY + 10);
       pdfDoc.fillColor('#1e3a8a').fontSize(9).font('Helvetica').text(
-        'Please keep this official digital summary for your records. Quote your Application ID when tracking status or inquiring via shop support or WhatsApp.',
+        'Keep this receipt safe. Use the Application ID when checking status or contacting support.',
         55, currentY + 24, { width: 485 }
       );
 

@@ -44,9 +44,31 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
       .then(r => r.json())
       .then(data => {
         if (data.success && data.data && data.data.length > 0) {
-          setDynamicServices(data.data.map(normalizeService));
+          const hardcodedSlugs = [
+            'srv_certificates', 'srv_pancard', 'srv_voterid',
+            'certificates', 'pancard', 'voterid', 'pan', 'voter',
+            'aay', 'jaati', 'niwas', 'all', 'income', 'caste', 'domicile'
+          ];
+          const hardcodedTitles = Object.values(SERVICES).map(s => (s.title || '').toLowerCase().trim());
+
+          const customDyn = data.data
+            .map(normalizeService)
+            .filter(svc => {
+              const svcSlug = (svc.slug || svc.id || '').toLowerCase().trim();
+              const svcTitle = (svc.title || '').toLowerCase().trim();
+
+              if (hardcodedSlugs.includes(svcSlug)) return false;
+              if (hardcodedTitles.some(ht => ht === svcTitle || svcTitle.includes(ht) || ht.includes(svcTitle))) return false;
+              if (svcTitle.includes('income') || svcTitle.includes('caste') || svcTitle.includes('domicile') ||
+                  svcTitle.includes('आय') || svcTitle.includes('जाति') || svcTitle.includes('निवास') ||
+                  svcTitle.includes('pan') || svcTitle.includes('voter') || svcTitle.includes('पैन') || svcTitle.includes('वोटर')) {
+                return false;
+              }
+              return true;
+            });
+
+          setDynamicServices([...Object.values(SERVICES), ...customDyn]);
         } else {
-          // Fallback to hardcoded services
           setDynamicServices(Object.values(SERVICES));
         }
       })

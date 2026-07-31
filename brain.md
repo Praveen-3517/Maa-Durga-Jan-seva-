@@ -292,6 +292,11 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-07-31 (v3.2.3 — Strict Service Deduplication Fix)**:
+  - Added strict deduplication logic to `CustomerPortal` & `BotSimulator` service fetching.
+  - Excludes DB duplicate rows of core services (PAN Card, Voter ID, Income/Caste/Domicile) so cards never double-display.
+  - Ensures clean 1-to-1 card rendering on Customer Portal & WhatsApp Bot Simulator.
+
 - **2026-07-31 (v3.2.2 — OBC Sub-caste Datalist & Custom Typing Support)**:
   - Exported 160+ UP OBC Castes & Sub-castes list (`OBC_SUBCASTES`) in `client/src/constants/services.js`.
   - Dynamically attaches HTML5 `<datalist>` to `upjaati` and `jaati` fields when Category is selected as `OBC`.

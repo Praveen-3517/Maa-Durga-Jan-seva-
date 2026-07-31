@@ -455,7 +455,14 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
       .then(r => r.json())
       .then(data => {
         if (data.success && data.data) {
-          const hardcodedIds = Object.keys(SERVICES);
+          const hardcodedSlugs = [
+            'srv_certificates', 'srv_pancard', 'srv_voterid',
+            'certificates', 'pancard', 'voterid', 'pan', 'voter',
+            'aay', 'jaati', 'niwas', 'all', 'income', 'caste', 'domicile'
+          ];
+
+          const hardcodedTitles = Object.values(SERVICES).map(s => (s.title || '').toLowerCase().trim());
+
           const newDynamic = data.data
             .map(svc => ({
               id: svc.id || svc.slug,
@@ -465,11 +472,40 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
               hindiTitle: svc.hindi_title || svc.hindiTitle || '',
               description: svc.description || '',
               requirements: svc.requirements || (svc.documents || []).filter(d => d.is_required).map(d => d.document_name),
-              slug: svc.slug || '',
+              slug: (svc.slug || '').toLowerCase().trim(),
             }))
-            .filter(svc => !hardcodedIds.includes(svc.id) && !hardcodedIds.includes(svc.slug));
-          
-          setActiveServices([...Object.values(SERVICES), ...newDynamic]);
+            .filter(svc => {
+              const svcSlug = (svc.slug || svc.id || '').toLowerCase().trim();
+              const svcTitle = (svc.title || '').toLowerCase().trim();
+
+              // Skip if slug matches hardcoded list
+              if (hardcodedSlugs.includes(svcSlug)) return false;
+
+              // Skip if title matches any hardcoded service title
+              if (hardcodedTitles.some(ht => ht === svcTitle || svcTitle.includes(ht) || ht.includes(svcTitle))) return false;
+
+              // Skip duplicate entries of core services in Hindi or English
+              if (svcTitle.includes('income') || svcTitle.includes('caste') || svcTitle.includes('domicile') ||
+                  svcTitle.includes('आय') || svcTitle.includes('जाति') || svcTitle.includes('निवास') ||
+                  svcTitle.includes('pan') || svcTitle.includes('voter') || svcTitle.includes('पैन') || svcTitle.includes('वोटर')) {
+                return false;
+              }
+
+              return true;
+            });
+
+          // Deduplicate unique dynamic custom services
+          const uniqueDynamic = [];
+          const seen = new Set();
+          for (const svc of newDynamic) {
+            const key = (svc.slug || svc.title).toLowerCase().trim();
+            if (!seen.has(key)) {
+              seen.add(key);
+              uniqueDynamic.push(svc);
+            }
+          }
+
+          setActiveServices([...Object.values(SERVICES), ...uniqueDynamic]);
         }
       })
       .catch(err => console.error('[CustomerPortal] Error fetching dynamic services:', err));

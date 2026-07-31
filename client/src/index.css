@@ -367,9 +367,9 @@ code {
 .btn-delete-row:hover { background: var(--danger-color); color: #fff; }
 
 /* MODAL */
-.modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; height: 100dvh; background: rgba(5,10,20,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999999 !important; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.25s ease; overflow: hidden; padding: 1rem; box-sizing: border-box; }
-.modal.open { display: flex; opacity: 1; }
-.modal-content { background: var(--bg-secondary); border: 1px solid var(--border-color); width: 100%; max-width: 640px; max-height: 90vh; max-height: 90dvh; border-radius: var(--border-radius); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); display: flex; flex-direction: column; overflow: hidden; margin: auto; position: relative; z-index: 1000000 !important; transform: none !important; }
+.modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; height: 100dvh; background: rgba(5,10,20,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999999 !important; padding: 1.5rem; box-sizing: border-box; overflow-y: auto; opacity: 0; transition: opacity 0.25s ease; }
+.modal.open { display: flex; align-items: center; justify-content: center; opacity: 1; }
+.modal-content { background: var(--bg-secondary); border: 1px solid var(--border-color); width: 100%; max-width: 620px; max-height: 85vh; border-radius: var(--border-radius); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); display: flex; flex-direction: column; overflow: hidden; margin: 0 auto; position: relative; z-index: 1000000 !important; transform: none !important; }
 .modal-header { padding: 1.1rem 1.4rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-tertiary); flex-shrink: 0; }
 .modal-header h3 { font-family: var(--font-heading); font-size: 1.15rem; color: var(--primary-color); display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 1.8rem; cursor: pointer; line-height: 1; transition: color var(--transition-speed), transform var(--transition-speed); flex-shrink: 0; }

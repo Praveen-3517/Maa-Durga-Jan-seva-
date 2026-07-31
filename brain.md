@@ -286,10 +286,23 @@ npm run build             # from f:\chat bot\
 | B-014 | 2026-07-29 | Low | Development | Local environment showing old UI instead of new changes when running server.js | Resolved |
 | B-015 | 2026-07-29 | High | UI | WhatsApp simulator buttons disappearing due to flexbox `flex-shrink` | Resolved |
 | B-016 | 2026-07-29 | High | Admin | Failed to create services due to RLS blocking anon key. Fixed by using `service_role` key in .env | Resolved |
+| B-017 | 2026-07-31 | High | Auth / UI | Password hash mismatch in settings.json & broken password eye toggle styling in Admin Login | Resolved |
 
 ---
 
 ## 📜 Changelog
+
+- **2026-07-31 (v3.2.2 — OBC Sub-caste Datalist & Custom Typing Support)**:
+  - Exported 160+ UP OBC Castes & Sub-castes list (`OBC_SUBCASTES`) in `client/src/constants/services.js`.
+  - Dynamically attaches HTML5 `<datalist>` to `upjaati` and `jaati` fields when Category is selected as `OBC`.
+  - Allows users to search/select from all 160 OBC options OR type custom sub-castes freely.
+  - Restricted strictly to `OBC` category selection.
+
+- **2026-07-31 (v3.2.1 — Admin Login Layout & Password Fix)**:
+  - Fixed password hash mismatch in `data/settings.json` so `Pratap@135` authenticates cleanly.
+  - Increased `loginLimiter` rate limit threshold from 10 to 30 attempts per 15 minutes in `server.js`.
+  - Refactored Admin Login password field structure and `.password-input-wrapper` / `.password-toggle-btn` CSS in `index.css` & `AdminDashboard/index.jsx`.
+  - Compacted the password form width (`max-width: 320px` centered inside card) for a clean, proportional layout.
 
 - **2026-07-30 (v3.1.0 — Merged Certificates Flow)**:
   - Replaced individual Income/Caste certificate services with a merged `srv_certificates` group (AAY / JAATI / NIWAS).

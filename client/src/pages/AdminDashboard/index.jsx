@@ -44,10 +44,15 @@ function LoginCard({ onLogin }) {
               required
               autoComplete="current-password"
             />
-            <i
-              className={`fa-solid ${showPass ? 'fa-eye' : 'fa-eye-slash'}`}
+            <button
+              type="button"
+              className="password-toggle-btn"
               onClick={() => setShowPass(!showPass)}
-            ></i>
+              title={showPass ? 'Hide password' : 'Show password'}
+              aria-label={showPass ? 'Hide password' : 'Show password'}
+            >
+              <i className={`fa-solid ${showPass ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+            </button>
           </div>
         </div>
         <button type="submit" className="btn btn-primary btn-block">

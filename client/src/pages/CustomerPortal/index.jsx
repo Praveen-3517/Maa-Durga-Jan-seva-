@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { SERVICES, CERTIFICATE_TYPES } from '../../constants/services';
+import { SERVICES, CERTIFICATE_TYPES, OBC_SUBCASTES } from '../../constants/services';
 
 /* ─── Small helper ─── */
 function ServiceCard({ service, onApply }) {
@@ -209,16 +209,32 @@ function CertificateFormModal({ certType, service, onClose, showToast, onSubmitS
                       {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   ) : (
-                    <input
-                      type={field.type || 'text'}
-                      value={formValues[field.name] || ''}
-                      onChange={e => !field.fixed && handleChange(field.name, e.target.value)}
-                      placeholder={field.fixed ? field.value : field.placeholder}
-                      required={field.required && !field.fixed}
-                      readOnly={field.fixed}
-                      style={field.fixed ? { background: 'var(--bg-tertiary)', color: 'var(--text-muted)', cursor: 'not-allowed' } : {}}
-                      maxLength={field.type === 'tel' ? 10 : undefined}
-                    />
+                    <>
+                      <input
+                        type={field.type || 'text'}
+                        list={formValues.category === 'OBC' && (field.name === 'upjaati' || field.name === 'jaati') ? "obc-subcastes-datalist" : undefined}
+                        value={formValues[field.name] || ''}
+                        onChange={e => !field.fixed && handleChange(field.name, e.target.value)}
+                        placeholder={formValues.category === 'OBC' && (field.name === 'upjaati' || field.name === 'jaati') ? "सूची से चुनें या टाइप करें..." : (field.fixed ? field.value : field.placeholder)}
+                        required={field.required && !field.fixed}
+                        readOnly={field.fixed}
+                        style={field.fixed ? { background: 'var(--bg-tertiary)', color: 'var(--text-muted)', cursor: 'not-allowed' } : {}}
+                        maxLength={field.type === 'tel' ? 10 : undefined}
+                      />
+                      {formValues.category === 'OBC' && (field.name === 'upjaati' || field.name === 'jaati') && (
+                        <>
+                          <datalist id="obc-subcastes-datalist">
+                            {OBC_SUBCASTES.map((sc, idx) => (
+                              <option key={idx} value={sc} />
+                            ))}
+                          </datalist>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--primary-color)', marginTop: '4px', display: 'block' }}>
+                            <i className="fa-solid fa-lightbulb" style={{ marginRight: 4 }}></i>
+                            OBC सूची में से चुनें या अपनी उपजाति टाइप करें
+                          </span>
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
               ))}

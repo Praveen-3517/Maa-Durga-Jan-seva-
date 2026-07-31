@@ -393,10 +393,37 @@ input[type="text"], input[type="tel"], input[type="email"], input[type="password
   transition: all var(--transition-speed);
 }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(245,158,11,0.14); }
-.password-input-wrapper { position: relative; }
-.password-input-wrapper input { padding-right: 2.5rem; }
-.password-input-wrapper i { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); cursor: pointer; transition: color var(--transition-speed); }
-.password-input-wrapper i:hover { color: var(--text-primary); }
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+  display: block;
+}
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 2.8rem;
+  box-sizing: border-box;
+}
+.password-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  padding: 0.35rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-speed);
+  z-index: 2;
+}
+.password-toggle-btn:hover {
+  color: var(--primary-color);
+}
 .login-error { color: var(--danger-color); font-size: 0.82rem; margin-top: 0.8rem; text-align: center; font-weight: 500; }
 .file-drop-area { border: 2px dashed var(--border-color); border-radius: var(--radius-sm); padding: 2rem 1rem; text-align: center; cursor: pointer; background: var(--bg-tertiary); transition: all var(--transition-speed); position: relative; }
 .file-drop-area:hover, .file-drop-area.drag-over { border-color: var(--primary-color); background: var(--primary-subtle); }
@@ -488,7 +515,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .promo-text p { font-size: 0.8rem; color: var(--text-secondary); }
 
 /* ADMIN DASHBOARD */
-.admin-login-card { max-width: 430px; margin: 4rem auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 2.5rem 2rem; box-shadow: var(--shadow); }
+.admin-login-card { max-width: 400px; margin: 3.5rem auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 2.2rem 1.8rem; box-shadow: var(--shadow); }
+.admin-login-card form { max-width: 320px; margin: 0 auto; }
 .login-header { text-align: center; margin-bottom: 2rem; }
 .login-icon-wrap { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05)); border: 2px solid rgba(245,158,11,0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
 .login-icon { font-size: 2.2rem; color: var(--primary-color); }

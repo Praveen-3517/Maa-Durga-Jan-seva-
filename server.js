@@ -69,10 +69,10 @@ app.use(cors({
 }));
 
 // ── FIX 3: Rate Limiting ──────────────────────────────────────────────────────
-// Admin login: max 10 attempts per 15 minutes per IP
+// Admin login: max 30 attempts per 15 minutes per IP
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many login attempts. Please try again after 15 minutes.' }

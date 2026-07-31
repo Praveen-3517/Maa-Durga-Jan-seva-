@@ -44,9 +44,19 @@ function ServiceCard({ service, onApply }) {
 
 /* ─── Sub-Service Picker (for merged certificate card) ─── */
 function CertificatePickerModal({ onSelect, onClose }) {
+  useEffect(() => {
+    const origBody = document.body.style.overflow;
+    const origHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = origBody;
+      document.documentElement.style.overflow = origHtml;
+    };
+  }, []);
   return (
     <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content" style={{ maxWidth: 500 }}>
+      <div className="modal-content">
         <div className="modal-header">
           <h3><i className="fa-solid fa-file-shield"></i> प्रमाण पत्र चुनें / Choose Certificate</h3>
           <button className="modal-close" onClick={onClose}>&times;</button>
@@ -111,6 +121,17 @@ function CertificateFormModal({ certType, service, onClose, showToast, onSubmitS
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef();
 
+  useEffect(() => {
+    const origBody = document.body.style.overflow;
+    const origHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = origBody;
+      document.documentElement.style.overflow = origHtml;
+    };
+  }, []);
+
   const handleChange = (name, value) => setFormValues(prev => ({ ...prev, [name]: value }));
 
   const handleFiles = (files) => {
@@ -164,7 +185,7 @@ function CertificateFormModal({ certType, service, onClose, showToast, onSubmitS
 
   return (
     <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content" style={{ maxWidth: 620 }}>
+      <div className="modal-content">
         <div className="modal-header" style={{ borderBottom: `3px solid ${certType.color}` }}>
           <h3 style={{ color: certType.color }}>
             <i className={certType.icon}></i> {certType.label}
@@ -319,6 +340,17 @@ function UploadModal({ service, onClose, showToast, adminToken, onSubmitSuccess,
   const nameRef = useRef();
   const phoneRef = useRef();
   const notesRef = useRef();
+
+  useEffect(() => {
+    const origBody = document.body.style.overflow;
+    const origHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = origBody;
+      document.documentElement.style.overflow = origHtml;
+    };
+  }, []);
 
   if (!service) return null;
 

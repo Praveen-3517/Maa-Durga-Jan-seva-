@@ -292,6 +292,13 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-07-31 (v3.2.4 — Mobile Modal Viewport & Full-Screen Fix)**:
+  - Implemented Full-Screen modal layout on mobile devices (`max-width: 640px`).
+  - Viewport fixed using `position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100dvh; z-index: 999999 !important`.
+  - Pinned modal overlay to user's current viewport so clicking "Apply Now" anywhere on page opens modal in-place without blank screen or scrolling down.
+  - Enforced internal scrolling only (`.modal-body { overflow-y: auto; flex: 1 1 auto; }`).
+  - Locked background scroll (`document.body.style.overflow = 'hidden'` & `document.documentElement.style.overflow = 'hidden'`) on modal mount.
+
 - **2026-07-31 (v3.2.3 — Strict Service Deduplication Fix)**:
   - Added strict deduplication logic to `CustomerPortal` & `BotSimulator` service fetching.
   - Excludes DB duplicate rows of core services (PAN Card, Voter ID, Income/Caste/Domicile) so cards never double-display.

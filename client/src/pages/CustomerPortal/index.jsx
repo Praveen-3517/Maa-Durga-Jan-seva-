@@ -450,7 +450,7 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
   // Combine hardcoded SERVICES with dynamic services from API
   const [activeServices, setActiveServices] = useState(Object.values(SERVICES));
 
-  useEffect(() => {
+  const fetchDynamicServices = useCallback(() => {
     fetch('/api/services')
       .then(r => r.json())
       .then(data => {
@@ -478,13 +478,8 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
               const svcSlug = (svc.slug || svc.id || '').toLowerCase().trim();
               const svcTitle = (svc.title || '').toLowerCase().trim();
 
-              // Skip if slug matches hardcoded list
               if (hardcodedSlugs.includes(svcSlug)) return false;
-
-              // Skip if title matches any hardcoded service title
               if (hardcodedTitles.some(ht => ht === svcTitle || svcTitle.includes(ht) || ht.includes(svcTitle))) return false;
-
-              // Skip duplicate entries of core services in Hindi or English
               if (svcTitle.includes('income') || svcTitle.includes('caste') || svcTitle.includes('domicile') ||
                   svcTitle.includes('आय') || svcTitle.includes('जाति') || svcTitle.includes('निवास') ||
                   svcTitle.includes('pan') || svcTitle.includes('voter') || svcTitle.includes('पैन') || svcTitle.includes('वोटर')) {
@@ -494,7 +489,6 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
               return true;
             });
 
-          // Deduplicate unique dynamic custom services
           const uniqueDynamic = [];
           const seen = new Set();
           for (const svc of newDynamic) {
@@ -510,6 +504,26 @@ export default function CustomerPortal({ shopSettings, showToast, adminToken, on
       })
       .catch(err => console.error('[CustomerPortal] Error fetching dynamic services:', err));
   }, []);
+
+  useEffect(() => {
+    fetchDynamicServices();
+
+    const interval = setInterval(fetchDynamicServices, 5000);
+    const handleServicesUpdated = () => fetchDynamicServices();
+    window.addEventListener('services_updated', handleServicesUpdated);
+
+    let bc;
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('services_channel');
+      bc.onmessage = () => fetchDynamicServices();
+    }
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('services_updated', handleServicesUpdated);
+      if (bc) bc.close();
+    };
+  }, [fetchDynamicServices]);
 
   const cleanPhone = String(shopSettings?.shopPhone || '918707845206').replace(/[^0-9]/g, '');
 

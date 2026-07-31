@@ -199,6 +199,15 @@ function ShopSettingsForm({ adminToken, showToast, onRefreshSettings }) {
       if (!res.ok) throw new Error('Failed to update settings');
       showToast('Shop settings saved successfully!');
       setForm(f => ({ ...f, adminPassword: '' }));
+      
+      // Dispatch real-time events across all tabs & windows
+      window.dispatchEvent(new Event('shop_settings_updated'));
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('shop_settings_channel');
+        bc.postMessage('updated');
+        bc.close();
+      }
+
       if (onRefreshSettings) onRefreshSettings();
     } catch (err) { showToast('Failed to save settings.', 'error'); }
   };
@@ -326,6 +335,15 @@ function ServiceManagement({ adminToken, showToast }) {
 
   useEffect(() => { loadServices(); }, []);
 
+  const notifyServicesChanged = () => {
+    window.dispatchEvent(new Event('services_updated'));
+    if (typeof BroadcastChannel !== 'undefined') {
+      const bc = new BroadcastChannel('services_channel');
+      bc.postMessage('updated');
+      bc.close();
+    }
+  };
+
   const handleToggleActive = async (svc) => {
     try {
       const res = await fetch(`/api/admin/services/${svc.id}`, {
@@ -337,6 +355,7 @@ function ServiceManagement({ adminToken, showToast }) {
       if (!res.ok) throw new Error(data.message);
       showToast(`Service ${!svc.is_active ? 'activated' : 'deactivated'} successfully!`);
       loadServices();
+      notifyServicesChanged();
     } catch (err) { showToast('Failed to update service: ' + err.message, 'error'); }
   };
 
@@ -350,6 +369,7 @@ function ServiceManagement({ adminToken, showToast }) {
       if (!res.ok) throw new Error(data.message);
       showToast('Service deleted.');
       loadServices();
+      notifyServicesChanged();
     } catch (err) { showToast('Failed to delete service: ' + err.message, 'error'); }
   };
 
@@ -536,6 +556,12 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
       }
 
       showToast(isEdit ? 'Service updated successfully!' : 'Service created successfully!');
+      window.dispatchEvent(new Event('services_updated'));
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('services_channel');
+        bc.postMessage('updated');
+        bc.close();
+      }
       onSaved();
     } catch (err) {
       showToast('Failed to save service: ' + err.message, 'error');

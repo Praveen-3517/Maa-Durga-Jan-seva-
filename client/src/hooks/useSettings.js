@@ -23,7 +23,6 @@ export function useSettings() {
       setShopSettings(data || FALLBACK_SETTINGS);
     } catch (err) {
       console.error('Settings load error:', err);
-      setShopSettings(FALLBACK_SETTINGS);
     } finally {
       setLoading(false);
     }
@@ -31,6 +30,25 @@ export function useSettings() {
 
   useEffect(() => {
     fetchSettings();
+
+    // Auto-sync polling every 5 seconds for real-time updates
+    const interval = setInterval(fetchSettings, 5000);
+
+    // Instant event-driven sync
+    const handleCustomEvent = () => fetchSettings();
+    window.addEventListener('shop_settings_updated', handleCustomEvent);
+
+    let bc;
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('shop_settings_channel');
+      bc.onmessage = () => fetchSettings();
+    }
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('shop_settings_updated', handleCustomEvent);
+      if (bc) bc.close();
+    };
   }, [fetchSettings]);
 
   return { shopSettings, loading, refetch: fetchSettings };

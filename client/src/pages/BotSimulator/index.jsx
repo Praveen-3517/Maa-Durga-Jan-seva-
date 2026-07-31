@@ -39,7 +39,7 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
   const origin = window.location.origin;
 
   // Fetch services from API (same source as real WhatsApp bot)
-  useEffect(() => {
+  const fetchBotServices = useCallback(() => {
     fetch('/api/services')
       .then(r => r.json())
       .then(data => {
@@ -76,6 +76,26 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
         setDynamicServices(Object.values(SERVICES));
       });
   }, []);
+
+  useEffect(() => {
+    fetchBotServices();
+
+    const interval = setInterval(fetchBotServices, 5000);
+    const handleServicesUpdated = () => fetchBotServices();
+    window.addEventListener('services_updated', handleServicesUpdated);
+
+    let bc;
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('services_channel');
+      bc.onmessage = () => fetchBotServices();
+    }
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('services_updated', handleServicesUpdated);
+      if (bc) bc.close();
+    };
+  }, [fetchBotServices]);
 
   // Use dynamic or fallback services
   const activeServices = dynamicServices.length > 0 ? dynamicServices : Object.values(SERVICES);

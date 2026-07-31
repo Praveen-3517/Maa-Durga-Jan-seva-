@@ -292,6 +292,11 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-07-31 (v3.2.6 — Real-Time Shop Settings & Service Sync)**:
+  - Added instant event-driven broadcasts (`shop_settings_updated`, `services_updated`, `BroadcastChannel`) when Admin updates Shop Settings or Services.
+  - Implemented 5-second auto-sync background polling across `useSettings`, `CustomerPortal`, and `BotSimulator`.
+  - Ensures any changes made by Admin (Shop Name, Phone, Address, Timings, Service details) reflect instantly across all pages and tabs in real-time.
+
 - **2026-07-31 (v3.2.4 — Revert Modal Changes to Original Working State)**:
   - Reverted all modal CSS and JSX layout changes back to original working state (`commit 2c88430`) as explicitly requested.
   - Retained 160+ OBC sub-castes datalist and strict service deduplication.

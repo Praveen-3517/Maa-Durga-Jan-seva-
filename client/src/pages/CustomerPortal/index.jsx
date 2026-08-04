@@ -1910,66 +1910,51 @@ export default function CustomerPortal({
           return;
         }
 
-        const session =
-          data.data;
-
-        const svc =
-          session.service;
-
+        const session = data.data;
+        const svc = session.service;
         if (!svc) return;
 
-        const builtService = {
-          id: svc.id,
+        const svcNameUpper = (svc.name || '').toUpperCase();
+        const svcId = (svc.id || svc.slug || '').toLowerCase();
 
-          slug: svc.slug,
+        const isCertGroup =
+          svc.isMerged ||
+          svcId === 'srv_certificates' ||
+          svcId.includes('aay') ||
+          svcId.includes('jaati') ||
+          svcId.includes('niwas') ||
+          svcNameUpper.includes('AAY') ||
+          svcNameUpper.includes('JAATI') ||
+          svcNameUpper.includes('NIWAS') ||
+          svcNameUpper.includes('आय') ||
+          svcNameUpper.includes('जाति') ||
+          svcNameUpper.includes('निवास');
 
-          title: svc.name,
+        setPrefilledName(session.customer_name || '');
+        setPrefilledPhone(session.whatsapp_number || '');
+        setOpenAsPage(true);
 
-          name: svc.name,
+        if (isCertGroup) {
+          setModalService(SERVICES.srv_certificates);
+          setShowCertPicker(true);
+          setSelectedCertType(null);
+        } else {
+          const builtService = {
+            id: svc.id,
+            slug: svc.slug,
+            title: svc.name,
+            name: svc.name,
+            icon: svc.icon || 'fa-solid fa-file',
+            hindiTitle: svc.hindi_title || '',
+            description: svc.description || '',
+            requirements: (svc.documents || []).filter(d => d.is_required).map(d => d.document_name),
+            documents: svc.documents || []
+          };
 
-          icon:
-            svc.icon ||
-            'fa-solid fa-file',
-
-          hindiTitle:
-            svc.hindi_title ||
-            '',
-
-          description:
-            svc.description ||
-            '',
-
-          requirements:
-            (
-              svc.documents ||
-              []
-            )
-              .filter(
-                d => d.is_required
-              )
-              .map(
-                d =>
-                  d.document_name
-              ),
-
-          documents:
-            svc.documents ||
-            []
-        };
-
-        setPrefilledName(
-          session.customer_name ||
-          ''
-        );
-
-        setPrefilledPhone(
-          session.whatsapp_number ||
-          ''
-        );
-
-        setModalService(
-          builtService
-        );
+          setModalService(builtService);
+          setShowCertPicker(false);
+          setSelectedCertType(null);
+        }
 
         const cleanUrl =
           window.location.pathname +

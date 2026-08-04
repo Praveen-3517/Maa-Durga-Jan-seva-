@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const FALLBACK_SETTINGS = {
-  shopName: 'Maa Durga Jan Seva Kendra',
+  shopName: 'Maa Durga Online Center',
   shopOwner: 'Ramesh Kumar',
   shopPhone: '918707845206',
   shopEmail: 'info@cybercafe.com',

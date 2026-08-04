@@ -35,7 +35,7 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
   const [dynamicServices, setDynamicServices] = useState([]);
   const chatRef = useRef();
 
-  const shopName = shopSettings?.shopName || 'Maa Durga Jan Seva Kendra';
+  const shopName = shopSettings?.shopName || 'Maa Durga Online Center';
   const origin = window.location.origin;
 
   // Fetch services from API (same source as real WhatsApp bot)

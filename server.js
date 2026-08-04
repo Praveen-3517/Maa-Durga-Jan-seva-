@@ -383,6 +383,21 @@ const handleUploadAndSubmission = async (req, res) => {
 
     const insertedRecord = submissionData && submissionData[0] ? submissionData[0] : null;
 
+    // ── Instant WhatsApp Notification to Admin (Shop Owner) ─────────
+    try {
+      const settings = getSettings();
+      const adminPhone = process.env.ADMIN_PHONE_NUMBER || settings.shopPhone || '918707845206';
+      const cleanAdminPhone = adminPhone.replace(/[^0-9]/g, '');
+      const docCount = (uploadedFiles || []).length;
+      
+      const adminNotifMsg = `🔔 *New Application Received!*\n\n👤 *Customer Name:* ${name}\n📞 *WhatsApp / Phone:* ${phone}\n📋 *Service:* ${service}\n📄 *Uploaded Documents:* ${docCount} file(s)\n${remarks ? `📝 *Details / Notes:* ${remarks}\n` : ''}\n🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n_Log in to view documents & process application._`;
+
+      await sendWhatsAppMessage(cleanAdminPhone, adminNotifMsg);
+      console.log(`[WhatsApp Admin Notification] Sent to ${cleanAdminPhone}`);
+    } catch (notifErr) {
+      console.error('[WhatsApp Admin Notification Error]:', notifErr.message);
+    }
+
     return res.status(201).json({
       success: true,
       message: "Application submitted successfully to Supabase!",

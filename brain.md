@@ -1,6 +1,6 @@
-# 🧠 Project Brain & Memory: Maa Durga Jan Seva Kendra
+# 🧠 Project Brain & Memory: Maa Durga Online Center
 
-This document is the **Single Source of Truth** for the **Maa Durga Jan Seva Kendra - Cyber Cafe Portal & WhatsApp Chatbot Simulator** project.
+This document is the **Single Source of Truth** for the **Maa Durga Online Center - Cyber Cafe Portal & Real WhatsApp Business Bot** project.
 
 > [!IMPORTANT]
 > **PERMANENT WORKFLOW RULE**:
@@ -15,32 +15,33 @@ This document is the **Single Source of Truth** for the **Maa Durga Jan Seva Ken
 
 ## 📌 Project Identity
 
-- **Project Title**: Maa Durga Jan Seva Kendra - Cyber Cafe Portal & WhatsApp Chatbot
+- **Project Title**: Maa Durga Online Center - Cyber Cafe Portal & Real WhatsApp Business Bot
 - **Internal Codename**: `cyber-cafe-portal`
-- **Category**: Web Application / Client Document Portal & Interactive Simulator
-- **Theme**: Cyber Cafe & CSC / Jan Seva Kendra Digital Services Portal
+- **Category**: Web Application / Client Document Portal & Real WhatsApp Automation
+- **Theme**: Cyber Cafe & CSC / Jan Seva Kendra / Online Center Digital Services Portal
 - **Story / Context**: Empowering local customers to upload documents for government & commercial services (PAN, Voter ID, Certificates, Aadhaar, etc.) while enabling shop owners to manage applications and automate customer support via WhatsApp.
-- **Target Audience**: Jan Seva Kendra customers, local shop clients, and cyber cafe administrators.
+- **Target Audience**: Local customers, shop clients, and cyber cafe administrators.
 - **Unique Selling Points**:
   - Cloud persistence with **Supabase PostgreSQL** and **Supabase Storage**.
   - **React (Vite) frontend** — fully component-based, hot-reload dev experience.
-  - Built-in interactive **WhatsApp Bot Simulator** (now fetches services dynamically from API).
-  - **Real WhatsApp Cloud API integration** — webhook, message handling, upload session generation.
+  - Interactive **WhatsApp Bot Simulator** (fetches services dynamically from API).
+  - **Real WhatsApp Cloud API integration** — connected with real phone number `+91 94538 27145`, Meta Business Manager System User permanent token, webhook processing, interactive list messages ("Services Menu 👇").
   - **Dynamic Service Management** — Admin can add/edit/delete/toggle services without code changes.
+  - Instant **Admin WhatsApp Notifications** to shop owner's personal phone (`+91 87078 45206`) upon application submission.
   - Production-ready exportable **n8n Workflow** for Meta WhatsApp Cloud API (₹0 monthly fees).
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.2.0` (UI Polish, Light Mode Fix, Form Enhancements)
-- **Current Build**: Development — Express backend on `http://localhost:3000` | React dev server on `http://localhost:5173`.
-- **Development Status**: UI polish + form enhancements complete. Build verified ✅.
+- **Version**: `3.3.0` (Real WhatsApp Cloud API Verified & Live, Permanent Token Configured, Interactive List Messages, Form Routing Fix, Instant Admin Notifications)
+- **Current Live URL**: `https://maa-durga-jan-seva.onrender.com`
+- **Development Status**: Production Live & Verified ✅.
 
 ---
 
 ## 📈 Progress
 
 - **Overall Completion**: 100%
-- **Current Milestone**: Real WhatsApp Business Cloud API Integration — COMPLETE & LIVE 🚀
+- **Current Milestone**: Real WhatsApp Business Cloud API Integration — LIVE & VERIFIED 🚀
 - **Completed Phases**:
   - Phase 1: Core Portal & Simulator ✅
   - Phase 2: System Documentation & Memory Initialization ✅
@@ -48,10 +49,14 @@ This document is the **Single Source of Truth** for the **Maa Durga Jan Seva Ken
   - Phase 4: Premium UI Redesign (Amber dark theme, Lottie mascot) ✅
   - Phase 5: React (Vite) Frontend Migration ✅
   - Phase 6: Real WhatsApp Cloud API Integration + Dynamic Services ✅
-  - Phase 7: Real WhatsApp Business Number Verification (+91 94538 27145) ✅
-- **Pending Work**:
-  - Run `data/supabase_migration.sql` in Supabase SQL Editor (⚠️ REQUIRED before dynamic database services work)
-  - SMS notifications (optional)
+  - Phase 7: Real WhatsApp Business Number Verification (`+91 94538 27145`) ✅
+  - Phase 8: System User Permanent Token Generation (`EAAaG...`) ✅
+  - Phase 9: Meta Interactive List Messages ("Services Menu 👇") ✅
+  - Phase 10: HTML Entity Sanitization Fix (removed `.escape()` from express-validator) ✅
+  - Phase 11: WhatsApp Upload Link Routing to Full Certificate Form ✅
+  - Phase 12: Shop Name Rebranding to "Maa Durga Online Center" ✅
+  - Phase 13: Instant Admin WhatsApp Notifications to Owner (`+91 87078 45206`) ✅
+- **Pending Work**: None (Fully operational and live)
 
 ---
 

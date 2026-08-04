@@ -1019,9 +1019,10 @@ const crypto = require('crypto');
 // WhatsApp / Meta config from environment
 const getWhatsAppPhoneId = () => (process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
 const getWhatsAppToken   = () => (process.env.WHATSAPP_ACCESS_TOKEN    || '').trim();
+const getLiveAppUrl      = () => (process.env.PUBLIC_APP_URL || 'https://maa-durga-jan-seva.onrender.com').trim();
 const WHATSAPP_VERIFY_TOKEN    = (process.env.WHATSAPP_VERIFY_TOKEN || 'maa_durga_verify_token_2026').trim();
 const N8N_WEBHOOK_URL          = process.env.N8N_WEBHOOK_URL          || '';
-const PUBLIC_APP_URL           = process.env.PUBLIC_APP_URL           || 'http://localhost:3000';
+const PUBLIC_APP_URL           = process.env.PUBLIC_APP_URL           || 'https://maa-durga-jan-seva.onrender.com';
 const UPLOAD_TOKEN_EXPIRY_MIN  = parseInt(process.env.UPLOAD_TOKEN_EXPIRY_MINUTES || '60', 10);
 
 // ─── Helper: Send WhatsApp text message via Meta Cloud API ─────────────────
@@ -1052,6 +1053,51 @@ const sendWhatsAppMessage = async (to, text) => {
   } catch (err) {
     console.error('[WhatsApp Send Error]:', err.message);
     throw err;
+  }
+};
+
+// ─── Helper: Send WhatsApp Interactive List Message ──────────────────────────
+const sendWhatsAppInteractiveList = async (to, header, bodyText, footer, buttonText, rows) => {
+  const phoneId = getWhatsAppPhoneId();
+  const token   = getWhatsAppToken();
+  if (!phoneId || !token) {
+    console.log('[WhatsApp] Credentials missing — interactive list NOT sent.');
+    return { simulated: true };
+  }
+  const url = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to,
+        type: 'interactive',
+        interactive: {
+          type: 'list',
+          header: { type: 'text', text: header },
+          body: { text: bodyText },
+          footer: { text: footer },
+          action: {
+            button: buttonText,
+            sections: [{ title: 'AVAILABLE SERVICES', rows }]
+          }
+        }
+      })
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error(`[WhatsApp Interactive List Error ${resp.status}]:`, errText);
+      // Fallback: send plain text
+      return null;
+    }
+    const resData = await resp.json();
+    console.log(`[WhatsApp] Interactive list sent to ${to}`);
+    return resData;
+  } catch (err) {
+    console.error('[WhatsApp Interactive List Error]:', err.message);
+    return null;
   }
 };
 
@@ -1362,8 +1408,9 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
     if (msgType === 'text') {
       msgText = (message.text?.body || '').trim().toLowerCase();
     } else if (msgType === 'interactive') {
-      // List reply or button reply
+      // List reply or button reply — get the row ID (e.g. "service_abc123")
       msgText = message.interactive?.list_reply?.id || message.interactive?.button_reply?.id || '';
+      console.log(`[WhatsApp] Interactive reply ID: "${msgText}"`);
     }
 
     console.log(`[WhatsApp] Message from ${from}: "${msgText}" (type: ${msgType})`);
@@ -1392,22 +1439,66 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
     const isGreeting = greetings.some(g => msgText.includes(g)) || msgText.length <= 3;
 
     if (isGreeting) {
-      // Fetch active services from Supabase
-      let servicesText = '';
       try {
         const services = await getActiveServices();
         if (services.length > 0) {
-          const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-          servicesText = services.map((s, i) => `${numberEmojis[i] || (i + 1) + '.'} ${s.name}`).join('\n');
+          // Send interactive list message (like Bot Simulator)
+          const rows = services.slice(0, 10).map((s) => ({
+            id: `service_${s.id}`,
+            title: s.name.substring(0, 24),
+            description: (s.hindi_title || s.description || '').substring(0, 72)
+          }));
+          const result = await sendWhatsAppInteractiveList(
+            from,
+            `🙏 ${shopName}`,
+            `Hamare Jan Seva Kendra me aapka swagat hai! Main aapki kya madad kar sakta hoon?`,
+            'Chunein aur aage badhein',
+            'Services Menu 👇',
+            rows
+          );
+          // If interactive list failed, fallback to plain text
+          if (!result) {
+            const numberEmojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+            const servicesText = services.map((s, i) => `${numberEmojis[i] || (i+1)+'.'} ${s.name}`).join('\n');
+            await sendWhatsAppMessage(from, `🙏 *Welcome to ${shopName}!*\n\n${servicesText}\n\nReply with the number of the service you need.`);
+          }
         } else {
-          servicesText = '• PAN Card\n• Voter ID\n• Income Certificate\n• Caste Certificate';
+          await sendWhatsAppMessage(from, `🙏 *Welcome to ${shopName}!*\n\nWe provide CSC & online digital services.\n\nPlease contact us for services.`);
         }
       } catch (e) {
-        servicesText = '• PAN Card\n• Voter ID\n• Income Certificate\n• Caste Certificate';
+        console.error('[WhatsApp] Greeting error:', e.message);
+        await sendWhatsAppMessage(from, `🙏 *Welcome to ${shopName}!*\n\nType "Hi" to see services.`);
       }
+      return;
+    }
 
-      const welcomeMsg = `🙏 *Welcome to ${shopName}!*\n\nWe provide CSC & online digital services.\n\nPlease select a service by replying with the number:\n\n${servicesText}\n\nReply with the number of the service you need.`;
-      await sendWhatsAppMessage(from, welcomeMsg);
+    // Handle list reply: "service_<uuid>"
+    if (msgText.startsWith('service_')) {
+      const serviceId = msgText.replace('service_', '');
+      try {
+        const services = await getActiveServices();
+        const selected = services.find(s => String(s.id) === serviceId);
+        if (selected) {
+          const requiredDocs = (selected.documents || []).filter(d => d.is_required).map(d => `✅ ${d.document_name}`).join('\n');
+          let uploadUrl = getLiveAppUrl();
+          try {
+            const sessionRes = await fetch(`${getLiveAppUrl()}/api/upload-session`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ service_id: selected.id, whatsapp_number: from })
+            });
+            if (sessionRes.ok) {
+              const sd = await sessionRes.json();
+              if (sd.upload_url) uploadUrl = sd.upload_url;
+            }
+          } catch (_) {}
+          const replyMsg = `📄 *${selected.name}*${selected.hindi_title ? `\n(${selected.hindi_title})` : ''}\n\nRequired Documents:\n${requiredDocs || 'Contact shop for document list.'}\n\n📎 Documents upload karne ke liye niche diya gaya link kholein:\n\n🔗 ${uploadUrl}\n\n_Link ${UPLOAD_TOKEN_EXPIRY_MIN} minutes mein expire hoga._\n\n*"Hi" type karein menu ke liye.*`;
+          await sendWhatsAppMessage(from, replyMsg);
+        }
+      } catch (e) {
+        console.error('[WhatsApp] List reply error:', e.message);
+        await sendWhatsAppMessage(from, '❌ Sorry, kuch galat hua. Please "Hi" type karein aur dobara try karein.');
+      }
       return;
     }
 
@@ -1425,9 +1516,9 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
             .join('\n');
 
           // Create a secure upload session
-          let uploadUrl = `${PUBLIC_APP_URL}`;
+          let uploadUrl = getLiveAppUrl();
           try {
-            const sessionRes = await fetch(`${PUBLIC_APP_URL}/api/upload-session`, {
+            const sessionRes = await fetch(`${getLiveAppUrl()}/api/upload-session`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ service_id: selected.id, whatsapp_number: from })
@@ -1440,7 +1531,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
             console.error('[WhatsApp] Failed to create upload session:', sessErr.message);
           }
 
-          const replyMsg = `📄 *${selected.name}*\n${selected.hindi_title ? `(${selected.hindi_title})\n` : ''}\nRequired Documents:\n${requiredDocs || 'Please contact the shop for document list.'}\n\nPlease keep these documents ready and upload them using the link below:\n\n🔗 ${uploadUrl}\n\n_Link expires in ${UPLOAD_TOKEN_EXPIRY_MIN} minutes._\n\n*Type "Hi" to see the Main Menu again.*`;
+          const replyMsg = `📄 *${selected.name}*${selected.hindi_title ? `\n(${selected.hindi_title})` : ''}\n\nRequired Documents:\n${requiredDocs || 'Please contact the shop for document list.'}\n\n📎 Documents upload karne ke liye niche diya gaya link kholein:\n\n🔗 ${uploadUrl}\n\n_Link ${UPLOAD_TOKEN_EXPIRY_MIN} minutes mein expire hoga._\n\n*"Hi" type karein menu ke liye.*`;
           await sendWhatsAppMessage(from, replyMsg);
         } else {
           const services = await getActiveServices();

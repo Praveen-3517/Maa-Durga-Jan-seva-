@@ -1017,8 +1017,8 @@ app.put('/api/settings', checkAdmin, async (req, res) => {
 const crypto = require('crypto');
 
 // WhatsApp / Meta config from environment
-const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
-const WHATSAPP_ACCESS_TOKEN    = process.env.WHATSAPP_ACCESS_TOKEN    || '';
+const getWhatsAppPhoneId = () => (process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
+const getWhatsAppToken   = () => (process.env.WHATSAPP_ACCESS_TOKEN    || '').trim();
 const WHATSAPP_VERIFY_TOKEN    = (process.env.WHATSAPP_VERIFY_TOKEN || 'maa_durga_verify_token_2026').trim();
 const N8N_WEBHOOK_URL          = process.env.N8N_WEBHOOK_URL          || '';
 const PUBLIC_APP_URL           = process.env.PUBLIC_APP_URL           || 'http://localhost:3000';
@@ -1026,22 +1026,33 @@ const UPLOAD_TOKEN_EXPIRY_MIN  = parseInt(process.env.UPLOAD_TOKEN_EXPIRY_MINUTE
 
 // ─── Helper: Send WhatsApp text message via Meta Cloud API ─────────────────
 const sendWhatsAppMessage = async (to, text) => {
-  if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
-    console.log('[WhatsApp] Credentials not configured — message NOT sent (dev mode).');
+  const phoneId = getWhatsAppPhoneId();
+  const token   = getWhatsAppToken();
+
+  if (!phoneId || !token) {
+    console.log('[WhatsApp] Credentials missing in environment — message NOT sent.');
     console.log(`[WhatsApp DEV] To: ${to}\nMessage:\n${text}`);
     return { simulated: true };
   }
-  const url = `https://graph.facebook.com/v19.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
-    body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'text', text: { body: text } })
-  });
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`WhatsApp API error: ${err}`);
+  const url = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'text', text: { body: text } })
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error(`[WhatsApp API Response Error ${resp.status}]:`, errText);
+      throw new Error(`WhatsApp API error: ${errText}`);
+    }
+    const resData = await resp.json();
+    console.log(`[WhatsApp] Message successfully sent to ${to}:`, resData);
+    return resData;
+  } catch (err) {
+    console.error('[WhatsApp Send Error]:', err.message);
+    throw err;
   }
-  return resp.json();
 };
 
 // ─── Helper: Fetch active services + docs from Supabase ───────────────────

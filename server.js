@@ -1174,10 +1174,10 @@ app.get('/api/services/:id', async (req, res) => {
 
 // ─── ADMIN: POST /api/admin/services — create new service ──────────────────
 app.post('/api/admin/services', checkAdmin, [
-  body('name').notEmpty().trim().escape(),
+  body('name').notEmpty().trim(),
   body('slug').optional().trim(),
-  body('description').optional().trim().escape(),
-  body('short_description').optional().trim().escape(),
+  body('description').optional().trim(),
+  body('short_description').optional().trim(),
   body('hindi_title').optional().trim(),
   body('icon').optional().trim(),
   body('is_active').optional().isBoolean(),
@@ -1259,7 +1259,7 @@ app.delete('/api/admin/services/:id', checkAdmin, async (req, res) => {
 
 // ─── ADMIN: POST /api/admin/services/:id/documents — add document ──────────
 app.post('/api/admin/services/:id/documents', checkAdmin, [
-  body('document_name').notEmpty().trim().escape(),
+  body('document_name').notEmpty().trim(),
   body('is_required').optional().isBoolean(),
   body('display_order').optional().isInt(),
 ], async (req, res) => {

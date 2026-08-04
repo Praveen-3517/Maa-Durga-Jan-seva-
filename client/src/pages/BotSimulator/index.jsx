@@ -255,7 +255,7 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
                   if (m.type === 'menu') return (
                     <div key={i} className="wa-interactive-card">
                       <div className="wa-interactive-header">{shopName}</div>
-                      <div className="wa-interactive-body">Hello! 🙏 Hamare Jan Seva Kendra me aapka swagat hai. Service select karein:</div>
+                      <div className="wa-interactive-body">Hello! 🙏 Hamare Online Center me aapka swagat hai. Service select karein:</div>
                       <div className="wa-interactive-footer">Chunein aur aage badhein</div>
                       <div className="wa-interactive-action-btn" onClick={() => setMenuOpen(true)}>
                         <i className="fa-solid fa-list-ul"></i> Services Menu 👇

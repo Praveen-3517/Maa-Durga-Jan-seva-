@@ -156,7 +156,7 @@ const BCRYPT_ROUNDS = 12;
 
 const getSettings = () => {
   const defaultSettings = {
-    shopName: "Maa Durga Jan Seva Kendra",
+    shopName: "Maa Durga Online Center",
     shopOwner: "Ramesh Kumar",
     shopPhone: "918707845206",
     shopEmail: "ramesh.cybercafe@gmail.com",
@@ -592,7 +592,7 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Receipt Not Found - Maa Durga Jan Seva Kendra</title>
+          <title>Receipt Not Found - Maa Durga Online Center</title>
           <style>
             body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
             .card { background: #1e293b; border: 1px solid #334155; padding: 2rem; border-radius: 12px; max-width: 450px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
@@ -661,7 +661,7 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
 
     // 1. Header Banner Box
     doc.rect(40, 40, 515, 65).fill(primaryColor);
-    doc.fillColor('#ffffff').fontSize(18).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text((settings.shopName || 'MAA DURGA JAN SEVA KENDRA').toUpperCase(), 55, 52);
+    doc.fillColor('#ffffff').fontSize(18).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text((settings.shopName || 'Maa Durga Online Center').toUpperCase(), 55, 52);
     doc.fontSize(9).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica').fillColor('#94a3b8').text('CSC & ONLINE DIGITAL SERVICES PORTAL', 55, 75);
     doc.text(`Contact: ${settings.shopPhone || 'N/A'}`, 55, 87);
 
@@ -784,7 +784,7 @@ const generatePdfSummaryBuffer = (submission, settings) => {
 
       // Header Banner Box
       pdfDoc.rect(40, 40, 515, 65).fill(primaryColor);
-      pdfDoc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text((settings.shopName || 'MAA DURGA JAN SEVA KENDRA').toUpperCase(), 55, 52);
+      pdfDoc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text((settings.shopName || 'Maa Durga Online Center').toUpperCase(), 55, 52);
       pdfDoc.fontSize(9).font('Helvetica').fillColor('#94a3b8').text('CSC AND ONLINE DIGITAL SERVICES PORTAL', 55, 75);
       pdfDoc.text(`Contact: ${settings.shopPhone || 'N/A'}`, 55, 87);
 
@@ -1445,7 +1445,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
 
     // ── Fallback: Handle conversation directly in Express ────────────────────
     const settings = getSettings();
-    const shopName = settings.shopName || 'Maa Durga Jan Seva Kendra';
+    const shopName = settings.shopName || 'Maa Durga Online Center';
 
     // Greeting detection
     const greetings = ['hi', 'hello', 'helo', 'hey', 'namaste', 'namaskar', 'jai', 'start', 'menu', 'help'];
@@ -1464,7 +1464,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
           const result = await sendWhatsAppInteractiveList(
             from,
             `🙏 ${shopName}`,
-            `Hamare Jan Seva Kendra me aapka swagat hai! Main aapki kya madad kar sakta hoon?`,
+            `Hamare Online Center me aapka swagat hai! Main aapki kya madad kar sakta hoon?`,
             'Chunein aur aage badhein',
             'Services Menu 👇',
             rows

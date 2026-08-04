@@ -145,6 +145,7 @@
 
 html {
   scroll-behavior: smooth;
+  box-sizing: border-box;
 }
 
 body {
@@ -157,6 +158,7 @@ body {
     radial-gradient(ellipse 60% 40% at 10% 0%, rgba(245, 158, 11, 0.07) 0%, transparent 55%),
     radial-gradient(ellipse 50% 40% at 90% 100%, rgba(34, 211, 238, 0.05) 0%, transparent 55%);
   background-attachment: fixed;
+  margin: 0%;
 }
 
 a {
@@ -190,7 +192,7 @@ code {
 
 /* NAVBAR */
 .navbar {
-  display: flex;
+ display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
@@ -199,10 +201,12 @@ code {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--glass-border);
-  position: sticky;
-  top: 0;
+  position : sticky;
+  top: 0%;
   z-index: 200;
   box-shadow: 0 1px 0 var(--glass-border), 0 4px 24px rgba(0, 0, 0, 0.25);
+  margin-top: 0%;
+
 }
 
 .logo {
@@ -723,6 +727,7 @@ code {
   background: transparent;
   color: var(--text-primary);
   border: 1px solid var(--border-color);
+
 }
 
 .btn-outline:hover {
@@ -733,6 +738,12 @@ code {
 .btn-block {
   display: flex;
   width: 100%;
+}
+
+.back{
+  position : fixed;
+  left : 20px;
+  top: 0;
 }
 
 .btn-icon {
@@ -2128,7 +2139,7 @@ textarea:focus {
   padding: 0.7rem 0 0.5rem;
   background: var(--surface-overlay);
   border-top: 1px solid var(--border-color);
-  margin-bottom: 0;
+
 }
 
 .footer-content {
@@ -2554,8 +2565,8 @@ textarea:focus {
 
 @media (max-width: 640px) {
   .footer {
-    margin-top: 0.9rem;
-    padding: 0.6rem 0 0.45rem;
+    /* margin-top: 0.9rem; */
+    /* padding: 0.6rem 0 0.45rem; */
   }
 
   .footer-content {
@@ -2709,3 +2720,33 @@ textarea:focus {
   gap: 1.5rem;
 }
 
+@media (max-width: 640px) {
+
+  /* Sirf application page ko full width */
+  .application-page {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .application-form-wrapper {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .application-page-view {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .application-page-view .modal-content {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 20px !important;
+  }
+}

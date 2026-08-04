@@ -103,7 +103,7 @@ export default function App() {
       </footer>
       <FloatingWhatsApp shopSettings={shopSettings} />
       <PetMascot />
-      {/* <Toast message={toast.message} type={toast.type} visible={toast.visible} /> */}
+      { <Toast message={toast.message} type={toast.type} visible={toast.visible} /> }
 
 
     </StarsBackground>

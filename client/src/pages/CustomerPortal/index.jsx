@@ -2030,7 +2030,7 @@ export default function CustomerPortal({
           style={{
             width: '100%',
             padding:
-              '0.5rem 1rem 1.5rem',
+              '0',
             margin: 0,
             boxSizing:
               'border-box'
@@ -2058,7 +2058,7 @@ export default function CustomerPortal({
           >
             <button
               type="button"
-              className="btn btn-outline"
+              className="btn btn-outline back"
               onClick={
                 handleClose
               }
@@ -2082,13 +2082,13 @@ export default function CustomerPortal({
                * FORM WIDTH
                * 90% of screen
                */
-              width: '90%',
+              width: '100%',
 
               /*
                * Maximum width
                */
               maxWidth:
-                '1350px',
+                '1550px',
 
               /*
                * CENTER
@@ -2099,7 +2099,8 @@ export default function CustomerPortal({
               padding: 0,
 
               boxSizing:
-                'border-box'
+                'border-box',
+
             }}
           >
             {showCertPicker &&

@@ -1101,6 +1101,19 @@ const sendWhatsAppInteractiveList = async (to, header, bodyText, footer, buttonT
   }
 };
 
+// ─── Helper: Decode HTML entities in text ─────────────────────────────────
+const decodeHtmlEntities = (str) => {
+  if (!str || typeof str !== 'string') return str;
+  return str
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&#47;/gi, '/')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#039;/gi, "'");
+};
+
 // ─── Helper: Fetch active services + docs from Supabase ───────────────────
 const getActiveServices = async () => {
   const { data: services, error: svcErr } = await supabase
@@ -1445,8 +1458,8 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
           // Send interactive list message (like Bot Simulator)
           const rows = services.slice(0, 10).map((s) => ({
             id: `service_${s.id}`,
-            title: s.name.substring(0, 24),
-            description: (s.hindi_title || s.description || '').substring(0, 72)
+            title: decodeHtmlEntities(s.name).substring(0, 24),
+            description: decodeHtmlEntities(s.hindi_title || s.description || '').substring(0, 72)
           }));
           const result = await sendWhatsAppInteractiveList(
             from,

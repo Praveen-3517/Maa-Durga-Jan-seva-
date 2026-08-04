@@ -1765,10 +1765,19 @@ export default function CustomerPortal({
                   svcTitle.includes('pan') ||
                   svcTitle.includes('voter') ||
                   svcTitle.includes('पैन') ||
-                  svcTitle.includes('वोटर')
+                  svcTitle.includes('वोटर') ||
+                  svcTitle.includes('aay') ||
+                  svcTitle.includes('jaati') ||
+                  svcTitle.includes('niwas') ||
+                  svcTitle.includes('jaati') ||
+                  svcTitle.replace(/[^a-z0-9]/g, '').includes(
+                    (Object.values(SERVICES).map(s => s.title.toLowerCase().replace(/[^a-z0-9]/g, '')))
+                      .find(ht => svcTitle.replace(/[^a-z0-9]/g, '').includes(ht) || ht.includes(svcTitle.replace(/[^a-z0-9]/g, ''))) || '____'
+                  )
                 ) {
                   return false;
                 }
+
 
                 return true;
               });

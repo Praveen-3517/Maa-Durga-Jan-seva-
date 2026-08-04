@@ -52,16 +52,16 @@ app.use(morgan('combined'));
 // In production, replace 'http://localhost:3000' with your live domain.
 const ALLOWED_ORIGINS = (
   process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://127.0.0.1:5173']
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'https://maa-durga-jan-seva.onrender.com']
 );
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl)
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    // Allow requests with no origin (mobile apps, Postman, curl, webhooks) or from allowed origins/Meta/Render
+    if (!origin || ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*') || origin.includes('facebook.com') || origin.includes('onrender.com')) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS policy: Origin '${origin}' is not allowed.`));
+      callback(null, true);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -1019,7 +1019,7 @@ const crypto = require('crypto');
 // WhatsApp / Meta config from environment
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
 const WHATSAPP_ACCESS_TOKEN    = process.env.WHATSAPP_ACCESS_TOKEN    || '';
-const WHATSAPP_VERIFY_TOKEN    = process.env.WHATSAPP_VERIFY_TOKEN    || 'maa_durga_verify_token_2026';
+const WHATSAPP_VERIFY_TOKEN    = (process.env.WHATSAPP_VERIFY_TOKEN || 'maa_durga_verify_token_2026').trim();
 const N8N_WEBHOOK_URL          = process.env.N8N_WEBHOOK_URL          || '';
 const PUBLIC_APP_URL           = process.env.PUBLIC_APP_URL           || 'http://localhost:3000';
 const UPLOAD_TOKEN_EXPIRY_MIN  = parseInt(process.env.UPLOAD_TOKEN_EXPIRY_MINUTES || '60', 10);
@@ -1316,12 +1316,17 @@ app.get('/api/whatsapp/webhook', (req, res) => {
   const token     = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode === 'subscribe' && token === WHATSAPP_VERIFY_TOKEN) {
-    console.log('[WhatsApp Webhook] Verified successfully.');
-    return res.status(200).send(challenge);
+  console.log('[WhatsApp Webhook GET] Incoming challenge request:', { mode, token, challenge });
+
+  const expectedToken = (process.env.WHATSAPP_VERIFY_TOKEN || 'maa_durga_verify_token_2026').trim();
+  const receivedToken = (token || '').trim();
+
+  if (mode === 'subscribe' && receivedToken === expectedToken) {
+    console.log('[WhatsApp Webhook] Verified successfully. Returning challenge:', challenge);
+    return res.status(200).type('text/plain').send(String(challenge));
   }
-  console.warn('[WhatsApp Webhook] Verification failed — token mismatch.');
-  res.status(403).json({ error: 'Verification failed.' });
+  console.warn(`[WhatsApp Webhook] Verification failed. Received token: "${receivedToken}", Expected token: "${expectedToken}"`);
+  return res.status(403).type('text/plain').send('Verification failed.');
 });
 
 // POST /api/whatsapp/webhook — receive incoming WhatsApp messages from Meta

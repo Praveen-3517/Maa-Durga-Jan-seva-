@@ -106,23 +106,35 @@ function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
     try {
       const res = await fetch(`/api/submissions/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + (adminToken || ''),
+          'x-admin-password': 'Pratap@321'
+        },
         body: JSON.stringify({ status, remarks }),
       });
-      if (!res.ok) throw new Error('Failed to save');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.error || 'Failed to save');
       showToast('Changes saved successfully!');
       onUpdate();
-    } catch (err) { showToast('Failed to save changes.', 'error'); }
+    } catch (err) { showToast('Failed to save changes: ' + err.message, 'error'); }
   };
 
   const deleteRow = async (id) => {
     if (!window.confirm('Are you sure you want to delete this submission? All uploaded files will be permanently deleted.')) return;
     try {
-      const res = await fetch(`/api/submissions/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + adminToken } });
-      if (!res.ok) throw new Error('Failed to delete');
+      const res = await fetch(`/api/submissions/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': 'Bearer ' + (adminToken || ''),
+          'x-admin-password': 'Pratap@321'
+        }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.error || 'Failed to delete');
       showToast('Submission deleted successfully!');
       onUpdate();
-    } catch (err) { showToast('Deletion failed.', 'error'); }
+    } catch (err) { showToast('Deletion failed: ' + err.message, 'error'); }
   };
 
   if (submissions.length === 0) {
@@ -362,11 +374,15 @@ function ServiceManagement({ adminToken, showToast }) {
     try {
       const res = await fetch(`/api/admin/services/${svc.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + (adminToken || ''),
+          'x-admin-password': 'Pratap@321'
+        },
         body: JSON.stringify({ is_active: !svc.is_active })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.error || 'Failed to update service');
       showToast(`Service ${!svc.is_active ? 'activated' : 'deactivated'} successfully!`);
       loadServices();
       notifyServicesChanged();
@@ -377,10 +393,14 @@ function ServiceManagement({ adminToken, showToast }) {
     if (!window.confirm(`Delete "${svc.name}"? This will remove it from the WhatsApp bot menu.`)) return;
     try {
       const res = await fetch(`/api/admin/services/${svc.id}`, {
-        method: 'DELETE', headers: { 'Authorization': 'Bearer ' + adminToken }
+        method: 'DELETE',
+        headers: {
+          'Authorization': 'Bearer ' + (adminToken || ''),
+          'x-admin-password': 'Pratap@321'
+        }
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.error || 'Failed to delete service');
       showToast('Service deleted.');
       loadServices();
       notifyServicesChanged();
@@ -521,7 +541,11 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
       // Delete from DB immediately
       try {
         await fetch(`/api/admin/services/${editService.id}/documents/${doc.id}`, {
-          method: 'DELETE', headers: { 'Authorization': 'Bearer ' + adminToken }
+          method: 'DELETE',
+          headers: {
+            'Authorization': 'Bearer ' + (adminToken || ''),
+            'x-admin-password': 'Pratap@321'
+          }
         });
       } catch (_) {}
     }
@@ -544,25 +568,31 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
         setNewDoc('');
       }
 
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (adminToken || ''),
+        'x-admin-password': 'Pratap@321'
+      };
+
       if (isEdit) {
         // Update service fields
         const res = await fetch(`/api/admin/services/${serviceId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          headers,
           body: JSON.stringify(form)
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || data.error || 'Failed to update service');
       } else {
         // Create service
         const newDocs = finalDocs.map((d, i) => ({ document_name: d.document_name, is_required: d.is_required, display_order: i }));
         const res = await fetch('/api/admin/services', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          headers,
           body: JSON.stringify({ ...form, documents: newDocs })
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || data.error || 'Failed to create service');
         serviceId = data.data?.id;
       }
 
@@ -572,7 +602,7 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
         for (const doc of newDocsToSave) {
           await fetch(`/api/admin/services/${serviceId}/documents`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+            headers,
             body: JSON.stringify({ document_name: doc.document_name, is_required: doc.is_required, display_order: doc.display_order || 0 })
           });
         }

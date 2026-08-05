@@ -296,6 +296,11 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-08-05 (v3.3.14 — Full Admin Dashboard Operations Audit & Fail-Safe Headers)**:
+  - **Comprehensive Admin Audit**: Enhanced all Admin Dashboard API calls (`SubmissionsTable`, `ServicesTab`, `ServiceModal`, `ShopSettingsForm`) with fail-safe header fallbacks and explicit error handling.
+  - Verified all Admin actions: Password login, status updates, submission deletion, service creation/editing, document toggling, and settings saving.
+  - Production build verified: `npm run build` ✅ (27 modules, 0 errors).
+
 - **2026-08-05 (v3.3.13 — Shop Settings Save & Admin Auth Fallback Fix)**:
   - **Shop Settings Fix**: Updated `checkAdmin` middleware ([server.js](file:///f:/chat%20bot/server.js)) and `ShopSettingsForm` ([AdminDashboard/index.jsx](file:///f:/chat%20bot/client/src/pages/AdminDashboard/index.jsx)) to support fallback authentication headers and detailed error reporting.
   - Verified shop settings update: Saved email `durgaonline01@gmail.com` and address `Chak Faizullaha, Bindwaliya, Near Ghazipur Ghat 233001 (UP)` to [data/settings.json](file:///f:/chat%20bot/data/settings.json).

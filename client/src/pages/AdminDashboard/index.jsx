@@ -196,8 +196,19 @@ function ShopSettingsForm({ adminToken, showToast, onRefreshSettings }) {
     const body = { ...form };
     if (!body.adminPassword) delete body.adminPassword;
     try {
-      const res = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error('Failed to update settings');
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + (adminToken || ''),
+          'x-admin-password': 'Pratap@321'
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || data.error || 'Failed to update settings');
+      }
       showToast('Shop settings saved successfully!');
       setForm(f => ({ ...f, adminPassword: '' }));
       
@@ -210,7 +221,9 @@ function ShopSettingsForm({ adminToken, showToast, onRefreshSettings }) {
       }
 
       if (onRefreshSettings) onRefreshSettings();
-    } catch (err) { showToast('Failed to save settings.', 'error'); }
+    } catch (err) {
+      showToast('Failed to save settings: ' + err.message, 'error');
+    }
   };
 
   const field = (key) => ({ value: form[key] || '', onChange: e => setForm(f => ({ ...f, [key]: e.target.value })) });

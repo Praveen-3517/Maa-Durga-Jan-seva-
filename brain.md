@@ -296,6 +296,11 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-08-05 (v3.3.13 — Shop Settings Save & Admin Auth Fallback Fix)**:
+  - **Shop Settings Fix**: Updated `checkAdmin` middleware ([server.js](file:///f:/chat%20bot/server.js)) and `ShopSettingsForm` ([AdminDashboard/index.jsx](file:///f:/chat%20bot/client/src/pages/AdminDashboard/index.jsx)) to support fallback authentication headers and detailed error reporting.
+  - Verified shop settings update: Saved email `durgaonline01@gmail.com` and address `Chak Faizullaha, Bindwaliya, Near Ghazipur Ghat 233001 (UP)` to [data/settings.json](file:///f:/chat%20bot/data/settings.json).
+  - Production build verified: `npm run build` ✅ (27 modules, 0 errors).
+
 - **2026-08-05 (v3.3.12 — Clean Customer Portal & Navbar-only CSC Certificate)**:
   - Removed duplicate `csc-trust-card` block from Customer Portal body as requested, leaving Customer Portal layout clean (Hero → Our Digital Services).
   - Kept official **🏅 CSC Certificate** in the top Navigation Bar with instant high-res Lightbox modal popup.

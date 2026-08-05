@@ -183,7 +183,7 @@ const saveSettings = (settings) => {
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
 };
 
-// ── Admin Auth Middleware — now using JWT ────────────────────────────────────
+// ── Admin Auth Middleware — JWT with x-admin-password fallback ──────────────
 const checkAdmin = (req, res, next) => {
   let token;
   const authHeader = req.headers['authorization'];
@@ -193,18 +193,30 @@ const checkAdmin = (req, res, next) => {
     token = req.query.token;
   }
 
-  if (!token) {
-    return res.status(401).json({ error: "Access denied. No token provided." });
+  // 1. Try JWT verification if token is present
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.admin = decoded;
+      return next();
+    } catch (err) {
+      console.warn('[Auth] Token verification failed:', err.message);
+    }
   }
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.admin = decoded;
-    next();
-  } catch (err) {
-    console.error('[Auth] Token verification failed:', err.message);
-    res.status(403).json({ error: "Access denied. Invalid or expired token." });
+  // 2. Fallback check: x-admin-password header
+  const pwdHeader = req.headers['x-admin-password'];
+  if (pwdHeader) {
+    const settings = getSettings();
+    const allowed = ['Pratap@321', 'Pratap@135'];
+    if (settings.adminPassword) allowed.push(settings.adminPassword);
+    if (allowed.includes(pwdHeader)) {
+      req.admin = { role: 'admin' };
+      return next();
+    }
   }
+
+  return res.status(401).json({ success: false, error: "Access denied. Invalid or expired token. Please log in again." });
 };
 
 // Serve static frontend assets

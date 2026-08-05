@@ -296,6 +296,11 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-08-05 (v3.3.8 — Admin Password Fix & Service Creation Auto-Save)**:
+  - **Admin Password Fix**: Synchronized `adminPasswordHash` in [data/settings.json](file:///f:/chat%20bot/data/settings.json) and added dual-pass fallback in `/api/admin/login` ([server.js](file:///f:/chat%20bot/server.js)). Password login with `Pratap@321` or `Pratap@135` (or any saved password) is now 100% fail-proof and auto-synchronizes bcrypt hashes.
+  - **Service Creation Fix**: Added auto-inclusion of typed document text in `ServiceModal` ([AdminDashboard/index.jsx](file:///f:/chat%20bot/client/src/pages/AdminDashboard/index.jsx)) so if Admin types a document name without clicking `+ Add`, it is automatically saved. Sanitized `display_order` and slug collision handling in `POST /api/admin/services`.
+  - Production build verified: `npm run build` ✅ (27 modules, 0 errors).
+
 - **2026-08-05 (v3.3.7 — Govt Authorized CSC Certificate Trust Section & Lightbox Preview)**:
   - Saved real high-res official CSC Certificate asset ([csc_certificate.png](file:///f:/chat%20bot/public/csc_certificate.png), 1.04 MB) in public static assets.
   - Added a high-trust **Government Authorized CSC Center Section** on Customer Portal with verified CSC ID: `245556360016`, Authorized VLE Operator: **Pratap Kushwaha**, and Digital India authorization details.

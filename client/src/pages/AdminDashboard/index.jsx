@@ -522,6 +522,15 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
     try {
       let serviceId = editService?.id;
 
+      // Auto-include typed document text if admin forgot to click + Add button
+      let finalDocs = [...documents];
+      if (newDoc.trim()) {
+        const autoAdded = { document_name: newDoc.trim(), is_required: newDocRequired, display_order: finalDocs.length, _new: true };
+        finalDocs.push(autoAdded);
+        setDocuments(finalDocs);
+        setNewDoc('');
+      }
+
       if (isEdit) {
         // Update service fields
         const res = await fetch(`/api/admin/services/${serviceId}`, {
@@ -533,7 +542,7 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
         if (!res.ok) throw new Error(data.message);
       } else {
         // Create service
-        const newDocs = documents.map((d, i) => ({ document_name: d.document_name, is_required: d.is_required, display_order: i }));
+        const newDocs = finalDocs.map((d, i) => ({ document_name: d.document_name, is_required: d.is_required, display_order: i }));
         const res = await fetch('/api/admin/services', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
@@ -546,12 +555,12 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
 
       // For edit mode, add any new documents
       if (isEdit) {
-        const newDocs = documents.filter(d => d._new);
-        for (const doc of newDocs) {
+        const newDocsToSave = finalDocs.filter(d => d._new);
+        for (const doc of newDocsToSave) {
           await fetch(`/api/admin/services/${serviceId}/documents`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-            body: JSON.stringify({ document_name: doc.document_name, is_required: doc.is_required, display_order: doc.display_order })
+            body: JSON.stringify({ document_name: doc.document_name, is_required: doc.is_required, display_order: doc.display_order || 0 })
           });
         }
       }

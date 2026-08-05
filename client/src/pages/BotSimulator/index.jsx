@@ -33,10 +33,7 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
   const [payloadCode, setPayloadCode] = useState('// Send a message to see the WhatsApp Graph API JSON payloads in real-time.');
   const [menuOpen, setMenuOpen] = useState(false);
   const [dynamicServices, setDynamicServices] = useState([]);
-  const chatRef = useRef();
-
-  const shopName = shopSettings?.shopName || 'Maa Durga Online Center';
-  const origin = window.location.origin;
+  const hasInitializedRef = useRef(false);
 
   // Fetch services from API (same source as real WhatsApp bot)
   const fetchBotServices = useCallback(() => {
@@ -44,11 +41,7 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
       .then(r => r.json())
       .then(data => {
         if (data.success && data.data && data.data.length > 0) {
-          const hardcodedSlugs = [
-            'srv_certificates', 'srv_pancard', 'srv_voterid',
-            'certificates', 'pancard', 'voterid', 'pan', 'voter',
-            'aay', 'jaati', 'niwas', 'all', 'income', 'caste', 'domicile'
-          ];
+          const hardcodedSlugs = Object.values(SERVICES).map(s => (s.slug || s.id || '').toLowerCase().trim());
           const hardcodedTitles = Object.values(SERVICES).map(s => (s.title || '').toLowerCase().trim());
 
           const customDyn = data.data
@@ -56,14 +49,8 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
             .filter(svc => {
               const svcSlug = (svc.slug || svc.id || '').toLowerCase().trim();
               const svcTitle = (svc.title || '').toLowerCase().trim();
-
               if (hardcodedSlugs.includes(svcSlug)) return false;
-              if (hardcodedTitles.some(ht => ht === svcTitle || svcTitle.includes(ht) || ht.includes(svcTitle))) return false;
-              if (svcTitle.includes('income') || svcTitle.includes('caste') || svcTitle.includes('domicile') ||
-                  svcTitle.includes('आय') || svcTitle.includes('जाति') || svcTitle.includes('निवास') ||
-                  svcTitle.includes('pan') || svcTitle.includes('voter') || svcTitle.includes('पैन') || svcTitle.includes('वोटर')) {
-                return false;
-              }
+              if (hardcodedTitles.includes(svcTitle)) return false;
               return true;
             });
 
@@ -208,12 +195,14 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
   };
 
   useEffect(() => {
-    if (activeServices.length === 0) return;
-    setTimeout(() => {
+    if (activeServices.length === 0 || hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+    const timer = setTimeout(() => {
       addMsg('bot', `Hi! ${shopName} me aapka swagat hai. Main aapki kya madad kar sakta hoon?`);
       setTimeout(addBotWelcomeMenu, 600);
     }, 1000);
-  }, [activeServices.length]);
+    return () => clearTimeout(timer);
+  }, [activeServices.length, shopName]);
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;

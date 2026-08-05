@@ -32,8 +32,8 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.3.0` (Real WhatsApp Cloud API Verified & Live, Permanent Token Configured, Interactive List Messages, Form Routing Fix, Instant Admin Notifications)
-- **Current Live URL**: `https://maa-durga-jan-seva.onrender.com`
+- **Version**: `3.3.7` (Custom Domain https://durgaonline.info, WhatsApp Cloud API Live, Govt CSC Certificate Trust Card, Direct Camera Photo Capture, Live Service Search Filter, Admin Pending Filter Fix, Dark Theme Lock)
+- **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
 ---
@@ -295,6 +295,44 @@ npm run build             # from f:\chat bot\
 ---
 
 ## 📜 Changelog
+
+- **2026-08-05 (v3.3.7 — Govt Authorized CSC Certificate Trust Section & Lightbox Preview)**:
+  - Saved real high-res official CSC Certificate asset ([csc_certificate.png](file:///f:/chat%20bot/public/csc_certificate.png), 1.04 MB) in public static assets.
+  - Added a high-trust **Government Authorized CSC Center Section** on Customer Portal with verified CSC ID: `245556360016`, Authorized VLE Operator: **Pratap Kushwaha**, and Digital India authorization details.
+  - Added interactive **Certificate Lightbox Modal**: Clicking the certificate opens a high-resolution full-screen preview with official verification badges.
+  - Production build verified: `npm run build` ✅ (27 modules, 0 errors).
+
+- **2026-08-05 (v3.3.6 — Customer Portal Live Search Filter Bar)**:
+  - Added **Interactive Live Search Filter Bar** on Customer Portal (`Our Digital Services` section).
+  - Users can now instantly search services by English title, Hindi title (आय, जाति, निवास, पैन), description, or required document keywords with real-time filtering, clear button, and empty state handling.
+  - Production build verified: `npm run build` ✅ (27 modules, 0 errors).
+
+- **2026-08-05 (v3.3.5 — Direct Camera Photo Capture, Admin Pending Filter Fix, Dark Theme Lock)**:
+  - Added **Direct Camera Photo Capture**: Mobile & desktop users can now click 📸 **Take Camera Photo** to take a live photo directly from their camera or choose 📁 **File / PDF** for Aadhar, Passport Photo, and all document uploads.
+  - Fixed **Admin Dashboard Pending Filter**: Status filtering is now case-insensitive and normalizes status values (`pending`, `Pending`, `in-progress`, `in_progress`), so filtering by "Pending" shows all pending submissions accurately.
+  - **Dark Theme Permanent Lock**: Locked system theme to Premium Dark Glassmorphism permanently, removed theme switcher for a cleaner navigation bar.
+  - Production build verified: `npm run build` ✅ (27 modules, 0 errors).
+
+- **2026-08-05 (v3.3.4 — Global Domain Migration to `https://durgaonline.info`)**:
+  - Replaced all legacy `onrender.com` URLs with `https://durgaonline.info` across Express backend ([server.js](file:///f:/chat%20bot/server.js)), CORS origin whitelist, upload session generators, and environment files.
+  - WhatsApp Bot service menu links now generate clean links starting with `https://durgaonline.info/?upload=TOKEN`.
+  - Production build verified: `npm run build` ✅.
+
+- **2026-08-05 (v3.3.3 — Google Search Ranking & SEO Optimization for `durgaonline`)**:
+  - Configured high-ranking meta title, description, and keyword targets for `durgaonline`, `durga online`, `durgaonline.info`, and `Maa Durga Online Center Ghazipur`.
+  - Added OpenGraph (OG) tags, Twitter Card tags, and **JSON-LD LocalBusiness Schema** (`schema.org/LocalBusiness`) with shop geo-coordinates and phone number for top-of-page Google Search & Maps ranking.
+  - Generated `sitemap.xml` and `robots.txt` for instant search crawler indexing.
+  - Production build verified: `npm run build` ✅.
+
+- **2026-08-05 (v3.3.2 — WhatsApp Bot Audit & Automated Customer Status Notifications)**:
+  - Performed full system audit across Meta API credentials, Supabase database, and webhook routes. Result: **All Systems 100% OK** (Token verified: `Maa Durga Online`, `+91 94538 27145`, Quality Rating: GREEN).
+  - Added **Automated WhatsApp Customer Status Notifications**: When Admin changes application status (Pending ➔ In Progress ➔ Completed / Rejected) in Admin Dashboard, an automatic formatted WhatsApp message with notes is sent directly to the customer's phone!
+  - Production build verified: `npm run build` ✅ (424 modules transformed, 0 errors).
+
+- **2026-08-05 (v3.3.1 — Permanent WhatsApp System User Token Updated & Verified)**:
+  - Verified user's new System User Permanent Token (`EAAaGzdUMTTYBSAG...`) against Meta Cloud API.
+  - Test result: **`Maa Durga Online`** (`+91 94538 27145`), `code_verification_status: VERIFIED`, `quality_rating: GREEN`.
+  - Updated local [.env](file:///f:/chat%20bot/.env) file with the new token.
 
 - **2026-08-04 (v3.3.0 — Real WhatsApp Business Number Verification & Live Integration)**:
   - Verified and registered real shop phone number (`+91 94538 27145`) on Meta WhatsApp Cloud API. Status updated to **`Registered`** with active webhook subscription.

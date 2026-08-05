@@ -53,7 +53,7 @@ app.use(morgan('combined'));
 const ALLOWED_ORIGINS = (
   process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'https://maa-durga-jan-seva.onrender.com']
+    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://127.0.0.1:5173', 'https://durgaonline.info', 'https://www.durgaonline.info', 'https://maa-durga-jan-seva.onrender.com']
 );
 app.use(cors({
   origin: (origin, callback) => {
@@ -383,6 +383,20 @@ const handleUploadAndSubmission = async (req, res) => {
 
     const insertedRecord = submissionData && submissionData[0] ? submissionData[0] : null;
 
+    // ── Mark Upload Session Token as Used (if present) ────────────
+    const uploadToken = req.body.upload_token || req.body.uploadToken;
+    if (uploadToken) {
+      try {
+        await supabase
+          .from('upload_sessions')
+          .update({ is_used: true })
+          .eq('token', uploadToken);
+        console.log(`[Upload Session] Token ${uploadToken} marked as used.`);
+      } catch (tokenErr) {
+        console.error('[Upload Session Mark Used Error]:', tokenErr.message);
+      }
+    }
+
     // ── Instant WhatsApp Notification to Admin (Shop Owner) ─────────
     try {
       const settings = getSettings();
@@ -493,6 +507,33 @@ const handleStatusUpdate = async (req, res) => {
     }
 
     const updatedRecord = data[0];
+
+    // ── Send Automated WhatsApp Status Update to Customer ────────────────
+    if (status && updatedRecord.phone) {
+      try {
+        const cleanPhone = updatedRecord.phone.replace(/[^0-9]/g, '');
+        const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+        const settings = getSettings();
+        const shopName = settings.shopName || 'Maa Durga Online Center';
+        
+        let statusMsg = '';
+        const statusLower = (status || '').toLowerCase();
+        if (statusLower === 'completed') {
+          statusMsg = `🎉 *Application Completed! - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\nAapka *${updatedRecord.service}* application poora ho gaya hai! ✅\n${remarks ? `📝 Notes: ${remarks}\n` : ''}\nAap dukan par aakar document le sakte hain. 🙏`;
+        } else if (statusLower === 'in progress' || statusLower === 'in_progress') {
+          statusMsg = `⏳ *Application Update - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\nAapke *${updatedRecord.service}* application par kaam shuru ho gaya hai. Status: *In Progress* 🔄\n${remarks ? `📝 Notes: ${remarks}\n` : ''}`;
+        } else if (statusLower === 'rejected') {
+          statusMsg = `⚠️ *Application Update - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\nAapke *${updatedRecord.service}* application me issue paaya gaya hai.\n${remarks ? `📝 Reason: ${remarks}\n` : ''}\nPlease center se sampark karein.`;
+        }
+
+        if (statusMsg) {
+          await sendWhatsAppMessage(formattedPhone, statusMsg);
+          console.log(`[WhatsApp Customer Notification] Sent status update to ${formattedPhone}`);
+        }
+      } catch (custNotifErr) {
+        console.error('[WhatsApp Customer Status Notification Error]:', custNotifErr.message);
+      }
+    }
 
     res.json({
       success: true,
@@ -1034,10 +1075,10 @@ const crypto = require('crypto');
 // WhatsApp / Meta config from environment
 const getWhatsAppPhoneId = () => (process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
 const getWhatsAppToken   = () => (process.env.WHATSAPP_ACCESS_TOKEN    || '').trim();
-const getLiveAppUrl      = () => (process.env.PUBLIC_APP_URL || 'https://maa-durga-jan-seva.onrender.com').trim();
+const getLiveAppUrl      = () => (process.env.PUBLIC_APP_URL || 'https://durgaonline.info').trim();
 const WHATSAPP_VERIFY_TOKEN    = (process.env.WHATSAPP_VERIFY_TOKEN || 'maa_durga_verify_token_2026').trim();
 const N8N_WEBHOOK_URL          = process.env.N8N_WEBHOOK_URL          || '';
-const PUBLIC_APP_URL           = process.env.PUBLIC_APP_URL           || 'https://maa-durga-jan-seva.onrender.com';
+const PUBLIC_APP_URL           = process.env.PUBLIC_APP_URL           || 'https://durgaonline.info';
 const UPLOAD_TOKEN_EXPIRY_MIN  = parseInt(process.env.UPLOAD_TOKEN_EXPIRY_MINUTES || '60', 10);
 
 // ─── Helper: Send WhatsApp text message via Meta Cloud API ─────────────────
@@ -1060,6 +1101,9 @@ const sendWhatsAppMessage = async (to, text) => {
     if (!resp.ok) {
       const errText = await resp.text();
       console.error(`[WhatsApp API Response Error ${resp.status}]:`, errText);
+      if (errText.includes('OAuthException') || errText.includes('blocked') || resp.status === 401 || resp.status === 400) {
+        console.error('⚠️ CRITICAL: Meta WHATSAPP_ACCESS_TOKEN is EXPIRED or BLOCKED by Meta! Please generate a new access token on Meta Developer Portal and update WHATSAPP_ACCESS_TOKEN in .env and Render dashboard.');
+      }
       throw new Error(`WhatsApp API error: ${errText}`);
     }
     const resData = await resp.json();
@@ -1314,6 +1358,27 @@ app.delete('/api/admin/services/:id/documents/:docId', checkAdmin, async (req, r
 
 // ─── UPLOAD SESSIONS ──────────────────────────────────────────────────────────
 
+// Internal helper to create upload session in Supabase without HTTP self-fetch
+const createUploadSessionInternal = async (serviceId, whatsappNumber = null, customerName = null) => {
+  try {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + UPLOAD_TOKEN_EXPIRY_MIN * 60 * 1000).toISOString();
+
+    const { error: sessErr } = await supabase
+      .from('upload_sessions')
+      .insert([{ token, service_id: serviceId, whatsapp_number: whatsappNumber, customer_name: customerName, expires_at: expiresAt }]);
+
+    if (sessErr) {
+      console.error('[Upload Session Internal Error]:', sessErr.message);
+      return getLiveAppUrl();
+    }
+    return `${getLiveAppUrl()}/?upload=${token}`;
+  } catch (err) {
+    console.error('[Upload Session Internal Error]:', err.message);
+    return getLiveAppUrl();
+  }
+};
+
 // POST /api/upload-session — create a secure WhatsApp-generated upload link
 app.post('/api/upload-session', async (req, res) => {
   try {
@@ -1325,19 +1390,10 @@ app.post('/api/upload-session', async (req, res) => {
       .from('services').select('id, name, slug').eq('id', service_id).single();
     if (svcErr || !service) return res.status(404).json({ success: false, message: 'Service not found.' });
 
-    // Generate cryptographically secure token
-    const token = crypto.randomBytes(32).toString('hex');
+    const uploadUrl = await createUploadSessionInternal(service_id, whatsapp_number, customer_name);
+    const token = uploadUrl.includes('?upload=') ? uploadUrl.split('?upload=')[1] : null;
     const expiresAt = new Date(Date.now() + UPLOAD_TOKEN_EXPIRY_MIN * 60 * 1000).toISOString();
 
-    const { data: session, error: sessErr } = await supabase
-      .from('upload_sessions')
-      .insert([{ token, service_id, whatsapp_number: whatsapp_number || null, customer_name: customer_name || null, expires_at: expiresAt }])
-      .select()
-      .single();
-
-    if (sessErr) throw new Error(sessErr.message);
-
-    const uploadUrl = `${PUBLIC_APP_URL}/?upload=${token}`;
     res.status(201).json({
       success: true,
       token,
@@ -1508,18 +1564,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
         const selected = services.find(s => String(s.id) === serviceId);
         if (selected) {
           const requiredDocs = (selected.documents || []).filter(d => d.is_required).map(d => `✅ ${d.document_name}`).join('\n');
-          let uploadUrl = getLiveAppUrl();
-          try {
-            const sessionRes = await fetch(`${getLiveAppUrl()}/api/upload-session`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ service_id: selected.id, whatsapp_number: from })
-            });
-            if (sessionRes.ok) {
-              const sd = await sessionRes.json();
-              if (sd.upload_url) uploadUrl = sd.upload_url;
-            }
-          } catch (_) {}
+          const uploadUrl = await createUploadSessionInternal(selected.id, from);
           const replyMsg = `📄 *${selected.name}*${selected.hindi_title ? `\n(${selected.hindi_title})` : ''}\n\nRequired Documents:\n${requiredDocs || 'Contact shop for document list.'}\n\n📎 Documents upload karne ke liye niche diya gaya link kholein:\n\n🔗 ${uploadUrl}\n\n_Link ${UPLOAD_TOKEN_EXPIRY_MIN} minutes mein expire hoga._\n\n*"Hi" type karein menu ke liye.*`;
           await sendWhatsAppMessage(from, replyMsg);
         }
@@ -1543,21 +1588,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
             .map((d, i) => `✅ ${d.document_name}`)
             .join('\n');
 
-          // Create a secure upload session
-          let uploadUrl = getLiveAppUrl();
-          try {
-            const sessionRes = await fetch(`${getLiveAppUrl()}/api/upload-session`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ service_id: selected.id, whatsapp_number: from })
-            });
-            if (sessionRes.ok) {
-              const sessionData = await sessionRes.json();
-              if (sessionData.upload_url) uploadUrl = sessionData.upload_url;
-            }
-          } catch (sessErr) {
-            console.error('[WhatsApp] Failed to create upload session:', sessErr.message);
-          }
+          const uploadUrl = await createUploadSessionInternal(selected.id, from);
 
           const replyMsg = `📄 *${selected.name}*${selected.hindi_title ? `\n(${selected.hindi_title})` : ''}\n\nRequired Documents:\n${requiredDocs || 'Please contact the shop for document list.'}\n\n📎 Documents upload karne ke liye niche diya gaya link kholein:\n\n🔗 ${uploadUrl}\n\n_Link ${UPLOAD_TOKEN_EXPIRY_MIN} minutes mein expire hoga._\n\n*"Hi" type karein menu ke liye.*`;
           await sendWhatsAppMessage(from, replyMsg);
@@ -1572,32 +1603,31 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
       return;
     }
 
-    // Keyword shortcuts (pan, voter, income, caste)
-    const shortcuts = { pan: 1, voter: 2, income: 3, aay: 3, caste: 4, jati: 4 };
-    for (const [keyword, idx] of Object.entries(shortcuts)) {
-      if (msgText.includes(keyword)) {
-        // Simulate selection
-        const fakeReq = { body: req.body, params: {}, query: {} };
-        const services = await getActiveServices();
-        const selected = services[idx - 1];
-        if (selected) {
-          const requiredDocs = (selected.documents || []).filter(d => d.is_required).map(d => `✅ ${d.document_name}`).join('\n');
-          let uploadUrl = `${PUBLIC_APP_URL}`;
-          try {
-            const sessionRes = await fetch(`${PUBLIC_APP_URL}/api/upload-session`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ service_id: selected.id, whatsapp_number: from })
-            });
-            if (sessionRes.ok) {
-              const sd = await sessionRes.json();
-              if (sd.upload_url) uploadUrl = sd.upload_url;
-            }
-          } catch (_) {}
-          await sendWhatsAppMessage(from, `📄 *${selected.name}*\n\nRequired Documents:\n${requiredDocs}\n\n🔗 ${uploadUrl}`);
-          return;
-        }
+    // Keyword shortcuts (pan, voter, income, caste, domicile)
+    try {
+      const services = await getActiveServices();
+      const matchedService = services.find(s => {
+        const nameLower = (s.name || '').toLowerCase();
+        const hindiLower = (s.hindi_title || '').toLowerCase();
+        const slugLower = (s.slug || '').toLowerCase();
+
+        if (msgText.includes('pan') && (nameLower.includes('pan') || slugLower.includes('pan') || hindiLower.includes('पैन'))) return true;
+        if (msgText.includes('voter') && (nameLower.includes('voter') || slugLower.includes('voter') || hindiLower.includes('वोटर'))) return true;
+        if ((msgText.includes('income') || msgText.includes('aay') || msgText.includes('आय')) && (nameLower.includes('income') || nameLower.includes('aay') || hindiLower.includes('आय') || slugLower.includes('income') || slugLower.includes('aay'))) return true;
+        if ((msgText.includes('caste') || msgText.includes('jati') || msgText.includes('jaati') || msgText.includes('जाति')) && (nameLower.includes('caste') || nameLower.includes('jati') || hindiLower.includes('जाति') || slugLower.includes('caste') || slugLower.includes('jaati'))) return true;
+        if ((msgText.includes('domicile') || msgText.includes('niwas') || msgText.includes('निवास')) && (nameLower.includes('domicile') || nameLower.includes('niwas') || hindiLower.includes('निवास') || slugLower.includes('domicile') || slugLower.includes('niwas'))) return true;
+        return false;
+      });
+
+      if (matchedService) {
+        const requiredDocs = (matchedService.documents || []).filter(d => d.is_required).map(d => `✅ ${d.document_name}`).join('\n');
+        const uploadUrl = await createUploadSessionInternal(matchedService.id, from);
+        const replyMsg = `📄 *${matchedService.name}*${matchedService.hindi_title ? `\n(${matchedService.hindi_title})` : ''}\n\nRequired Documents:\n${requiredDocs || 'Contact shop for document list.'}\n\n📎 Documents upload karne ke liye niche diya gaya link kholein:\n\n🔗 ${uploadUrl}\n\n_Link ${UPLOAD_TOKEN_EXPIRY_MIN} minutes mein expire hoga._\n\n*"Hi" type karein menu ke liye.*`;
+        await sendWhatsAppMessage(from, replyMsg);
+        return;
       }
+    } catch (e) {
+      console.error('[WhatsApp] Keyword shortcut search error:', e.message);
     }
 
     // Default fallback

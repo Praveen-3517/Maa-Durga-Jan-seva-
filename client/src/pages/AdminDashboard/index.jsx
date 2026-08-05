@@ -66,9 +66,10 @@ function LoginCard({ onLogin }) {
 
 function StatsRow({ submissions }) {
   const total = submissions.length;
-  const pending = submissions.filter(s => s.status === 'pending').length;
-  const processing = submissions.filter(s => s.status === 'in-progress').length;
-  const completed = submissions.filter(s => s.status === 'completed').length;
+  const normalizeStatus = s => (s?.status || 'pending').toString().toLowerCase().replace(/_/g, '-');
+  const pending = submissions.filter(s => normalizeStatus(s) === 'pending').length;
+  const processing = submissions.filter(s => ['in-progress', 'processing'].includes(normalizeStatus(s))).length;
+  const completed = submissions.filter(s => normalizeStatus(s) === 'completed').length;
   return (
     <div className="stats-row">
       <div className="stat-card">
@@ -691,7 +692,9 @@ export default function AdminDashboard({ adminToken, login, logout, showToast, i
   const filtered = submissions.filter(s => {
     const q = searchQuery.toLowerCase();
     const matchQ = !q || s.clientName?.toLowerCase().includes(q) || s.clientPhone?.toLowerCase().includes(q) || s.serviceName?.toLowerCase().includes(q);
-    const matchS = statusFilter === 'all' || s.status === statusFilter;
+    const sStatus = (s.status || 'pending').toString().toLowerCase().replace(/_/g, '-');
+    const fStatus = (statusFilter || 'all').toString().toLowerCase().replace(/_/g, '-');
+    const matchS = fStatus === 'all' || sStatus === fStatus;
     return matchQ && matchS;
   });
 

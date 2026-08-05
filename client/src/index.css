@@ -740,10 +740,11 @@ code {
   width: 100%;
 }
 
-.back{
-  position : fixed;
-  left : 20px;
-  top: 0;
+.back {
+  position: fixed;
+  left: 20px;
+  top: 85px;
+  z-index: 150;
 }
 
 .btn-icon {

@@ -40,10 +40,10 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  // Apply initial theme
+  // Apply initial theme (Permanently Dark Theme)
   useEffect(() => {
-    const saved = localStorage.getItem('theme') || 'system';
-    document.documentElement.setAttribute('data-theme', saved);
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('theme', 'dark');
   }, []);
 
   return (

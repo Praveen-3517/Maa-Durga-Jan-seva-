@@ -356,6 +356,11 @@ function CertificateFormModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fileInputRef = useRef();
+  const cameraInputRef = useRef();
+  const aadharFileRef = useRef();
+  const aadharCameraRef = useRef();
+  const photoFileRef = useRef();
+  const photoCameraRef = useRef();
 
   const handleChange = (name, value) => {
     setFormValues(prev => ({
@@ -907,19 +912,52 @@ function CertificateFormModal({
                     </div>
                   </div>
 
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={e =>
-                      setAadharFile(
-                        e.target.files[0]
-                      )
-                    }
-                    style={{
-                      maxWidth: '100%',
-                      fontSize: '0.8rem'
-                    }}
-                  />
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input
+                      type="file"
+                      ref={aadharFileRef}
+                      accept="image/*,application/pdf"
+                      onChange={e => setAadharFile(e.target.files[0])}
+                      style={{ display: 'none' }}
+                    />
+                    <input
+                      type="file"
+                      ref={aadharCameraRef}
+                      accept="image/*"
+                      capture="environment"
+                      onChange={e => setAadharFile(e.target.files[0])}
+                      style={{ display: 'none' }}
+                    />
+
+                    {aadharFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span>{aadharFile.name.length > 18 ? aadharFile.name.substring(0, 15) + '...' : aadharFile.name}</span>
+                        <button type="button" onClick={() => setAadharFile(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 4 }}>&times;</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() => aadharFileRef.current?.click()}
+                          style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
+                        >
+                          <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>
+                          File / PDF
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() => aadharCameraRef.current?.click()}
+                          style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
+                        >
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>
+                          Take Photo
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div
@@ -970,19 +1008,52 @@ function CertificateFormModal({
                     </div>
                   </div>
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e =>
-                      setPhotoFile(
-                        e.target.files[0]
-                      )
-                    }
-                    style={{
-                      maxWidth: '100%',
-                      fontSize: '0.8rem'
-                    }}
-                  />
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input
+                      type="file"
+                      ref={photoFileRef}
+                      accept="image/*"
+                      onChange={e => setPhotoFile(e.target.files[0])}
+                      style={{ display: 'none' }}
+                    />
+                    <input
+                      type="file"
+                      ref={photoCameraRef}
+                      accept="image/*"
+                      capture="environment"
+                      onChange={e => setPhotoFile(e.target.files[0])}
+                      style={{ display: 'none' }}
+                    />
+
+                    {photoFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span>{photoFile.name.length > 18 ? photoFile.name.substring(0, 15) + '...' : photoFile.name}</span>
+                        <button type="button" onClick={() => setPhotoFile(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 4 }}>&times;</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() => photoFileRef.current?.click()}
+                          style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
+                        >
+                          <i className="fa-solid fa-image" style={{ marginRight: 4 }}></i>
+                          Choose Image
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() => photoCameraRef.current?.click()}
+                          style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
+                        >
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>
+                          Take Photo
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1036,17 +1107,49 @@ function CertificateFormModal({
                 <i className="fa-solid fa-cloud-arrow-up file-icon"></i>
 
                 <p>
-                  Drag &amp; drop files here, or{' '}
-                  <span className="file-browse">
-                    browse files
-                  </span>
+                  Drag &amp; drop files here, or choose an option:
                 </p>
+
+                <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', marginTop: '0.75rem', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
+                  >
+                    <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>
+                    Browse Files / PDF
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => cameraInputRef.current?.click()}
+                    style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
+                  >
+                    <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>
+                    Take Camera Photo
+                  </button>
+                </div>
 
                 <input
                   type="file"
                   ref={fileInputRef}
                   multiple
                   accept="image/*,application/pdf"
+                  style={{
+                    display: 'none'
+                  }}
+                  onChange={e =>
+                    handleFiles(
+                      e.target.files
+                    )
+                  }
+                />
+                <input
+                  type="file"
+                  ref={cameraInputRef}
+                  accept="image/*"
+                  capture="environment"
                   style={{
                     display: 'none'
                   }}
@@ -1152,6 +1255,7 @@ function UploadModal({
     useState(false);
 
   const fileInputRef = useRef();
+  const cameraInputRef = useRef();
   const nameRef = useRef();
   const phoneRef = useRef();
   const notesRef = useRef();
@@ -1485,17 +1589,49 @@ function UploadModal({
                 <i className="fa-solid fa-cloud-arrow-up file-icon"></i>
 
                 <p>
-                  Drag &amp; drop files here, or{' '}
-                  <span className="file-browse">
-                    browse files
-                  </span>
+                  Drag &amp; drop files here, or choose an option:
                 </p>
+
+                <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', marginTop: '0.75rem', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
+                  >
+                    <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>
+                    Browse Files / PDF
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => cameraInputRef.current?.click()}
+                    style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
+                  >
+                    <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>
+                    Take Camera Photo
+                  </button>
+                </div>
 
                 <input
                   type="file"
                   ref={fileInputRef}
                   multiple
                   accept="image/*,application/pdf"
+                  style={{
+                    display: 'none'
+                  }}
+                  onChange={e =>
+                    handleFiles(
+                      e.target.files
+                    )
+                  }
+                />
+                <input
+                  type="file"
+                  ref={cameraInputRef}
+                  accept="image/*"
+                  capture="environment"
                   style={{
                     display: 'none'
                   }}
@@ -1629,8 +1765,9 @@ export default function CustomerPortal({
   const [selectedCertType, setSelectedCertType] =
     useState(null);
 
-  const [openAsPage, setOpenAsPage] =
-    useState(false);
+  const [openAsPage, setOpenAsPage] = useState(false);
+  const [serviceSearchQuery, setServiceSearchQuery] = useState('');
+  const [showCertPreview, setShowCertPreview] = useState(false);
 
   // Combine hardcoded SERVICES with dynamic services from API
   const [activeServices, setActiveServices] =
@@ -1736,49 +1873,8 @@ export default function CustomerPortal({
                     .toLowerCase()
                     .trim();
 
-                if (
-                  hardcodedSlugs.includes(
-                    svcSlug
-                  )
-                ) {
-                  return false;
-                }
-
-                if (
-                  hardcodedTitles.some(
-                    ht =>
-                      ht === svcTitle ||
-                      svcTitle.includes(ht) ||
-                      ht.includes(svcTitle)
-                  )
-                ) {
-                  return false;
-                }
-
-                if (
-                  svcTitle.includes('income') ||
-                  svcTitle.includes('caste') ||
-                  svcTitle.includes('domicile') ||
-                  svcTitle.includes('आय') ||
-                  svcTitle.includes('जाति') ||
-                  svcTitle.includes('निवास') ||
-                  svcTitle.includes('pan') ||
-                  svcTitle.includes('voter') ||
-                  svcTitle.includes('पैन') ||
-                  svcTitle.includes('वोटर') ||
-                  svcTitle.includes('aay') ||
-                  svcTitle.includes('jaati') ||
-                  svcTitle.includes('niwas') ||
-                  svcTitle.includes('jaati') ||
-                  svcTitle.replace(/[^a-z0-9]/g, '').includes(
-                    (Object.values(SERVICES).map(s => s.title.toLowerCase().replace(/[^a-z0-9]/g, '')))
-                      .find(ht => svcTitle.replace(/[^a-z0-9]/g, '').includes(ht) || ht.includes(svcTitle.replace(/[^a-z0-9]/g, ''))) || '____'
-                  )
-                ) {
-                  return false;
-                }
-
-
+                if (hardcodedSlugs.includes(svcSlug)) return false;
+                if (hardcodedTitles.includes(svcTitle)) return false;
                 return true;
               });
 
@@ -2283,6 +2379,118 @@ export default function CustomerPortal({
             </div>
           </div>
 
+          {/* GOVERNMENT AUTHORIZED CSC TRUST SECTION */}
+          <div
+            className="csc-trust-card"
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.98))',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              borderRadius: '16px',
+              padding: '1.6rem 2rem',
+              margin: '2rem auto 2.5rem auto',
+              maxWidth: '1100px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1.5rem',
+              flexWrap: 'wrap',
+              boxShadow: '0 12px 35px rgba(0, 0, 0, 0.35)',
+              position: 'relative'
+            }}
+          >
+            <div style={{ flex: '1 1 480px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(34, 197, 94, 0.15)', border: '1px solid rgba(34, 197, 94, 0.4)', padding: '0.35rem 0.85rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600, color: '#4ade80', marginBottom: '0.75rem' }}>
+                <i className="fa-solid fa-circle-check"></i> Government Authorized CSC Center
+              </div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem', lineHeight: 1.3 }}>
+                <i className="fa-solid fa-award" style={{ color: 'var(--primary-color)', marginRight: 8 }}></i>
+                Govt. Certified &amp; Registered Digital Center
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.55', marginBottom: '1.25rem' }}>
+                <strong>{shopSettings?.shopName || 'Maa Durga Online Center'}</strong> is an official <strong>Digital India CSC (Common Service Center)</strong> authorized by the Ministry of Electronics &amp; Information Technology, Govt. of India.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', fontSize: '0.85rem' }}>
+                <div style={{ background: 'var(--bg-tertiary)', padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', marginBottom: 2 }}>CSC ID (Govt Reg No.)</span>
+                  <strong style={{ color: 'var(--primary-color)', fontFamily: 'monospace', fontSize: '0.95rem', letterSpacing: '0.5px' }}>245556360016</strong>
+                </div>
+                <div style={{ background: 'var(--bg-tertiary)', padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', marginBottom: 2 }}>Authorized VLE Operator</span>
+                  <strong style={{ color: 'var(--text-primary)' }}>Pratap Kushwaha</strong>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', cursor: 'pointer', flex: '0 0 auto', margin: '0 auto' }} onClick={() => setShowCertPreview(true)}>
+              <div
+                style={{
+                  position: 'relative',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '2px solid var(--primary-color)',
+                  boxShadow: '0 8px 24px rgba(245, 158, 11, 0.25)',
+                  maxWidth: '230px',
+                  background: '#fff'
+                }}
+              >
+                <img src="/csc_certificate.png" alt="CSC Government Certificate" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    gap: '0.4rem',
+                    padding: '0.5rem',
+                    textAlign: 'center'
+                  }}
+                >
+                  <i className="fa-solid fa-circle-check" style={{ fontSize: '1.5rem', color: '#4ade80' }}></i>
+                  <span>Click to View Full Certificate</span>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--primary-color)', marginTop: '0.6rem', display: 'block', fontWeight: 600 }}>
+                <i className="fa-solid fa-expand" style={{ marginRight: 4 }}></i> View Official Certificate
+              </span>
+            </div>
+          </div>
+
+          {/* CERTIFICATE LIGHTBOX MODAL */}
+          {showCertPreview && (
+            <div className="modal open" onClick={() => setShowCertPreview(false)} style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999 }}>
+              <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '850px', width: '95%', background: 'var(--bg-secondary)', border: '1px solid var(--primary-color)', borderRadius: '16px', overflow: 'hidden' }}>
+                <div className="modal-header" style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <i className="fa-solid fa-certificate" style={{ color: 'var(--primary-color)', fontSize: '1.2rem' }}></i>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem' }}>CSC Government Authorized Certificate</h3>
+                      <span style={{ fontSize: '0.78rem', color: '#4ade80' }}><i className="fa-solid fa-check-double"></i> Verified Official Document • Ministry of Electronics &amp; IT</span>
+                    </div>
+                  </div>
+                  <button className="modal-close" onClick={() => setShowCertPreview(false)}>&times;</button>
+                </div>
+                <div className="modal-body" style={{ padding: '1rem', textAlign: 'center', background: '#000' }}>
+                  <img src="/csc_certificate.png" alt="CSC Govt Certificate" style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: '8px' }} />
+                </div>
+                <div className="modal-footer" style={{ justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' }}>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    CSC ID: <strong>245556360016</strong> • VLE: <strong>Pratap Kushwaha</strong>
+                  </div>
+                  <button className="btn btn-outline" onClick={() => setShowCertPreview(false)}>
+                    Close Preview
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* SERVICES */}
 
           <div className="services-container">
@@ -2293,25 +2501,99 @@ export default function CustomerPortal({
               </h2>
 
               <p className="section-subtitle">
-                Select a service below to view
-                required documents and submit
-                them online.
+                Select a service below to view required documents and submit them online.
               </p>
             </div>
 
-            <div className="services-grid">
-              {activeServices.map(
-                service => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    onApply={
-                      handleApply
-                    }
-                  />
-                )
-              )}
+            {/* LIVE SEARCH FILTER BAR */}
+            <div style={{ maxWidth: '540px', margin: '1rem auto 2.2rem auto', position: 'relative' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', left: '1.1rem', color: 'var(--primary-color)', fontSize: '1.05rem', pointerEvents: 'none' }}></i>
+                <input
+                  type="text"
+                  placeholder="खोजें / Search Service (e.g. PAN Card, Voter ID, आय, जाति, निवास)..."
+                  value={serviceSearchQuery}
+                  onChange={e => setServiceSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 2.8rem 0.85rem 2.8rem',
+                    borderRadius: '50px',
+                    border: '2px solid var(--border-color)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.92rem',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                    outline: 'none',
+                    transition: 'all 0.25s ease'
+                  }}
+                  onFocus={e => e.target.style.borderColor = 'var(--primary-color)'}
+                  onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
+                />
+                {serviceSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setServiceSearchQuery('')}
+                    style={{
+                      position: 'absolute',
+                      right: '1rem',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Clear Search"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
             </div>
+
+            {(() => {
+              const filteredServices = activeServices.filter(svc => {
+                if (!serviceSearchQuery.trim()) return true;
+                const q = serviceSearchQuery.toLowerCase().trim();
+                const title = (svc.title || svc.name || '').toLowerCase();
+                const hindi = (svc.hindiTitle || svc.hindi_title || '').toLowerCase();
+                const desc = (svc.description || '').toLowerCase();
+                const reqs = (svc.requirements || []).join(' ').toLowerCase();
+                return title.includes(q) || hindi.includes(q) || desc.includes(q) || reqs.includes(q);
+              });
+
+              if (filteredServices.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px dashed var(--border-color)', margin: '1rem 0' }}>
+                    <i className="fa-solid fa-magnifying-glass" style={{ fontSize: '2.5rem', color: 'var(--text-muted)', marginBottom: '1rem' }}></i>
+                    <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>कोई सर्विस नहीं मिली / No Service Found</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+                      "{serviceSearchQuery}" नाम की कोई सर्विस नहीं मिली। कृपया "PAN", "Voter", या "Certificate" टाइप करके खोजें।
+                    </p>
+                    <button className="btn btn-outline" onClick={() => setServiceSearchQuery('')}>
+                      <i className="fa-solid fa-xmark" style={{ marginRight: 6 }}></i> Clear Search
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="services-grid">
+                  {filteredServices.map(service => (
+                    <ServiceCard
+                      key={service.id}
+                      service={service}
+                      onApply={handleApply}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* NORMAL MODALS */}

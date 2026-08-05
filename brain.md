@@ -296,6 +296,11 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-08-05 (v3.3.12 — Clean Customer Portal & Navbar-only CSC Certificate)**:
+  - Removed duplicate `csc-trust-card` block from Customer Portal body as requested, leaving Customer Portal layout clean (Hero → Our Digital Services).
+  - Kept official **🏅 CSC Certificate** in the top Navigation Bar with instant high-res Lightbox modal popup.
+  - Production build verified: `npm run build` ✅ (27 modules, 0 errors).
+
 - **2026-08-05 (v3.3.11 — Navbar CSC Certificate Item & Global Lightbox)**:
   - Added **🏅 CSC Certificate** button directly in the main Navigation Bar ([Navbar.jsx](file:///f:/chat%20bot/client/src/components/Navbar.jsx)) right next to **Customer Portal**.
   - Clicking **CSC Certificate** in the Navbar triggers a instant full-resolution Government Certificate Lightbox modal window from any tab across the app.

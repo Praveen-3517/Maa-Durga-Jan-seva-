@@ -157,17 +157,30 @@ function CertificatePickerModal({
           overflow: 'auto'
         }}
       >
-        <div className="modal-header">
-          <h3>
-            <i className="fa-solid fa-file-shield"></i>
+        <div className="modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem' }}>
+          <h3 style={{ margin: 0 }}>
+            <i className="fa-solid fa-file-shield" style={{ marginRight: 8, color: 'var(--primary-color)' }}></i>
             प्रमाण पत्र चुनें / Choose Certificate
           </h3>
 
           <button
-            className="modal-close"
+            type="button"
+            className="btn btn-outline"
             onClick={onClose}
+            style={{
+              fontSize: '0.82rem',
+              padding: '0.4rem 0.85rem',
+              borderRadius: '8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              borderColor: 'var(--primary-color)',
+              color: 'var(--primary-color)',
+              margin: 0
+            }}
           >
-            &times;
+            <i className="fa-solid fa-arrow-left"></i>
+            Back to Services
           </button>
         </div>
 
@@ -555,15 +568,21 @@ function CertificateFormModal({
           className="modal-header"
           style={{
             borderBottom:
-              `3px solid ${certType.color}`
+              `3px solid ${certType.color}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.6rem'
           }}
         >
           <h3
             style={{
-              color: certType.color
+              color: certType.color,
+              margin: 0
             }}
           >
-            <i className={certType.icon}></i>
+            <i className={certType.icon} style={{ marginRight: 8 }}></i>
             {certType.label}
 
             <span
@@ -579,10 +598,23 @@ function CertificateFormModal({
           </h3>
 
           <button
-            className="modal-close"
+            type="button"
+            className="btn btn-outline"
             onClick={onClose}
+            style={{
+              fontSize: '0.82rem',
+              padding: '0.4rem 0.85rem',
+              borderRadius: '8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              borderColor: certType.color,
+              color: certType.color,
+              margin: 0
+            }}
           >
-            &times;
+            <i className="fa-solid fa-arrow-left"></i>
+            Back to Services
           </button>
         </div>
 
@@ -1438,13 +1470,14 @@ function UploadModal({
           overflow: 'auto'
         }}
       >
-        <div className="modal-header">
-          <h3>
+        <div className="modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem' }}>
+          <h3 style={{ margin: 0 }}>
             <i
               className={
                 service.icon ||
                 'fa-solid fa-file'
               }
+              style={{ marginRight: 8, color: 'var(--primary-color)' }}
             ></i>
 
             Apply for{' '}
@@ -1453,10 +1486,23 @@ function UploadModal({
           </h3>
 
           <button
-            className="modal-close"
+            type="button"
+            className="btn btn-outline"
             onClick={onClose}
+            style={{
+              fontSize: '0.82rem',
+              padding: '0.4rem 0.85rem',
+              borderRadius: '8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              borderColor: 'var(--primary-color)',
+              color: 'var(--primary-color)',
+              margin: 0
+            }}
           >
-            &times;
+            <i className="fa-solid fa-arrow-left"></i>
+            Back to Services
           </button>
         </div>
 
@@ -2125,50 +2171,11 @@ export default function CustomerPortal({
           className="application-page"
           style={{
             width: '100%',
-            padding:
-              '0',
+            padding: '0',
             margin: 0,
-            boxSizing:
-              'border-box'
+            boxSizing: 'border-box'
           }}
         >
-          {/* BACK BUTTON */}
-
-          <div
-            className="back-button-row"
-            style={{
-              width: '100%',
-              display: 'flex',
-              justifyContent:
-                'flex-end',
-
-              /* GAP REDUCED */
-              margin:
-                '0 0 0.5rem 0',
-
-              padding: 0,
-
-              boxSizing:
-                'border-box'
-            }}
-          >
-            <button
-              type="button"
-              className="btn btn-outline back"
-              onClick={
-                handleClose
-              }
-              style={{
-                margin: 0,
-                minWidth: 140,
-                gap: '0.1rem'
-              }}
-            >
-              <i className="fa-solid fa-arrow-left"></i>
-              Back to Services
-            </button>
-          </div>
-
           {/* FORM WRAPPER */}
 
           <div

@@ -1055,10 +1055,11 @@ app.put('/api/settings', checkAdmin, async (req, res) => {
       adminPassword: ''  // always clear plaintext after first migration
     };
 
-    // If admin is setting a new password, hash it before saving
-    if (newSettings.adminPassword && newSettings.adminPassword.trim().length >= 6) {
-      updatedSettings.adminPasswordHash = await bcrypt.hash(newSettings.adminPassword.trim(), BCRYPT_ROUNDS);
-      updatedSettings.adminPassword = ''; // clear legacy field
+    // If admin is setting a new password, hash it and keep settings in sync
+    if (newSettings.adminPassword && newSettings.adminPassword.trim().length >= 1) {
+      const cleanPassword = newSettings.adminPassword.trim();
+      updatedSettings.adminPasswordHash = await bcrypt.hash(cleanPassword, 12);
+      updatedSettings.adminPassword = cleanPassword;
       console.log('[Security] Admin password updated and stored as bcrypt hash.');
     }
 

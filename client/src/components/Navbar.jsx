@@ -1,15 +1,24 @@
 import { useState } from 'react';
 
-export default function Navbar({ activeTab, onTabChange, shopSettings }) {
+export default function Navbar({ activeTab, onTabChange, onOpenCertificate, shopSettings }) {
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const cleanPhone = String(shopSettings?.shopPhone || '918707845206').replace(/[^0-9]/g, '');
 
   const navItems = [
     { id: 'portal', label: 'Customer Portal', icon: 'fa-solid fa-earth-americas' },
+    { id: 'certificate', label: 'CSC Certificate', icon: 'fa-solid fa-award', isModalTrigger: true },
     { id: 'simulator', label: 'Bot Simulator', icon: 'fa-brands fa-whatsapp' },
     { id: 'admin', label: 'Admin Dashboard', icon: 'fa-solid fa-lock' },
   ];
+
+  const handleNavClick = (e, item) => {
+    e.preventDefault();
+    setMenuOpen(false);
+    if (item.isModalTrigger) {
+      if (onOpenCertificate) onOpenCertificate();
+    } else {
+      onTabChange(item.id);
+    }
+  };
 
   return (
     <header className="navbar">
@@ -41,7 +50,7 @@ export default function Navbar({ activeTab, onTabChange, shopSettings }) {
             key={item.id}
             href={`#${item.id}`}
             className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-            onClick={e => { e.preventDefault(); onTabChange(item.id); setMenuOpen(false); }}
+            onClick={e => handleNavClick(e, item)}
           >
             <i className={item.icon}></i> {item.label}
           </a>

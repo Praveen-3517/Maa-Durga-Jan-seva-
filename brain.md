@@ -296,6 +296,11 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-08-05 (v3.3.11 — Navbar CSC Certificate Item & Global Lightbox)**:
+  - Added **🏅 CSC Certificate** button directly in the main Navigation Bar ([Navbar.jsx](file:///f:/chat%20bot/client/src/components/Navbar.jsx)) right next to **Customer Portal**.
+  - Clicking **CSC Certificate** in the Navbar triggers a instant full-resolution Government Certificate Lightbox modal window from any tab across the app.
+  - Production build verified: `npm run build` ✅ (27 modules, 0 errors).
+
 - **2026-08-05 (v3.3.10 — Back to Services Header Integration & Zero Overlap Fix)**:
   - Fixed modal header button overlap: Integrated the **`← Back to Services`** button directly inside `.modal-header` (flexbox space-between) across `UploadModal`, `CertificateFormModal`, and `CertificatePickerModal`.
   - Removed floating `back-button-row` container that was overlapping modal titles on certain viewport sizes.

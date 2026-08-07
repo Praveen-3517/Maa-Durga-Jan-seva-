@@ -6,7 +6,6 @@ export default function Navbar({ activeTab, onTabChange, onOpenCertificate, shop
   const navItems = [
     { id: 'portal', label: 'Customer Portal', icon: 'fa-solid fa-earth-americas' },
     { id: 'certificate', label: 'CSC Certificate', icon: 'fa-solid fa-award', isModalTrigger: true },
-    { id: 'simulator', label: 'Bot Simulator', icon: 'fa-brands fa-whatsapp' },
     { id: 'admin', label: 'Admin Dashboard', icon: 'fa-solid fa-lock' },
   ];
 

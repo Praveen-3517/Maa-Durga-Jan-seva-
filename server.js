@@ -64,6 +64,13 @@ app.use(helmet({
 app.use(compression());
 app.use(morgan('combined'));
 
+// Serve static frontend assets early so they are NOT blocked by CORS policies.
+// Serve from client/dist if it exists (Vite build), otherwise fallback to public
+const distPath = path.join(__dirname, 'client', 'dist');
+const publicPath = path.join(__dirname, 'public');
+const frontendPath = fs.existsSync(distPath) ? distPath : publicPath;
+app.use(express.static(frontendPath));
+
 // ── FIX 2: CORS — Lock to Allowed Origins ────────────────────────────────────
 // In production, replace 'http://localhost:3000' with your live domain.
 const ALLOWED_ORIGINS = (
@@ -74,7 +81,7 @@ const ALLOWED_ORIGINS = (
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, curl, webhooks) or from allowed origins/Meta/Render
-    if (!origin || ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*') || origin.includes('facebook.com') || origin.includes('onrender.com')) {
+    if (!origin || ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*') || origin.includes('facebook.com') || origin.includes('onrender.com') || origin.includes('durgaonline.info')) {
       callback(null, true);
     } else {
       // BUG-005 FIX: Previously BOTH branches called callback(null, true) making CORS completely open.
@@ -258,12 +265,7 @@ const checkAdmin = (req, res, next) => {
   return res.status(401).json({ success: false, error: "Access denied. Invalid or expired token. Please log in again." });
 };
 
-// Serve static frontend assets
-// Serve from client/dist if it exists (Vite build), otherwise fallback to public
-const distPath = path.join(__dirname, 'client', 'dist');
-const publicPath = path.join(__dirname, 'public');
-const frontendPath = fs.existsSync(distPath) ? distPath : publicPath;
-app.use(express.static(frontendPath));
+// Static assets are now served earlier (before CORS)
 
 // --- 4. API Endpoints ---
 

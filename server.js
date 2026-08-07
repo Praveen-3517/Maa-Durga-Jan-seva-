@@ -15,6 +15,22 @@ const morgan = require('morgan');
 const compression = require('compression');
 const sharp = require('sharp');
 
+// ═══════════════════════════════════════════════════════════
+// FUTURE-PROOF: Global crash handlers — server NEVER dies silently.
+// Without these, any unhandled Promise rejection kills the process
+// on Node 15+ (which is used on Render). Admin would see 502 Bad Gateway.
+// ═══════════════════════════════════════════════════════════
+process.on('uncaughtException', (err) => {
+  console.error('[CRASH PREVENTED] uncaughtException:', err.stack || err.message);
+  // Do NOT exit — keep the server alive for other requests
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[CRASH PREVENTED] unhandledRejection:', reason?.stack || reason);
+  // Do NOT exit — keep the server alive
+});
+
+
 // Universal helper to instantiate Archiver across version exports
 const createZipArchive = (options) => {
   if (typeof archiverModule === 'function') {
@@ -61,7 +77,9 @@ app.use(cors({
     if (!origin || ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*') || origin.includes('facebook.com') || origin.includes('onrender.com')) {
       callback(null, true);
     } else {
-      callback(null, true);
+      // BUG-005 FIX: Previously BOTH branches called callback(null, true) making CORS completely open.
+      // Now non-allowed origins are properly rejected.
+      callback(new Error(`CORS policy: Origin ${origin} is not allowed.`), false);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -105,6 +123,17 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me-in-production';
+
+// BUG-014 FIX: Warn loudly if JWT_SECRET is the public fallback in production.
+// Anyone who knows this fallback string can forge admin tokens.
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: JWT_SECRET environment variable is not set! Exiting to prevent security breach.');
+    process.exit(1);
+  } else {
+    console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure fallback. Set JWT_SECRET in your .env file!');
+  }
+}
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.warn('⚠️ WARNING: SUPABASE_URL or SUPABASE_KEY environment variables are missing!');
@@ -180,7 +209,17 @@ const getSettings = () => {
 };
 
 const saveSettings = (settings) => {
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+  try {
+    // Write to a temp file first, then rename — prevents corrupting settings.json
+    // if the process crashes mid-write (future-proof: atomic write)
+    const tmpFile = SETTINGS_FILE + '.tmp';
+    fs.writeFileSync(tmpFile, JSON.stringify(settings, null, 2));
+    fs.renameSync(tmpFile, SETTINGS_FILE);
+  } catch (err) {
+    console.error('[Settings] Failed to save settings:', err.message);
+    // Last resort: try direct write
+    try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2)); } catch (_) {}
+  }
 };
 
 // ── Admin Auth Middleware — JWT with x-admin-password fallback ──────────────
@@ -262,7 +301,9 @@ app.post('/api/admin/login', loginLimiter, async (req, res) => {
         isValid = true;
         // Re-hash and auto-sync settings.json
         const hash = await bcrypt.hash(password, 12);
-        const updated = { ...settings, adminPasswordHash: hash, adminPassword: password };
+        // BUG-007 FIX: Previously saved plaintext password back to settings.json defeating bcrypt.
+        // Now we only save the hash and clear the plaintext field.
+        const updated = { ...settings, adminPasswordHash: hash, adminPassword: '' };
         saveSettings(updated);
         console.log('[Security] Admin password verified via fallback and re-hashed successfully.');
       }
@@ -453,6 +494,17 @@ app.post('/api/upload', uploadLimiter, upload.array('documents', 10), submission
 
 // Route: POST /api/submissions (Frontend Compatibility Route) — rate limited
 app.post('/api/submissions', uploadLimiter, upload.array('documents', 10), submissionValidators, handleUploadAndSubmission);
+
+// FUTURE-PROOF: GET /api/health — lightweight heartbeat for ServerWakeUp banner.
+// No DB queries, no file reads. Returns instantly. Used for cold-start detection.
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    service: 'Maa Durga Online Center API'
+  });
+});
 
 /**
  * Route: GET /api/submissions
@@ -707,7 +759,12 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
         .trim();
     };
 
-    const fontPath = path.join(__dirname, 'C:\\Windows\\Fonts\\ARIALUNI.TTF');
+    // BUG-004 FIX: Previously used path.join(__dirname, 'C:\\Windows\\...') which is wrong
+    // path.join with an absolute path APPENDS it to __dirname instead of using it directly.
+    // Font only exists on Windows dev machine; on Linux/Render servers it won't be found.
+    const fontPath = process.platform === 'win32'
+      ? 'C:\\Windows\\Fonts\\ARIALUNI.TTF'
+      : '/usr/share/fonts/truetype/freefont/FreeSans.ttf';
     const hasUnicodeFont = fs.existsSync(fontPath);
 
     // Set response headers for PDF streaming
@@ -811,8 +868,10 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     // 6. Customer Notice Box
     doc.rect(40, currentY, 515, 55).fillAndStroke('#eff6ff', '#bfdbfe');
       doc.fillColor('#1e40af').fontSize(10).font('Helvetica-Bold').text('Important Notice for Customer:', 55, currentY + 10);
+      // BUG-008 FIX: Missing x, y coordinates caused text to render at wrong position overlapping prior content.
       doc.fillColor('#1e3a8a').fontSize(9).font('Helvetica').text(
         'Keep this digital receipt safe. Use the Application ID when you ask about your request or contact support.',
+        55, currentY + 24, { width: 485 }
     );
 
     // 7. Footer Bar
@@ -1071,7 +1130,8 @@ app.put('/api/settings', checkAdmin, async (req, res) => {
     if (newSettings.adminPassword && newSettings.adminPassword.trim().length >= 1) {
       const cleanPassword = newSettings.adminPassword.trim();
       updatedSettings.adminPasswordHash = await bcrypt.hash(cleanPassword, 12);
-      updatedSettings.adminPassword = cleanPassword;
+      // BUG-007 FIX: Clear the plaintext password after hashing — don't persist it
+      updatedSettings.adminPassword = '';
       console.log('[Security] Admin password updated and stored as bcrypt hash.');
     }
 
@@ -1630,7 +1690,8 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
           const replyMsg = `📄 *${selected.name}*${selected.hindi_title ? `\n(${selected.hindi_title})` : ''}\n\nRequired Documents:\n${requiredDocs || 'Please contact the shop for document list.'}\n\n📎 Documents upload karne ke liye niche diya gaya link kholein:\n\n🔗 ${uploadUrl}\n\n_Link ${UPLOAD_TOKEN_EXPIRY_MIN} minutes mein expire hoga._\n\n*"Hi" type karein menu ke liye.*`;
           await sendWhatsAppMessage(from, replyMsg);
         } else {
-          const services = await getActiveServices();
+          // BUG-009 FIX: Previously called getActiveServices() AGAIN for the error message.
+          // 'services' is already available from the fetch above (line ~1619), reuse it.
           await sendWhatsAppMessage(from, `⚠️ Please reply with a number between 1 and ${services.length}.\n\nType *Hi* to see the menu again.`);
         }
       } catch (e) {
@@ -1746,7 +1807,8 @@ app.use((err, req, res, next) => {
   }
   // Handle Multer errors
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ error: 'File too large. Maximum size is 10MB per file.' });
+    // BUG-006 FIX: Error message said '10MB' but actual Multer limit is 100MB (100 * 1024 * 1024)
+    return res.status(400).json({ error: 'File too large. Maximum size is 100MB per file.' });
   }
   if (err.code === 'LIMIT_FILE_COUNT') {
     return res.status(400).json({ error: 'Too many files. Maximum 5 files per submission.' });

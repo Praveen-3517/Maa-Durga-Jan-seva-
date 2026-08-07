@@ -11,14 +11,20 @@ function LoginCard({ onLogin }) {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
+  // FUTURE-PROOF: isLoading prevents double-submit on slow connections
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return; // double-click guard
     setError('');
+    setIsLoading(true);
     try {
       await onLogin(password);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -43,6 +49,7 @@ function LoginCard({ onLogin }) {
               placeholder="Enter password"
               required
               autoComplete="current-password"
+              disabled={isLoading}
             />
             <button
               type="button"
@@ -55,8 +62,10 @@ function LoginCard({ onLogin }) {
             </button>
           </div>
         </div>
-        <button type="submit" className="btn btn-primary btn-block">
-          <i className="fa-solid fa-right-to-bracket"></i> Access Dashboard
+        <button type="submit" className="btn btn-primary btn-block" disabled={isLoading}>
+          {isLoading
+            ? <><span className="spinner"></span> Verifying...</>
+            : <><i className="fa-solid fa-right-to-bracket"></i> Access Dashboard</>}
         </button>
         {error && <div className="login-error">{error}</div>}
       </form>
@@ -70,6 +79,8 @@ function StatsRow({ submissions }) {
   const pending = submissions.filter(s => normalizeStatus(s) === 'pending').length;
   const processing = submissions.filter(s => ['in-progress', 'processing'].includes(normalizeStatus(s))).length;
   const completed = submissions.filter(s => normalizeStatus(s) === 'completed').length;
+  // FUTURE-PROOF: Added rejected count — was missing, admin couldn't see how many were rejected
+  const rejected = submissions.filter(s => normalizeStatus(s) === 'rejected').length;
   return (
     <div className="stats-row">
       <div className="stat-card">
@@ -82,8 +93,14 @@ function StatsRow({ submissions }) {
       </div>
       <div className="stat-card">
         <div className="stat-icon completed"><i className="fa-solid fa-circle-check"></i></div>
-        <div className="stat-details"><span className="stat-value">{completed}</span><span className="stat-label">Completed Applications</span></div>
+        <div className="stat-details"><span className="stat-value">{completed}</span><span className="stat-label">Completed</span></div>
       </div>
+      {rejected > 0 && (
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}><i className="fa-solid fa-circle-xmark"></i></div>
+          <div className="stat-details"><span className="stat-value">{rejected}</span><span className="stat-label">Rejected</span></div>
+        </div>
+      )}
       <div className="stat-card">
         <div className="stat-icon total"><i className="fa-solid fa-folder-open"></i></div>
         <div className="stat-details"><span className="stat-value">{total}</span><span className="stat-label">Total Submissions</span></div>
@@ -94,6 +111,9 @@ function StatsRow({ submissions }) {
 
 function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
   const [rows, setRows] = useState({});
+  // FUTURE-PROOF: Track in-flight save/delete per row to prevent double-click
+  const [saving, setSaving] = useState({});
+  const [deleting, setDeleting] = useState({});
 
   useEffect(() => {
     const init = {};
@@ -103,13 +123,17 @@ function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
 
   const saveRow = async (id) => {
     const { status, remarks } = rows[id] || {};
+    // FUTURE-PROOF: Prevent double-click saving — track which rows are in-flight
+    if (saving[id]) return;
+    setSaving(s => ({ ...s, [id]: true }));
+
     try {
       const res = await fetch(`/api/submissions/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          // BUG-003 FIX: Removed hardcoded 'Pratap@321' password — JWT token is sufficient
           'Authorization': 'Bearer ' + (adminToken || ''),
-          'x-admin-password': 'Pratap@321'
         },
         body: JSON.stringify({ status, remarks }),
       });
@@ -118,16 +142,20 @@ function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
       showToast('Changes saved successfully!');
       onUpdate();
     } catch (err) { showToast('Failed to save changes: ' + err.message, 'error'); }
+    finally { setSaving(s => ({ ...s, [id]: false })); }
   };
 
   const deleteRow = async (id) => {
     if (!window.confirm('Are you sure you want to delete this submission? All uploaded files will be permanently deleted.')) return;
+    // FUTURE-PROOF: Prevent double-click deletion
+    if (deleting[id]) return;
+    setDeleting(d => ({ ...d, [id]: true }));
     try {
       const res = await fetch(`/api/submissions/${id}`, {
         method: 'DELETE',
         headers: {
+          // BUG-003 FIX: Removed hardcoded 'Pratap@321' password
           'Authorization': 'Bearer ' + (adminToken || ''),
-          'x-admin-password': 'Pratap@321'
         }
       });
       const data = await res.json().catch(() => ({}));
@@ -135,6 +163,7 @@ function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
       showToast('Submission deleted successfully!');
       onUpdate();
     } catch (err) { showToast('Deletion failed: ' + err.message, 'error'); }
+    finally { setDeleting(d => ({ ...d, [id]: false })); }
   };
 
   if (submissions.length === 0) {
@@ -147,10 +176,10 @@ function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
       <tr key={sub.id} data-status={rows[sub.id]?.status || sub.status}>
         <td>{dateStr}</td>
         <td>
-          <div className="cust-name">{escapeHtml(sub.clientName)}</div>
-          <div className="cust-phone"><i className="fa-brands fa-whatsapp"></i> <a href={`https://wa.me/${sub.clientPhone}`} target="_blank" rel="noreferrer">{escapeHtml(sub.clientPhone)}</a></div>
+          <div className="cust-name">{sub.clientName}</div>
+          <div className="cust-phone"><i className="fa-brands fa-whatsapp"></i> <a href={`https://wa.me/${sub.clientPhone}`} target="_blank" rel="noreferrer">{sub.clientPhone}</a></div>
         </td>
-        <td><span className="service-type-badge">{escapeHtml(sub.serviceName)}</span></td>
+        <td><span className="service-type-badge">{sub.serviceName}</span></td>
         <td>
           <div className="file-links-container">
             {(sub.files || []).length > 0 ? sub.files.map((f, i) => (
@@ -183,10 +212,24 @@ function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
         </td>
         <td>
           <div className="action-buttons">
-            <button className="btn btn-save-row btn-icon" title="Save" onClick={() => saveRow(sub.id)}><i className="fa-solid fa-floppy-disk"></i></button>
+            <button
+              className="btn btn-save-row btn-icon"
+              title={saving[sub.id] ? 'Saving...' : 'Save'}
+              onClick={() => saveRow(sub.id)}
+              disabled={saving[sub.id] || deleting[sub.id]}
+            >
+              {saving[sub.id] ? <span className="spinner" style={{width:12,height:12}}></span> : <i className="fa-solid fa-floppy-disk"></i>}
+            </button>
             <a href={`/api/submissions/${encodeURIComponent(sub.id)}/receipt`} target="_blank" rel="noreferrer" className="btn btn-outline btn-icon" title="View Receipt"><i className="fa-solid fa-file-pdf"></i></a>
             <a href={`/api/admin/submissions/${encodeURIComponent(sub.id)}/download`} target="_blank" rel="noreferrer" className="btn btn-outline btn-icon" title="Download ZIP"><i className="fa-solid fa-file-zipper"></i></a>
-            <button className="btn btn-delete-row btn-icon" title="Delete" onClick={() => deleteRow(sub.id)}><i className="fa-solid fa-trash-can"></i></button>
+            <button
+              className="btn btn-delete-row btn-icon"
+              title={deleting[sub.id] ? 'Deleting...' : 'Delete'}
+              onClick={() => deleteRow(sub.id)}
+              disabled={saving[sub.id] || deleting[sub.id]}
+            >
+              {deleting[sub.id] ? <span className="spinner" style={{width:12,height:12}}></span> : <i className="fa-solid fa-trash-can"></i>}
+            </button>
           </div>
         </td>
       </tr>
@@ -212,8 +255,8 @@ function ShopSettingsForm({ adminToken, showToast, onRefreshSettings }) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          // BUG-003 FIX: Removed hardcoded 'Pratap@321' password
           'Authorization': 'Bearer ' + (adminToken || ''),
-          'x-admin-password': 'Pratap@321'
         },
         body: JSON.stringify(body)
       });
@@ -376,8 +419,8 @@ function ServiceManagement({ adminToken, showToast }) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          // BUG-003 FIX: Removed hardcoded 'Pratap@321' password
           'Authorization': 'Bearer ' + (adminToken || ''),
-          'x-admin-password': 'Pratap@321'
         },
         body: JSON.stringify({ is_active: !svc.is_active })
       });
@@ -395,8 +438,8 @@ function ServiceManagement({ adminToken, showToast }) {
       const res = await fetch(`/api/admin/services/${svc.id}`, {
         method: 'DELETE',
         headers: {
+          // BUG-003 FIX: Removed hardcoded 'Pratap@321' password
           'Authorization': 'Bearer ' + (adminToken || ''),
-          'x-admin-password': 'Pratap@321'
         }
       });
       const data = await res.json().catch(() => ({}));
@@ -543,8 +586,8 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
         await fetch(`/api/admin/services/${editService.id}/documents/${doc.id}`, {
           method: 'DELETE',
           headers: {
+            // BUG-003 FIX: Removed hardcoded 'Pratap@321' password
             'Authorization': 'Bearer ' + (adminToken || ''),
-            'x-admin-password': 'Pratap@321'
           }
         });
       } catch (_) {}
@@ -570,8 +613,8 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
 
       const headers = {
         'Content-Type': 'application/json',
+        // BUG-003 FIX: Removed hardcoded 'Pratap@321' password — JWT token is the secure auth method
         'Authorization': 'Bearer ' + (adminToken || ''),
-        'x-admin-password': 'Pratap@321'
       };
 
       if (isEdit) {
@@ -741,6 +784,15 @@ export default function AdminDashboard({ adminToken, login, logout, showToast, i
     if (isLoggedIn) loadData();
   }, [isLoggedIn]);
 
+  // FUTURE-PROOF: Auto-refresh every 60s — admin sees new submissions without manual reload
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const interval = setInterval(() => {
+      loadData();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [isLoggedIn, adminToken]);
+
   const filtered = submissions.filter(s => {
     const q = searchQuery.toLowerCase();
     const matchQ = !q || s.clientName?.toLowerCase().includes(q) || s.clientPhone?.toLowerCase().includes(q) || s.serviceName?.toLowerCase().includes(q);
@@ -793,6 +845,8 @@ export default function AdminDashboard({ adminToken, login, logout, showToast, i
                 <option value="pending">Pending</option>
                 <option value="in-progress">In Progress</option>
                 <option value="completed">Completed</option>
+                {/* BUG-011 FIX: Added missing Rejected option */}
+                <option value="rejected">Rejected</option>
               </select>
             </div>
           </div>

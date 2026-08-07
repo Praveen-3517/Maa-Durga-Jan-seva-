@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.3.7` (Custom Domain https://durgaonline.info, WhatsApp Cloud API Live, Govt CSC Certificate Trust Card, Direct Camera Photo Capture, Live Service Search Filter, Admin Pending Filter Fix, Dark Theme Lock)
+- **Version**: `3.4.0` (All 14 Bugs Fixed — Critical Crash Fixes, Security Hardening, Production Error Messages)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -295,6 +295,24 @@ npm run build             # from f:\chat bot\
 ---
 
 ## 📜 Changelog
+
+- **2026-08-07 (v3.4.0 — Full Bug Audit & Fix Session — 14 Bugs Fixed)**:
+  - **BUG-001 (Critical)**: Fixed `shopName` ReferenceError in BotSimulator — variable used in 5 places but never declared. Added `const shopName = shopSettings?.shopName || 'Maa Durga Online Center'`.
+  - **BUG-002 (Critical)**: Fixed `chatRef` ReferenceError in BotSimulator — used in JSX ref and useEffect scroll but `useRef()` was never declared.
+  - **BUG-003 (High)**: Removed hardcoded `'Pratap@321'` admin password from 7 frontend API fetch calls in AdminDashboard — it was bundled into public JS visible to anyone.
+  - **BUG-004 (High)**: Fixed PDF receipt font path — `path.join(__dirname, 'C:\\Windows\\...')` was wrong; now uses `process.platform` check for Windows vs Linux.
+  - **BUG-005 (High)**: Fixed CORS — both `if` and `else` branches called `callback(null, true)`, meaning ALL origins were allowed. Now rejects non-whitelisted origins.
+  - **BUG-006 (High)**: Fixed Multer file size error message — said "10MB max" but actual limit is 100MB.
+  - **BUG-007 (High)**: Fixed plaintext password saved to `settings.json` after bcrypt hashing — now always clears `adminPassword: ''` after hashing.
+  - **BUG-008 (Medium)**: Fixed PDF receipt notice box — text was missing x/y coordinates, causing potential overlap with prior content.
+  - **BUG-009 (Medium)**: Fixed WhatsApp bot number selection — was calling `getActiveServices()` twice for invalid number error; now reuses already-fetched data.
+  - **BUG-010 (Medium)**: Addressed via BUG-007 fix — plaintext password no longer stored.
+  - **BUG-011 (Medium)**: Added missing "Rejected" option to Admin Dashboard status filter dropdown.
+  - **BUG-012 (Medium)**: Fixed double-escaping — `escapeHtml()` was used in JSX text nodes causing `&amp;` to render as `&amp;amp;`. Removed from JSX nodes (React already escapes).
+  - **BUG-013 (Low)**: Reduced BotSimulator polling interval from 5s to 30s to reduce unnecessary DB reads.
+  - **BUG-014 (Low)**: Added JWT_SECRET validation — now exits in production if not set; warns in development.
+  - **Screenshot Fix**: Fixed "Server unavailable. Please start the backend" showing to real customers — now shows user-friendly "Network error" in production vs dev-specific message locally.
+  - Production build verified: `npm run build` ✅ (27 modules, 0 errors).
 
 - **2026-08-05 (v3.3.14 — Full Admin Dashboard Operations Audit & Fail-Safe Headers)**:
   - **Comprehensive Admin Audit**: Enhanced all Admin Dashboard API calls (`SubmissionsTable`, `ServicesTab`, `ServiceModal`, `ShopSettingsForm`) with fail-safe header fallbacks and explicit error handling.

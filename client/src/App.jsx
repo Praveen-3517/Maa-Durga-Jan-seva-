@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Toast from './components/Toast';
 import PetMascot from './components/PetMascot';
 import FloatingWhatsApp from './components/FloatingWhatsApp';
+import ServerWakeUp from './components/ServerWakeUp';
 import CustomerPortal from './pages/CustomerPortal';
 import BotSimulator from './pages/BotSimulator';
 import AdminDashboard from './pages/AdminDashboard';
@@ -130,6 +131,8 @@ export default function App() {
       <FloatingWhatsApp shopSettings={shopSettings} />
       <PetMascot />
       { <Toast message={toast.message} type={toast.type} visible={toast.visible} /> }
+      {/* Server wake-up banner — only shows on production when Render server is cold-starting */}
+      <ServerWakeUp />
 
 
     </StarsBackground>

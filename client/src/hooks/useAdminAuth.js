@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 
 export function useAdminAuth() {
   const [adminToken, setAdminToken] = useState(
-    () => sessionStorage.getItem('adminToken') || ''
+    // FUTURE-PROOF: Using localStorage instead of sessionStorage so admin session survives tab close
+    () => localStorage.getItem('adminToken') || ''
   );
 
   const login = useCallback(async (password) => {
@@ -14,7 +15,7 @@ export function useAdminAuth() {
     const text = await res.text();
     const data = text ? JSON.parse(text) : {};
     if (res.ok && data?.success && data?.token) {
-      sessionStorage.setItem('adminToken', data.token);
+      localStorage.setItem('adminToken', data.token);
       setAdminToken(data.token);
       return { success: true };
     }
@@ -22,7 +23,7 @@ export function useAdminAuth() {
   }, []);
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem('adminToken');
+    localStorage.removeItem('adminToken');
     setAdminToken('');
   }, []);
 

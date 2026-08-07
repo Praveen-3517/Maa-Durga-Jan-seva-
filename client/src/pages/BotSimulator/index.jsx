@@ -34,6 +34,10 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dynamicServices, setDynamicServices] = useState([]);
   const hasInitializedRef = useRef(false);
+  // BUG-002 FIX: chatRef was used in JSX and useEffect but was never declared
+  const chatRef = useRef();
+  // BUG-001 FIX: shopName was used in 5+ places but never declared from props
+  const shopName = shopSettings?.shopName || 'Maa Durga Online Center';
 
   // Fetch services from API (same source as real WhatsApp bot)
   const fetchBotServices = useCallback(() => {
@@ -67,7 +71,8 @@ export default function BotSimulator({ shopSettings, onGoToAdmin }) {
   useEffect(() => {
     fetchBotServices();
 
-    const interval = setInterval(fetchBotServices, 5000);
+    // BUG-013 FIX: Reduced polling from 5s to 30s to avoid excessive DB reads when tab is open
+    const interval = setInterval(fetchBotServices, 30000);
     const handleServicesUpdated = () => fetchBotServices();
     window.addEventListener('services_updated', handleServicesUpdated);
 

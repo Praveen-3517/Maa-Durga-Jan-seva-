@@ -7,14 +7,62 @@ const API_BASE = (typeof window !== 'undefined' && (window.location.hostname ===
 
 const getApiUrl = (path) => `${API_BASE}${path}`;
 
+const isNetworkError = (err) => {
+  if (!err || !err.message) return false;
+  const lower = err.message.toLowerCase();
+  return lower.includes('failed to fetch') ||
+    lower.includes('networkerror') ||
+    lower.includes('network request failed') ||
+    lower.includes('load failed') ||
+    lower.includes('aborted');
+};
+
+const isLocalDev = typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 const getSubmitErrorMessage = (err) => {
   if (!err || !err.message) return 'Server error occurred. Please try again.';
-  const lower = err.message.toLowerCase();
-  if (lower.includes('failed to fetch') || lower.includes('networkerror') || lower.includes('network request failed')) {
-    return 'Server unavailable. Please start the backend or check your connection.';
+  if (isNetworkError(err)) {
+    return isLocalDev
+      ? 'Server unavailable. Please start the backend (npm run dev).'
+      : 'Network error. Please check your internet connection and try again.';
   }
   return err.message;
 };
+
+/**
+ * fetchWithWakeUp — Smart fetch that auto-retries for up to 60s on network errors.
+ * Used for submissions when Render server might be cold-starting.
+ * @param {string} url
+ * @param {RequestInit} options
+ * @param {(secondsLeft: number) => void} onRetrying - called every second during retry countdown
+ */
+const fetchWithWakeUp = async (url, options, onRetrying) => {
+  const MAX_WAIT = 60000; // 60 seconds total retry window
+  const RETRY_INTERVAL = 6000; // retry every 6 seconds
+  const startTime = Date.now();
+
+  while (true) {
+    try {
+      const response = await fetch(url, options);
+      return response; // success
+    } catch (err) {
+      if (!isNetworkError(err)) throw err; // non-network error, don't retry
+      if (isLocalDev) throw err; // don't auto-retry in dev
+
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= MAX_WAIT) throw err; // gave up
+
+      // Show countdown to user
+      const remaining = Math.ceil((MAX_WAIT - elapsed) / 1000);
+      if (onRetrying) onRetrying(remaining);
+
+      // Wait before retry
+      await new Promise(r => setTimeout(r, RETRY_INTERVAL));
+    }
+  }
+};
+
 
 /* ─── Small helper ─── */
 function ServiceCard({ service, onApply }) {
@@ -367,6 +415,9 @@ function CertificateFormModal({
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Server wake-up retry state
+  const [wakeRetrying, setWakeRetrying] = useState(false);
+  const [wakeSecondsLeft, setWakeSecondsLeft] = useState(0);
 
   const fileInputRef = useRef();
   const cameraInputRef = useRef();
@@ -477,13 +528,18 @@ function CertificateFormModal({
     });
 
     try {
-      const res = await fetch(
+      // Use fetchWithWakeUp: auto-retries for up to 60s if server is cold-starting
+      const res = await fetchWithWakeUp(
         getApiUrl('/api/submissions'),
-        {
-          method: 'POST',
-          body: formData
+        { method: 'POST', body: formData },
+        (secondsLeft) => {
+          // Called each retry cycle — shows countdown inside button
+          setWakeRetrying(true);
+          setWakeSecondsLeft(secondsLeft);
         }
       );
+
+      setWakeRetrying(false);
 
       const text = await res.text();
 
@@ -517,6 +573,7 @@ function CertificateFormModal({
         onSubmitSuccess();
       }
     } catch (err) {
+      setWakeRetrying(false);
       showToast(
         getSubmitErrorMessage(err),
         'error'
@@ -1245,10 +1302,18 @@ function CertificateFormModal({
                   background:
                     certType.color,
                   borderColor:
-                    certType.color
+                    certType.color,
+                  minWidth: '160px',
+                  position: 'relative',
+                  overflow: 'hidden',
                 }}
               >
-                {isSubmitting ? (
+                {wakeRetrying ? (
+                  <>
+                    <i className="fa-solid fa-satellite-dish" style={{ animation: 'pulse-wake 1s infinite' }}></i>
+                    {' '}Server jag raha hai... {wakeSecondsLeft}s
+                  </>
+                ) : isSubmitting ? (
                   <span className="spinner"></span>
                 ) : (
                   <>
@@ -1285,6 +1350,10 @@ function UploadModal({
 
   const [isSubmitting, setIsSubmitting] =
     useState(false);
+
+  // Server wake-up retry state
+  const [wakeRetrying, setWakeRetrying] = useState(false);
+  const [wakeSecondsLeft, setWakeSecondsLeft] = useState(0);
 
   const fileInputRef = useRef();
   const cameraInputRef = useRef();
@@ -1377,13 +1446,17 @@ function UploadModal({
     );
 
     try {
-      const res = await fetch(
+      // fetchWithWakeUp: auto-retries for 60s on network error (Render cold start)
+      const res = await fetchWithWakeUp(
         getApiUrl('/api/submissions'),
-        {
-          method: 'POST',
-          body: formData
+        { method: 'POST', body: formData },
+        (secondsLeft) => {
+          setWakeRetrying(true);
+          setWakeSecondsLeft(secondsLeft);
         }
       );
+
+      setWakeRetrying(false);
 
       const text = await res.text();
 
@@ -1417,6 +1490,7 @@ function UploadModal({
         onSubmitSuccess();
       }
     } catch (err) {
+      setWakeRetrying(false);
       showToast(
         getSubmitErrorMessage(err),
         'error'
@@ -1739,8 +1813,14 @@ function UploadModal({
                 type="submit"
                 className="btn btn-primary"
                 disabled={isSubmitting}
+                style={{ minWidth: '160px' }}
               >
-                {isSubmitting ? (
+                {wakeRetrying ? (
+                  <>
+                    <i className="fa-solid fa-satellite-dish" style={{ animation: 'pulse-wake 1s infinite' }}></i>
+                    {' '}Server jag raha hai... {wakeSecondsLeft}s
+                  </>
+                ) : isSubmitting ? (
                   <span className="spinner"></span>
                 ) : (
                   <>
@@ -1977,9 +2057,10 @@ export default function CustomerPortal({
 
     fetchDynamicServices();
 
+    // FUTURE-PROOF: Reduced from 5s to 30s — same fix as BotSimulator
     const interval = setInterval(
       fetchDynamicServices,
-      5000
+      30000
     );
 
     const handleServicesUpdated =

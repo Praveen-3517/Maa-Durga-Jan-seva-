@@ -65,11 +65,14 @@ app.use(compression());
 app.use(morgan('combined'));
 
 // Serve static frontend assets early so they are NOT blocked by CORS policies.
-// Serve from client/dist if it exists (Vite build), otherwise fallback to public
-const distPath = path.join(__dirname, 'client', 'dist');
+// Serve from both public and client/dist to prevent Render cache issues
 const publicPath = path.join(__dirname, 'public');
-const frontendPath = fs.existsSync(distPath) ? distPath : publicPath;
-app.use(express.static(frontendPath));
+const distPath = path.join(__dirname, 'client', 'dist');
+
+app.use(express.static(publicPath));
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
 
 // ── FIX 2: CORS — Lock to Allowed Origins ────────────────────────────────────
 // In production, replace 'http://localhost:3000' with your live domain.
@@ -1794,10 +1797,16 @@ app.use((req, res, next) => {
 
 // Fallback to serve index.html for client-side routing (SPA)
 app.get('*', (req, res) => {
-  const distPath = path.join(__dirname, 'client', 'dist');
-  const publicPath = path.join(__dirname, 'public');
-  const frontendPath = fs.existsSync(distPath) ? distPath : publicPath;
-  res.sendFile(path.join(frontendPath, 'index.html'));
+  const publicIndex = path.join(__dirname, 'public', 'index.html');
+  const distIndex = path.join(__dirname, 'client', 'dist', 'index.html');
+  
+  if (fs.existsSync(publicIndex)) {
+    res.sendFile(publicIndex);
+  } else if (fs.existsSync(distIndex)) {
+    res.sendFile(distIndex);
+  } else {
+    res.status(404).send('Frontend build not found.');
+  }
 });
 
 // ── FIX 6 cont.: Global Error Handler — never expose stack traces ─────────────

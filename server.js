@@ -1,4 +1,18 @@
 require('dotenv').config();
+
+// ═══════════════════════════════════════════════════════════
+// FAIL-FAST ENVIRONMENT VALIDATION
+// Catch missing configuration instantly before starting the server.
+// ═══════════════════════════════════════════════════════════
+const REQUIRED_ENV_VARS = ['SUPABASE_URL', 'SUPABASE_KEY', 'JWT_SECRET'];
+if (process.env.NODE_ENV === 'production') {
+  const missingVars = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
+  if (missingVars.length > 0) {
+    console.error(`\n🚨 FATAL ERROR: Missing required environment variables in PRODUCTION:\n   -> ${missingVars.join(', ')}\n\nServer cannot start safely. Exiting now.`);
+    process.exit(1);
+  }
+}
+
 const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
@@ -134,22 +148,6 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me-in-production';
 
-// BUG-014 FIX: Warn loudly if JWT_SECRET is the public fallback in production.
-// Anyone who knows this fallback string can forge admin tokens.
-if (!process.env.JWT_SECRET) {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('FATAL: JWT_SECRET environment variable is not set! Exiting to prevent security breach.');
-    process.exit(1);
-  } else {
-    console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure fallback. Set JWT_SECRET in your .env file!');
-  }
-}
-
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.warn('⚠️ WARNING: SUPABASE_URL or SUPABASE_KEY environment variables are missing!');
-  console.warn('Please create a .env file based on .env.example with your Supabase credentials.');
-}
-
 // Initialize Supabase client
 const supabase = createClient(
   SUPABASE_URL || 'https://placeholder.supabase.co',
@@ -228,7 +226,7 @@ const saveSettings = (settings) => {
   } catch (err) {
     console.error('[Settings] Failed to save settings:', err.message);
     // Last resort: try direct write
-    try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2)); } catch (_) {}
+    try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2)); } catch (_) { /* ignore */ }
   }
 };
 
@@ -711,8 +709,8 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     if ((!data || data.length === 0)) {
       const allRes = await supabase.from('submissions').select('*').limit(100);
       if (allRes.data && allRes.data.length > 0) {
-        const targetNorm = rawId.replace(/[\s\-]/g, '').toLowerCase();
-        const found = allRes.data.find(s => (s.id || '').replace(/[\s\-]/g, '').toLowerCase() === targetNorm);
+        const targetNorm = rawId.replace(/[\s-]/g, '').toLowerCase();
+        const found = allRes.data.find(s => (s.id || '').replace(/[\s-]/g, '').toLowerCase() === targetNorm);
         if (found) data = [found];
       }
     }
@@ -759,6 +757,7 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
         .replace(/&#39;/g, "'")
         .replace(/&quot;/g, '"')
         .replace(/[\uFFFD]/g, '')
+        // eslint-disable-next-line no-control-regex
         .replace(/[\x00-\x1F\x7F]/g, '')
         .replace(/\s+/g, ' ')
         .trim();
@@ -1040,8 +1039,8 @@ const handleZipDownload = async (req, res) => {
     if (!data || data.length === 0) {
       const allRes = await supabase.from('submissions').select('*').limit(100);
       if (allRes.data && allRes.data.length > 0) {
-        const targetNorm = rawId.replace(/[\s\-]/g, '').toLowerCase();
-        const found = allRes.data.find(s => (s.id || '').replace(/[\s\-]/g, '').toLowerCase() === targetNorm);
+        const targetNorm = rawId.replace(/[\s-]/g, '').toLowerCase();
+        const found = allRes.data.find(s => (s.id || '').replace(/[\s-]/g, '').toLowerCase() === targetNorm);
         if (found) data = [found];
       }
     }

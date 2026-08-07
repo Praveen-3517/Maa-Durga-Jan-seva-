@@ -9,7 +9,9 @@
     "dev:client": "cd client && npm run dev",
     "build:client": "cd client && npm run build",
     "build": "cd client && npm run build",
-    "postinstall": "cd client && npm install --include=dev && npm run build"
+    "postinstall": "cd client && npm install --include=dev && npm run build",
+    "lint-staged": "lint-staged",
+    "prepare": "husky"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",
@@ -29,5 +31,16 @@
     "sharp": "^0.35.3",
     "simplex-noise": "^4.0.3",
     "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix"
+    ]
   }
 }

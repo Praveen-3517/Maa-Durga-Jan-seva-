@@ -1626,7 +1626,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
           // Send interactive list message (like Bot Simulator)
           const rows = services.slice(0, 10).map((s) => ({
             id: `service_${s.id}`,
-            title: decodeHtmlEntities(s.name).substring(0, 24),
+            title: decodeHtmlEntities(s.name || '').substring(0, 24) || 'Service',
             description: decodeHtmlEntities(s.hindi_title || s.description || '').substring(0, 72)
           }));
           const result = await sendWhatsAppInteractiveList(

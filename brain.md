@@ -296,6 +296,11 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-08-07 (v3.4.1 — WhatsApp ID Mismatch Fix & UI Polish)**:
+  - **WhatsApp API Fix**: Resolved "API access blocked" error. Identified ID mismatch between Test Account and Real Account. Reverted `.env` to real account IDs (`1044...` and `1284...`).
+  - **Meta Payment Policy Documented**: Clarified that Meta strictly requires a Payment Method (Credit/Debit card) for Permanent System User Tokens to work. Without a card, only 24-hour temporary tokens function.
+  - **UI Update**: Removed "Bot Simulator" tab from `Navbar.jsx` for a cleaner production dashboard.
+
 - **2026-08-07 (v3.4.0 — Full Bug Audit & Fix Session — 14 Bugs Fixed)**:
   - **BUG-001 (Critical)**: Fixed `shopName` ReferenceError in BotSimulator — variable used in 5 places but never declared. Added `const shopName = shopSettings?.shopName || 'Maa Durga Online Center'`.
   - **BUG-002 (Critical)**: Fixed `chatRef` ReferenceError in BotSimulator — used in JSX ref and useEffect scroll but `useRef()` was never declared.

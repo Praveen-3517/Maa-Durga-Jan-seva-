@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.4.0` (All 14 Bugs Fixed — Critical Crash Fixes, Security Hardening, Production Error Messages)
+- **Version**: `3.6.1` (Interactive Text Input Fields & Email ID Input rendering on Customer Portal + Document Separation)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -296,6 +296,11 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
+- **2026-08-09 (v3.4.2 — PAN Card & Correction Age Proof Mandatory Update)**:
+  - **PAN Card & Correction Age Proof Update**: Configured **`उम्र प्रमाण पत्र / Age Proof (Voter ID / Birth Certificate / 10th Result)`** as a mandatory document for both **New PAN Card** and **PAN Card Correction** applications across [constants/services.js](file:///f:/chat%20bot/client/src/constants/services.js) and [CustomerPortal/index.jsx](file:///f:/chat%20bot/client/src/pages/CustomerPortal/index.jsx).
+  - Enforced mandatory validation and direct camera photo capture / file picker for Age Proof and Old PAN Card in the application form modal.
+  - Production build verified: `npm run build` ✅ (28 modules transformed, 0 errors).
+
 - **2026-08-07 (v3.4.1 — WhatsApp ID Mismatch Fix & UI Polish)**:
   - **WhatsApp API Fix**: Resolved "API access blocked" error. Identified ID mismatch between Test Account and Real Account. Reverted `.env` to real account IDs (`1044...` and `1284...`).
   - **Meta Payment Policy Documented**: Clarified that Meta strictly requires a Payment Method (Credit/Debit card) for Permanent System User Tokens to work. Without a card, only 24-hour temporary tokens function.
@@ -533,23 +538,19 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **Active State**: All features built and verified. UI fully polished with light/dark mode support. Form fields enhanced with Category + Tahsil dropdowns. Mandatory Aadhar/Photo upload enforced. Service cards compact and content-driven.
-- **What was just accomplished (v3.2.0 — 2026-07-30)**:
-  - **"All" Certificate Option**: Added `all` (सभी — आय, जाति, निवास) as 4th option in certificate picker, combining requirements of all three certificates.
-  - **Category Dropdown**: Added `जाति श्रेणी / Category` select field (OBC, GENERAL, SC, ST, Any other) to all 4 certificate forms.
-  - **Tahsil Dropdown**: Replaced fixed "Ghazipur" text with a proper dropdown: Ghazipur, Jakhaniya, Kasamabad, Mohamdabad, Saidpur, Sevrai, Jamaniya.
-  - **Mandatory Aadhar + Photo Upload**: Separated mandatory uploads (Aadhar Card + Passport Photo) as individual required file inputs. Form won't submit unless both are uploaded. Other supporting docs remain in drag-and-drop area.
-  - **CSC Logo in Navbar**: Replaced FontAwesome laptop icon with actual `logo.jpeg` in the navigation bar.
-  - **Address → Google Maps Link**: Address in hero section now links to `https://maps.app.goo.gl/4x7veXD2rUK5ZsP57`.
-  - **Android Mobile Responsiveness**: File upload boxes use `flexWrap` and `maxWidth: 100%` for clean mobile layout.
-  - **Light Mode Full Fix**:
-    - Added missing CSS variables (`--bg-card`, `--bg-tertiary`, WA colors, etc.) to system theme media query.
-    - Added explicit `!important` overrides for `.quick-contact-bar` in light/system themes → soft blue pill (`#EFF6FF`).
-    - Removed hardcoded `rgba(15,23,42,*)` from `.quick-contact-bar` and `.file-drop-area`.
-    - Fixed hardcoded `white` color text → `var(--text-primary)` for address + timings.
-    - Hero grid pattern opacity reduced in light mode.
-  - **Service Card Spacing**: Reduced padding (`1.8rem` → `1.2rem`), reduced margins between card sections. Removed `height: 100%` and `flex-grow: 1` so cards shrink to fit their content naturally — no more empty whitespace gaps.
-  - **Modal Layout**: Reverted modal layout & position back to original v3.2.0 state as requested.
+- **Active State**: All features built and verified. Interactive Text Fields & Email ID Input rendering live.
+- **What was just accomplished (v3.6.1 — 2026-08-09)**:
+  - **Dynamic Text Input Fields Rendering in Customer Form (`UploadModal`)**:
+    - Automatic separation of **File Upload Documents** vs **Text Input Fields** (Email ID, Old Passport No., Father Name, Old PAN No., etc.).
+    - When Email ID is required or added in documents, it renders as a dedicated **Email ID Text Input Field** (`<input type="email" />`) with live regex validation, instead of showing as a file upload requirement.
+    - Added support for custom dynamic text fields (e.g. `Old Passport Number`, `Old PAN Card Number`, `Father's Name`, `UAN Number`, etc.) to render interactive text fields on the customer portal and attach directly to submission details.
+    - Added 1-Click Quick Preset Chips in `ServiceModal` (Admin Dashboard) for both file documents and text fields.
+  - **What was previously accomplished (v3.6.0)**:
+    - **Email ID Configuration per Service & Reordered Services**: Voter ID placed at #5 (behind Driving License & Ration Card), Passport Seva at #7 (behind Ayushman Card).
+- **What was previously accomplished (v3.5.0)**:
+  - **Dynamic Service & Document Management (Admin Control)**: Full editable documents with 1-click mandatory/optional toggles, reordering, icon presets, and real-time portal syncing.
+- **What was previously accomplished (v3.4.2)**:
+  - **PAN Card & PAN Card Correction Age Proof**: Enforced mandatory Age Proof (Voter ID / Birth Certificate / 10th Result) replacing 10th marksheet.
 - **Admin Password**: `Pratap@135`
 - **WhatsApp Verify Token**: `maa_durga_verify_token_2026`
 - **Next Step**: Run Supabase SQL migration → Connect real WhatsApp phone when available.

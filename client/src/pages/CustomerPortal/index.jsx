@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { SERVICES, CERTIFICATE_TYPES, OBC_SUBCASTES } from '../../constants/services';
+import { SERVICES, CERTIFICATE_TYPES, PAN_TYPES, OBC_SUBCASTES } from '../../constants/services';
 
 const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? 'http://localhost:3000'
@@ -67,6 +67,8 @@ const fetchWithWakeUp = async (url, options, onRetrying) => {
 /* ─── Small helper ─── */
 function ServiceCard({ service, onApply }) {
   const isMerged = service.isMerged;
+  const isPan = service.id === 'srv_pancard' || service.slug === 'srv_pancard' || (service.title || '').toLowerCase().includes('pan');
+  const subTypes = isPan ? PAN_TYPES : CERTIFICATE_TYPES;
 
   return (
     <div
@@ -81,7 +83,7 @@ function ServiceCard({ service, onApply }) {
         </div>
 
         <span className="service-badge">
-          {isMerged ? '3-in-1 Service' : 'Online Process'}
+          {isMerged ? (isPan ? '2-in-1 Service' : '3-in-1 Service') : 'Online Process'}
         </span>
       </div>
 
@@ -111,7 +113,7 @@ function ServiceCard({ service, onApply }) {
             marginBottom: '8px'
           }}
         >
-          {Object.values(CERTIFICATE_TYPES).map(ct => (
+          {Object.values(subTypes).map(ct => (
             <span
               key={ct.id}
               style={{
@@ -167,10 +169,19 @@ function ServiceCard({ service, onApply }) {
 
 /* ─── Sub-Service Picker ─── */
 function CertificatePickerModal({
+  service,
   onSelect,
   onClose,
   pageView = false
 }) {
+  const isPan = service?.id === 'srv_pancard' || service?.slug === 'srv_pancard' || (service?.title || '').toLowerCase().includes('pan');
+  const subTypes = isPan ? PAN_TYPES : CERTIFICATE_TYPES;
+  const modalTitle = isPan ? 'पैन कार्ड सेवा चुनें / Choose PAN Card Option' : 'प्रमाण पत्र चुनें / Choose Certificate';
+  const modalSub = isPan
+    ? 'आप किस पैन कार्ड सेवा के लिए आवेदन करना चाहते हैं? / Which PAN card service do you want to apply for?'
+    : 'आप किस प्रमाण पत्र के लिए आवेदन करना चाहते हैं? / Which certificate do you want to apply for?';
+  const modalIcon = isPan ? 'fa-solid fa-address-card' : 'fa-solid fa-file-shield';
+
   return (
     <div
       className={
@@ -207,8 +218,8 @@ function CertificatePickerModal({
       >
         <div className="modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem' }}>
           <h3 style={{ margin: 0 }}>
-            <i className="fa-solid fa-file-shield" style={{ marginRight: 8, color: 'var(--primary-color)' }}></i>
-            प्रमाण पत्र चुनें / Choose Certificate
+            <i className={modalIcon} style={{ marginRight: 8, color: 'var(--primary-color)' }}></i>
+            {modalTitle}
           </h3>
 
           <button
@@ -240,8 +251,7 @@ function CertificatePickerModal({
               fontSize: '0.92rem'
             }}
           >
-            आप किस प्रमाण पत्र के लिए आवेदन करना चाहते हैं?
-            / Which certificate do you want to apply for?
+            {modalSub}
           </p>
 
           <div
@@ -251,7 +261,7 @@ function CertificatePickerModal({
               gap: '0.85rem'
             }}
           >
-            {Object.values(CERTIFICATE_TYPES).map(ct => (
+            {Object.values(subTypes).map(ct => (
               <button
                 key={ct.id}
                 onClick={() => onSelect(ct)}
@@ -411,7 +421,11 @@ function CertificateFormModal({
   });
 
   const [aadharFile, setAadharFile] = useState(null);
+  const [aadharBackFile, setAadharBackFile] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
+  const [salarySlipFile, setSalarySlipFile] = useState(null);
+  const [ageProofFile, setAgeProofFile] = useState(null);
+  const [oldPanFile, setOldPanFile] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -423,8 +437,16 @@ function CertificateFormModal({
   const cameraInputRef = useRef();
   const aadharFileRef = useRef();
   const aadharCameraRef = useRef();
+  const aadharBackFileRef = useRef();
+  const aadharBackCameraRef = useRef();
   const photoFileRef = useRef();
   const photoCameraRef = useRef();
+  const salarySlipFileRef = useRef();
+  const salarySlipCameraRef = useRef();
+  const ageProofFileRef = useRef();
+  const ageProofCameraRef = useRef();
+  const oldPanFileRef = useRef();
+  const oldPanCameraRef = useRef();
 
   const handleChange = (name, value) => {
     setFormValues(prev => ({
@@ -463,7 +485,15 @@ function CertificateFormModal({
 
     if (!aadharFile) {
       showToast(
-        'कृपया आधार कार्ड अपलोड करें। / Please upload Aadhar Card.',
+        'कृपया आधार कार्ड Front side अपलोड करें। / Please upload Aadhar Card Front.',
+        'error'
+      );
+      return;
+    }
+
+    if (!aadharBackFile) {
+      showToast(
+        'कृपया आधार कार्ड Back side अपलोड करें। / Please upload Aadhar Card Back.',
         'error'
       );
       return;
@@ -471,7 +501,34 @@ function CertificateFormModal({
 
     if (!photoFile) {
       showToast(
-        'कृपया फोटो अपलोड करें। / Please upload Passport Photo.',
+        'कृपया पासपोर्ट साइज फोटो अपलोड करें। / Please upload Passport Photo.',
+        'error'
+      );
+      return;
+    }
+
+    // If Occupation is नौकरी, salary slip is mandatory
+    if (formValues.vyavsay === 'नौकरी' && !salarySlipFile) {
+      showToast(
+        'नौकरी चुनने पर सैलरी स्लिप अनिवार्य है। / Salary Slip is mandatory for Occupation: नौकरी.',
+        'error'
+      );
+      return;
+    }
+
+    // If New PAN Card or PAN Correction, Age Proof (Voter ID / Birth Certificate / 10th Result) is mandatory
+    if ((certType.id === 'new_pan' || certType.id === 'pan_correction' || certType.mandatoryDocType === 'age_proof' || certType.mandatoryDocType === 'marksheet') && !ageProofFile) {
+      showToast(
+        'कृपया उम्र प्रमाण पत्र (Voter ID / Birth Certificate / 10th Result) अपलोड करें। / Please upload Age Proof.',
+        'error'
+      );
+      return;
+    }
+
+    // If PAN Correction, Old PAN Card is mandatory
+    if ((certType.id === 'pan_correction' || certType.mandatoryDocType === 'old_pan') && !oldPanFile) {
+      showToast(
+        'कृपया पुराना पैन कार्ड अपलोड करें। / Please upload Old PAN Card.',
         'error'
       );
       return;
@@ -519,8 +576,27 @@ function CertificateFormModal({
       formData.append('documents', aadharFile);
     }
 
+    if (aadharBackFile) {
+      formData.append('documents', aadharBackFile);
+    }
+
     if (photoFile) {
       formData.append('documents', photoFile);
+    }
+
+    // Attach salary slip if Occupation = नौकरी
+    if (salarySlipFile) {
+      formData.append('documents', salarySlipFile);
+    }
+
+    // Attach Age Proof if New PAN
+    if (ageProofFile) {
+      formData.append('documents', ageProofFile);
+    }
+
+    // Attach Old PAN if Correction
+    if (oldPanFile) {
+      formData.append('documents', oldPanFile);
     }
 
     selectedFiles.forEach(f => {
@@ -954,69 +1030,31 @@ function CertificateFormModal({
                   marginTop: '0.5rem'
                 }}
               >
+                {/* Aadhaar Card FRONT */}
                 <div
                   style={{
-                    background:
-                      'var(--bg-tertiary)',
+                    background: 'var(--bg-tertiary)',
                     padding: '0.8rem',
                     borderRadius: '8px',
-                    border:
-                      `1px solid ${aadharFile
-                        ? certType.color
-                        : 'var(--border-color)'
-                      }`,
+                    border: `1px solid ${aadharFile ? certType.color : 'var(--border-color)'}`,
                     display: 'flex',
                     flexWrap: 'wrap',
                     gap: '0.5rem',
                     alignItems: 'center',
-                    justifyContent:
-                      'space-between'
+                    justifyContent: 'space-between'
                   }}
                 >
                   <div>
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      <i
-                        className="fa-solid fa-address-card"
-                        style={{
-                          marginRight: 6
-                        }}
-                      ></i>
-
-                      आधार कार्ड / Aadhar Card
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                      <i className="fa-solid fa-address-card" style={{ marginRight: 6 }}></i>
+                      आधार कार्ड Front / Aadhar Front
                     </div>
-
-                    <div
-                      style={{
-                        fontSize: '0.75rem',
-                        color:
-                          'var(--text-muted)'
-                      }}
-                    >
-                      Required (Image or PDF)
-                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Required — Front Side (Image or PDF)</div>
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <input
-                      type="file"
-                      ref={aadharFileRef}
-                      accept="image/*,application/pdf"
-                      onChange={e => setAadharFile(e.target.files[0])}
-                      style={{ display: 'none' }}
-                    />
-                    <input
-                      type="file"
-                      ref={aadharCameraRef}
-                      accept="image/*"
-                      capture="environment"
-                      onChange={e => setAadharFile(e.target.files[0])}
-                      style={{ display: 'none' }}
-                    />
+                    <input type="file" ref={aadharFileRef} accept="image/*,application/pdf" onChange={e => setAadharFile(e.target.files[0])} style={{ display: 'none' }} />
+                    <input type="file" ref={aadharCameraRef} accept="image/*" capture="environment" onChange={e => setAadharFile(e.target.files[0])} style={{ display: 'none' }} />
 
                     {aadharFile ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
@@ -1026,23 +1064,56 @@ function CertificateFormModal({
                       </div>
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={() => aadharFileRef.current?.click()}
-                          style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
-                        >
-                          <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>
-                          File / PDF
+                        <button type="button" className="btn btn-outline" onClick={() => aadharFileRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+                          <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>File / PDF
                         </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={() => aadharCameraRef.current?.click()}
-                          style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
-                        >
-                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>
-                          Take Photo
+                        <button type="button" className="btn btn-outline" onClick={() => aadharCameraRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>Take Photo
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Aadhaar Card BACK */}
+                <div
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    padding: '0.8rem',
+                    borderRadius: '8px',
+                    border: `1px solid ${aadharBackFile ? certType.color : 'var(--border-color)'}`,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                      <i className="fa-solid fa-address-card" style={{ marginRight: 6 }}></i>
+                      आधार कार्ड Back / Aadhar Back
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Required — Back Side (Image or PDF)</div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input type="file" ref={aadharBackFileRef} accept="image/*,application/pdf" onChange={e => setAadharBackFile(e.target.files[0])} style={{ display: 'none' }} />
+                    <input type="file" ref={aadharBackCameraRef} accept="image/*" capture="environment" onChange={e => setAadharBackFile(e.target.files[0])} style={{ display: 'none' }} />
+
+                    {aadharBackFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span>{aadharBackFile.name.length > 18 ? aadharBackFile.name.substring(0, 15) + '...' : aadharBackFile.name}</span>
+                        <button type="button" onClick={() => setAadharBackFile(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 4 }}>&times;</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button type="button" className="btn btn-outline" onClick={() => aadharBackFileRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+                          <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>File / PDF
+                        </button>
+                        <button type="button" className="btn btn-outline" onClick={() => aadharBackCameraRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>Take Photo
                         </button>
                       </>
                     )}
@@ -1145,6 +1216,154 @@ function CertificateFormModal({
                   </div>
                 </div>
               </div>
+
+              {/* ─── Conditional: Salary Slip (only when Occupation = नौकरी) ─── */}
+              {formValues.vyavsay === 'नौकरी' && (
+                <div
+                  style={{
+                    marginTop: '0.75rem',
+                    background: 'linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.04))',
+                    border: `1px solid ${salarySlipFile ? certType.color : 'rgba(245,158,11,0.5)'}`,
+                    borderRadius: '10px',
+                    padding: '0.9rem 1rem',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    animation: 'fadeInDown 0.3s ease'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.92rem', color: certType.color, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className="fa-solid fa-file-invoice-dollar"></i>
+                      सैलरी स्लिप / Salary Slip
+                      <span style={{ fontSize: '0.72rem', background: 'rgba(245,158,11,0.2)', color: certType.color, borderRadius: '4px', padding: '1px 6px', marginLeft: 4 }}>नौकरी के लिए अनिवार्य</span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                      Required for Occupation: नौकरी (Image or PDF)
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input type="file" ref={salarySlipFileRef} accept="image/*,application/pdf" onChange={e => setSalarySlipFile(e.target.files[0])} style={{ display: 'none' }} />
+                    <input type="file" ref={salarySlipCameraRef} accept="image/*" capture="environment" onChange={e => setSalarySlipFile(e.target.files[0])} style={{ display: 'none' }} />
+
+                    {salarySlipFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span>{salarySlipFile.name.length > 18 ? salarySlipFile.name.substring(0, 15) + '...' : salarySlipFile.name}</span>
+                        <button type="button" onClick={() => setSalarySlipFile(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 4 }}>&times;</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button type="button" className="btn btn-outline" onClick={() => salarySlipFileRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+                          <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>File / PDF
+                        </button>
+                        <button type="button" className="btn btn-outline" onClick={() => salarySlipCameraRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>Take Photo
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Mandatory: Age Proof (Voter ID / Birth Certificate / 10th Result) for PAN Card (New / Correction) ─── */}
+              {(certType.id === 'new_pan' || certType.id === 'pan_correction' || certType.mandatoryDocType === 'age_proof' || certType.mandatoryDocType === 'marksheet') && (
+                <div
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    padding: '0.8rem',
+                    borderRadius: '8px',
+                    border: `1px solid ${ageProofFile ? certType.color : 'var(--border-color)'}`,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: '0.5rem'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                      <i className="fa-solid fa-cake-candles" style={{ marginRight: 6 }}></i>
+                      उम्र प्रमाण पत्र / Age Proof
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Voter ID / Birth Certificate / 10th Result (Image or PDF)</div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input type="file" ref={ageProofFileRef} accept="image/*,application/pdf" onChange={e => setAgeProofFile(e.target.files[0])} style={{ display: 'none' }} />
+                    <input type="file" ref={ageProofCameraRef} accept="image/*" capture="environment" onChange={e => setAgeProofFile(e.target.files[0])} style={{ display: 'none' }} />
+
+                    {ageProofFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span>{ageProofFile.name.length > 18 ? ageProofFile.name.substring(0, 15) + '...' : ageProofFile.name}</span>
+                        <button type="button" onClick={() => setAgeProofFile(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 4 }}>&times;</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button type="button" className="btn btn-outline" onClick={() => ageProofFileRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+                          <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>File / PDF
+                        </button>
+                        <button type="button" className="btn btn-outline" onClick={() => ageProofCameraRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>Take Photo
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Mandatory: Old PAN Card (for PAN Card Correction) ─── */}
+              {(certType.id === 'pan_correction' || certType.mandatoryDocType === 'old_pan') && (
+                <div
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    padding: '0.8rem',
+                    borderRadius: '8px',
+                    border: `1px solid ${oldPanFile ? certType.color : 'var(--border-color)'}`,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: '0.5rem'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                      <i className="fa-solid fa-address-card" style={{ marginRight: 6 }}></i>
+                      पुराना पैन कार्ड / Old PAN Card
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Required for PAN Correction (Image or PDF)</div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input type="file" ref={oldPanFileRef} accept="image/*,application/pdf" onChange={e => setOldPanFile(e.target.files[0])} style={{ display: 'none' }} />
+                    <input type="file" ref={oldPanCameraRef} accept="image/*" capture="environment" onChange={e => setOldPanFile(e.target.files[0])} style={{ display: 'none' }} />
+
+                    {oldPanFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span>{oldPanFile.name.length > 18 ? oldPanFile.name.substring(0, 15) + '...' : oldPanFile.name}</span>
+                        <button type="button" onClick={() => setOldPanFile(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 4 }}>&times;</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button type="button" className="btn btn-outline" onClick={() => oldPanFileRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+                          <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>File / PDF
+                        </button>
+                        <button type="button" className="btn btn-outline" onClick={() => oldPanCameraRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>Take Photo
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Other File Uploads */}
@@ -1342,6 +1561,40 @@ function UploadModal({
   uploadToken,
   pageView = false
 }) {
+  const isEmailDoc = (name) => {
+    const l = (name || '').toLowerCase().trim();
+    return l.includes('email') || l.includes('ईमेल');
+  };
+
+  const isEmailRequired = service.email_requirement === 'required' ||
+    (service.documents || []).some(d => isEmailDoc(d.document_name) && d.is_required !== false) ||
+    (service.requirements || []).some(r => isEmailDoc(typeof r === 'string' ? r : ''));
+
+  const hasEmailInDocs = (service.documents || []).some(d => isEmailDoc(d.document_name)) ||
+    (service.requirements || []).some(r => isEmailDoc(typeof r === 'string' ? r : ''));
+
+  const showEmailField = hasEmailInDocs || service.email_requirement === 'required' || service.email_requirement === 'optional' || !service.email_requirement;
+
+  const customTextFields = (service.documents || [])
+    .filter(d => {
+      const name = (d.document_name || '').toLowerCase().trim();
+      if (isEmailDoc(name)) return false;
+      return (
+        name.includes('number') ||
+        name.includes('नंबर') ||
+        name.includes(' no.') ||
+        name.includes(' no ') ||
+        name.endsWith(' no') ||
+        name.includes('संख्या') ||
+        name.includes('uan')
+      );
+    })
+    .map(d => ({
+      name: d.document_name,
+      isRequired: d.is_required !== false,
+    }));
+
+  const [customFieldValues, setCustomFieldValues] = useState({});
   const [selectedFiles, setSelectedFiles] =
     useState([]);
 
@@ -1351,14 +1604,24 @@ function UploadModal({
   const [isSubmitting, setIsSubmitting] =
     useState(false);
 
-  // Server wake-up retry state
+  const [aadharFile, setAadharFile] = useState(null);
+  const [aadharBackFile, setAadharBackFile] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+
   const [wakeRetrying, setWakeRetrying] = useState(false);
   const [wakeSecondsLeft, setWakeSecondsLeft] = useState(0);
 
   const fileInputRef = useRef();
   const cameraInputRef = useRef();
+  const aadharFileRef = useRef();
+  const aadharCameraRef = useRef();
+  const aadharBackFileRef = useRef();
+  const aadharBackCameraRef = useRef();
+  const photoFileRef = useRef();
+  const photoCameraRef = useRef();
   const nameRef = useRef();
   const phoneRef = useRef();
+  const emailRef = useRef();
   const notesRef = useRef();
 
   if (!service) return null;
@@ -1391,9 +1654,50 @@ function UploadModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (selectedFiles.length === 0) {
+    const emailVal = emailRef.current ? emailRef.current.value.trim() : '';
+
+    if (isEmailRequired && !emailVal) {
       showToast(
-        'Please upload at least one document.',
+        'कृपया अपनी ईमेल आईडी दर्ज करें। / Please enter your Email ID.',
+        'error'
+      );
+      return;
+    }
+
+    if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      showToast(
+        'कृपया मान्य ईमेल आईडी दर्ज करें (उदा. yourname@gmail.com)। / Please enter a valid Email ID.',
+        'error'
+      );
+      return;
+    }
+
+    for (const f of customTextFields) {
+      if (f.isRequired && (!customFieldValues[f.name] || !customFieldValues[f.name].trim())) {
+        showToast(`कृपया ${f.name} दर्ज करें। / Please enter ${f.name}.`, 'error');
+        return;
+      }
+    }
+
+    if (!aadharFile) {
+      showToast(
+        'कृपया आधार कार्ड Front Side अपलोड करें। / Please upload Aadhar Card Front.',
+        'error'
+      );
+      return;
+    }
+
+    if (!aadharBackFile) {
+      showToast(
+        'कृपया आधार कार्ड Back Side अपलोड करें। / Please upload Aadhar Card Back.',
+        'error'
+      );
+      return;
+    }
+
+    if (!photoFile) {
+      showToast(
+        'कृपया पासपोर्ट साइज फोटो अपलोड करें। / Please upload Passport Photo.',
         'error'
       );
       return;
@@ -1413,6 +1717,11 @@ function UploadModal({
       phoneRef.current.value
     );
 
+    if (emailVal) {
+      formData.append('clientEmail', emailVal);
+      formData.append('email', emailVal);
+    }
+
     formData.append(
       'serviceType',
       service.id ||
@@ -1426,10 +1735,16 @@ function UploadModal({
       service.name
     );
 
-    formData.append(
-      'notes',
-      notesRef.current.value
-    );
+    const notesParts = [];
+    if (emailVal) notesParts.push(`[Email: ${emailVal}]`);
+    Object.entries(customFieldValues).forEach(([k, v]) => {
+      if (v && v.trim()) notesParts.push(`[${k}: ${v.trim()}]`);
+    });
+    const userNotes = notesRef.current?.value ? notesRef.current.value.trim() : '';
+    if (userNotes) notesParts.push(userNotes);
+
+    const combinedNotes = notesParts.join(' ');
+    formData.append('notes', combinedNotes);
 
     if (uploadToken) {
       formData.append(
@@ -1437,6 +1752,10 @@ function UploadModal({
         uploadToken
       );
     }
+
+    formData.append('documents', aadharFile);
+    formData.append('documents', aadharBackFile);
+    formData.append('documents', photoFile);
 
     selectedFiles.forEach(f =>
       formData.append(
@@ -1446,7 +1765,6 @@ function UploadModal({
     );
 
     try {
-      // fetchWithWakeUp: auto-retries for 60s on network error (Render cold start)
       const res = await fetchWithWakeUp(
         getApiUrl('/api/submissions'),
         { method: 'POST', body: formData },
@@ -1458,30 +1776,27 @@ function UploadModal({
 
       setWakeRetrying(false);
 
-      const text = await res.text();
-
-      const data = text
-        ? JSON.parse(text)
-        : {};
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseErr) {
+        console.error('Failed to parse response JSON:', parseErr);
+      }
 
       if (!res.ok) {
-        throw new Error(
-          data?.message ||
-          'Failed to submit application'
-        );
+        throw new Error(data?.message || 'Failed to submit application');
       }
 
       showToast(
-        'Application submitted successfully! Opening your official receipt...'
+        'Application submitted successfully! Opening your official receipt...',
       );
 
       onClose();
 
       if (data?.id) {
         window.open(
-          getApiUrl(
-            `/api/submissions/${encodeURIComponent(data.id)}/receipt`
-          ),
+          getApiUrl(`/api/submissions/${encodeURIComponent(data.id)}/receipt`),
           '_blank'
         );
       }
@@ -1500,11 +1815,12 @@ function UploadModal({
     }
   };
 
-  const requirementsList =
-    service.requirements ||
-    (service.documents || []).map(
-      d => d.document_name
-    );
+  const customFieldNamesSet = new Set(customTextFields.map(f => f.name));
+  const rawList = service.documents && service.documents.length > 0
+    ? service.documents.map(d => d.document_name)
+    : (service.requirements || []);
+
+  const fileRequirementsList = rawList.filter(r => !isEmailDoc(r) && !customFieldNamesSet.has(r));
 
   return (
     <div
@@ -1615,26 +1931,28 @@ function UploadModal({
             </div>
           )}
 
-          <div className="requirements-box">
-            <h4>
-              <i className="fa-solid fa-circle-info"></i>
-              Required Documents:
-            </h4>
+          {fileRequirementsList.length > 0 && (
+            <div className="requirements-box">
+              <h4>
+                <i className="fa-solid fa-circle-info"></i>
+                Required Documents (आवश्यक दस्तावेज़):
+              </h4>
 
-            <ul>
-              {requirementsList.map(
-                (r, i) => (
-                  <li key={i}>{r}</li>
-                )
-              )}
-            </ul>
-          </div>
+              <ul>
+                {fileRequirementsList.map(
+                  (r, i) => (
+                    <li key={i}>{r}</li>
+                  )
+                )}
+              </ul>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="form-grid-2">
               <div className="form-group">
                 <label>
-                  Your Full Name (English)
+                  Your Full Name (English) <span style={{ color: 'var(--primary-color)' }}>*</span>
                 </label>
 
                 <input
@@ -1650,7 +1968,7 @@ function UploadModal({
 
               <div className="form-group">
                 <label>
-                  Your Mobile Number (WhatsApp Number)
+                  Your Mobile Number (WhatsApp Number) <span style={{ color: 'var(--primary-color)' }}>*</span>
                 </label>
 
                 <input
@@ -1665,6 +1983,27 @@ function UploadModal({
               </div>
             </div>
 
+            {/* Email ID Field */}
+            {showEmailField && (
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <i className="fa-solid fa-envelope" style={{ color: 'var(--primary-color)' }}></i>
+                  Email ID (ईमेल आईडी)
+                  {isEmailRequired ? (
+                    <span style={{ color: '#ef4444', marginLeft: 4, fontWeight: 700 }}>* (अनिवार्य / Mandatory)</span>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginLeft: 4 }}>(वैकल्पिक / Optional)</span>
+                  )}
+                </label>
+                <input
+                  type="email"
+                  ref={emailRef}
+                  placeholder="yourname@gmail.com"
+                  required={isEmailRequired}
+                />
+              </div>
+            )}
+
             <div className="form-group">
               <label>
                 Additional Instructions / Details (Notes)
@@ -1675,6 +2014,110 @@ function UploadModal({
                 rows="2"
                 placeholder="Example: Need correction in Father's Name, etc. (Optional)"
               ></textarea>
+            </div>
+
+            {/* ─── Mandatory: Aadhaar Card + Passport Photo ─── */}
+            <div className="form-group" style={{ marginTop: '1rem' }}>
+              <label>
+                अनिवार्य दस्तावेज़ / Mandatory Documents
+                <span style={{ color: 'var(--primary-color)' }}> *</span>
+              </label>
+
+              <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', marginTop: '0.5rem' }}>
+                {/* Aadhaar Card FRONT */}
+                <div style={{ background: 'var(--bg-tertiary)', padding: '0.8rem', borderRadius: '8px', border: `1px solid ${aadharFile ? 'var(--primary-color)' : 'var(--border-color)'}`, display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                      <i className="fa-solid fa-address-card" style={{ marginRight: 6 }}></i>
+                      आधार कार्ड Front / Aadhar Front
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Required — Front Side (Image or PDF)</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input type="file" ref={aadharFileRef} accept="image/*,application/pdf" onChange={e => setAadharFile(e.target.files[0])} style={{ display: 'none' }} />
+                    <input type="file" ref={aadharCameraRef} accept="image/*" capture="environment" onChange={e => setAadharFile(e.target.files[0])} style={{ display: 'none' }} />
+                    {aadharFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span>{aadharFile.name.length > 18 ? aadharFile.name.substring(0, 15) + '...' : aadharFile.name}</span>
+                        <button type="button" onClick={() => setAadharFile(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 4 }}>&times;</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button type="button" className="btn btn-outline" onClick={() => aadharFileRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+                          <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>File / PDF
+                        </button>
+                        <button type="button" className="btn btn-outline" onClick={() => aadharCameraRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>Take Photo
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Aadhaar Card BACK */}
+                <div style={{ background: 'var(--bg-tertiary)', padding: '0.8rem', borderRadius: '8px', border: `1px solid ${aadharBackFile ? 'var(--primary-color)' : 'var(--border-color)'}`, display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                      <i className="fa-solid fa-address-card" style={{ marginRight: 6 }}></i>
+                      आधार कार्ड Back / Aadhar Back
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Required — Back Side (Image or PDF)</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input type="file" ref={aadharBackFileRef} accept="image/*,application/pdf" onChange={e => setAadharBackFile(e.target.files[0])} style={{ display: 'none' }} />
+                    <input type="file" ref={aadharBackCameraRef} accept="image/*" capture="environment" onChange={e => setAadharBackFile(e.target.files[0])} style={{ display: 'none' }} />
+                    {aadharBackFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span>{aadharBackFile.name.length > 18 ? aadharBackFile.name.substring(0, 15) + '...' : aadharBackFile.name}</span>
+                        <button type="button" onClick={() => setAadharBackFile(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 4 }}>&times;</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button type="button" className="btn btn-outline" onClick={() => aadharBackFileRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+                          <i className="fa-solid fa-folder-open" style={{ marginRight: 4 }}></i>File / PDF
+                        </button>
+                        <button type="button" className="btn btn-outline" onClick={() => aadharBackCameraRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>Take Photo
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+
+                {/* Passport Photo */}
+                <div style={{ background: 'var(--bg-tertiary)', padding: '0.8rem', borderRadius: '8px', border: `1px solid ${photoFile ? 'var(--primary-color)' : 'var(--border-color)'}`, display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                      <i className="fa-solid fa-camera" style={{ marginRight: 6 }}></i>
+                      पासपोर्ट साइज फोटो / Passport Photo
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Required (Image Only)</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input type="file" ref={photoFileRef} accept="image/*" onChange={e => setPhotoFile(e.target.files[0])} style={{ display: 'none' }} />
+                    <input type="file" ref={photoCameraRef} accept="image/*" capture="environment" onChange={e => setPhotoFile(e.target.files[0])} style={{ display: 'none' }} />
+                    {photoFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(34,197,94,0.12)', border: '1px solid #22c55e', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.82rem', color: '#4ade80' }}>
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span>{photoFile.name.length > 18 ? photoFile.name.substring(0, 15) + '...' : photoFile.name}</span>
+                        <button type="button" onClick={() => setPhotoFile(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 4 }}>&times;</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button type="button" className="btn btn-outline" onClick={() => photoFileRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}>
+                          <i className="fa-solid fa-image" style={{ marginRight: 4 }}></i>Choose Image
+                        </button>
+                        <button type="button" className="btn btn-outline" onClick={() => photoCameraRef.current?.click()} style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: 'rgba(245, 158, 11, 0.15)', borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>
+                          <i className="fa-solid fa-camera" style={{ marginRight: 4 }}></i>Take Photo
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="form-group">
@@ -1896,145 +2339,170 @@ export default function CustomerPortal({
   const [showCertPreview, setShowCertPreview] = useState(false);
 
   // Combine hardcoded SERVICES with dynamic services from API
-  const [activeServices, setActiveServices] =
-    useState(Object.values(SERVICES));
+  const [activeServices, setActiveServices] = useState(Object.values(SERVICES));
 
   const fetchDynamicServices = useCallback(() => {
     fetch('/api/services')
       .then(r => r.json())
       .then(data => {
-        if (data.success && data.data) {
-          const hardcodedSlugs = [
-            'srv_certificates',
-            'srv_pancard',
-            'srv_voterid',
-            'certificates',
-            'pancard',
-            'voterid',
-            'pan',
-            'voter',
-            'aay',
-            'jaati',
-            'niwas',
-            'all',
-            'income',
-            'caste',
-            'domicile'
+        if (data.success && Array.isArray(data.data)) {
+          const coreServicesMap = { ...SERVICES };
+          const dynamicList = [];
+
+          data.data.forEach(svc => {
+            const svcSlug = (svc.slug || '').toLowerCase().trim();
+            const svcName = (svc.name || '').toLowerCase().trim();
+            const docsList = (svc.documents || []).filter(d => d.is_required !== false).map(d => d.document_name);
+            const reqs = docsList.length > 0 ? docsList : (svc.requirements || []);
+
+            // Check if matches srv_pancard
+            if (svcSlug === 'srv_pancard' || svcSlug.includes('pan') || svcName.includes('pan card') || svcName.includes('पैन कार्ड')) {
+              coreServicesMap.srv_pancard = {
+                ...coreServicesMap.srv_pancard,
+                title: svc.name || coreServicesMap.srv_pancard.title,
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_pancard.hindiTitle,
+                description: svc.description || coreServicesMap.srv_pancard.description,
+                icon: svc.icon || coreServicesMap.srv_pancard.icon,
+                display_order: svc.display_order ?? coreServicesMap.srv_pancard.display_order,
+                email_requirement: svc.email_requirement || coreServicesMap.srv_pancard.email_requirement,
+                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_pancard.requirements,
+                documents: svc.documents || []
+              };
+            } else if (svcSlug === 'srv_certificates' || svcSlug.includes('certificate') || svcName.includes('aay') || svcName.includes('आय') || svcName.includes('जाति')) {
+              coreServicesMap.srv_certificates = {
+                ...coreServicesMap.srv_certificates,
+                title: svc.name || coreServicesMap.srv_certificates.title,
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_certificates.hindiTitle,
+                description: svc.description || coreServicesMap.srv_certificates.description,
+                icon: svc.icon || coreServicesMap.srv_certificates.icon,
+                display_order: svc.display_order ?? coreServicesMap.srv_certificates.display_order,
+                email_requirement: svc.email_requirement || coreServicesMap.srv_certificates.email_requirement,
+                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_certificates.requirements,
+                documents: svc.documents || []
+              };
+            } else if (svcSlug === 'srv_driving' || svcSlug.includes('driving') || svcName.includes('driving') || svcName.includes('ड्राइविंग')) {
+              coreServicesMap.srv_driving = {
+                ...coreServicesMap.srv_driving,
+                title: svc.name || coreServicesMap.srv_driving.title,
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_driving.hindiTitle,
+                description: svc.description || coreServicesMap.srv_driving.description,
+                icon: svc.icon || coreServicesMap.srv_driving.icon,
+                display_order: svc.display_order ?? coreServicesMap.srv_driving.display_order,
+                email_requirement: svc.email_requirement || coreServicesMap.srv_driving.email_requirement,
+                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_driving.requirements,
+                documents: svc.documents || []
+              };
+            } else if (svcSlug === 'srv_ration' || svcSlug.includes('ration') || svcName.includes('ration') || svcName.includes('राशन')) {
+              coreServicesMap.srv_ration = {
+                ...coreServicesMap.srv_ration,
+                title: svc.name || coreServicesMap.srv_ration.title,
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_ration.hindiTitle,
+                description: svc.description || coreServicesMap.srv_ration.description,
+                icon: svc.icon || coreServicesMap.srv_ration.icon,
+                display_order: svc.display_order ?? coreServicesMap.srv_ration.display_order,
+                email_requirement: svc.email_requirement || coreServicesMap.srv_ration.email_requirement,
+                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_ration.requirements,
+                documents: svc.documents || []
+              };
+            } else if (svcSlug === 'srv_voterid' || svcSlug.includes('voter') || svcName.includes('voter') || svcName.includes('वोटर')) {
+              coreServicesMap.srv_voterid = {
+                ...coreServicesMap.srv_voterid,
+                title: svc.name || coreServicesMap.srv_voterid.title,
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_voterid.hindiTitle,
+                description: svc.description || coreServicesMap.srv_voterid.description,
+                icon: svc.icon || coreServicesMap.srv_voterid.icon,
+                display_order: svc.display_order ?? coreServicesMap.srv_voterid.display_order,
+                email_requirement: svc.email_requirement || coreServicesMap.srv_voterid.email_requirement,
+                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_voterid.requirements,
+                documents: svc.documents || []
+              };
+            } else if (svcSlug === 'srv_ayushman' || svcSlug.includes('ayushman') || svcName.includes('ayushman') || svcName.includes('आयुष्मान')) {
+              coreServicesMap.srv_ayushman = {
+                ...coreServicesMap.srv_ayushman,
+                title: svc.name || coreServicesMap.srv_ayushman.title,
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_ayushman.hindiTitle,
+                description: svc.description || coreServicesMap.srv_ayushman.description,
+                icon: svc.icon || coreServicesMap.srv_ayushman.icon,
+                display_order: svc.display_order ?? coreServicesMap.srv_ayushman.display_order,
+                email_requirement: svc.email_requirement || coreServicesMap.srv_ayushman.email_requirement,
+                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_ayushman.requirements,
+                documents: svc.documents || []
+              };
+            } else if (svcSlug === 'srv_passport' || svcSlug.includes('passport') || svcName.includes('passport') || svcName.includes('पासपोर्ट')) {
+              coreServicesMap.srv_passport = {
+                ...coreServicesMap.srv_passport,
+                title: svc.name || coreServicesMap.srv_passport.title,
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_passport.hindiTitle,
+                description: svc.description || coreServicesMap.srv_passport.description,
+                icon: svc.icon || coreServicesMap.srv_passport.icon,
+                display_order: svc.display_order ?? coreServicesMap.srv_passport.display_order,
+                email_requirement: svc.email_requirement || coreServicesMap.srv_passport.email_requirement,
+                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_passport.requirements,
+                documents: svc.documents || []
+              };
+            } else if (svcSlug === 'srv_pf' || svcSlug.includes('pf') || svcName.includes('pf') || svcName.includes('पीएफ')) {
+              coreServicesMap.srv_pf = {
+                ...coreServicesMap.srv_pf,
+                title: svc.name || coreServicesMap.srv_pf.title,
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_pf.hindiTitle,
+                description: svc.description || coreServicesMap.srv_pf.description,
+                icon: svc.icon || coreServicesMap.srv_pf.icon,
+                display_order: svc.display_order ?? coreServicesMap.srv_pf.display_order,
+                email_requirement: svc.email_requirement || coreServicesMap.srv_pf.email_requirement,
+                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_pf.requirements,
+                documents: svc.documents || []
+              };
+            } else {
+              // Custom / Dynamic service from Admin
+              dynamicList.push({
+                id: svc.id || svc.slug,
+                slug: svc.slug || `svc-${svc.id}`,
+                title: svc.name || svc.title,
+                name: svc.name || svc.title,
+                icon: svc.icon || 'fa-solid fa-file-shield',
+                hindiTitle: svc.hindi_title || svc.hindiTitle || '',
+                description: svc.description || '',
+                email_requirement: svc.email_requirement || 'optional',
+                requirements: reqs,
+                documents: svc.documents || [],
+                display_order: svc.display_order ?? 99
+              });
+            }
+          });
+
+          const combined = [
+            ...Object.values(coreServicesMap),
+            ...dynamicList
           ];
 
-          const hardcodedTitles =
-            Object.values(SERVICES).map(
-              s =>
-                (s.title || '')
-                  .toLowerCase()
-                  .trim()
-            );
+          // Sort strictly by display_order
+          combined.sort((a, b) => (a.display_order ?? 99) - (b.display_order ?? 99));
 
-          const newDynamic =
-            data.data
-              .map(svc => ({
-                id:
-                  svc.id ||
-                  svc.slug,
-
-                title:
-                  svc.name ||
-                  svc.title,
-
-                name:
-                  svc.name ||
-                  svc.title,
-
-                icon:
-                  svc.icon ||
-                  'fa-solid fa-file',
-
-                hindiTitle:
-                  svc.hindi_title ||
-                  svc.hindiTitle ||
-                  '',
-
-                description:
-                  svc.description ||
-                  '',
-
-                requirements:
-                  svc.requirements ||
-                  (
-                    svc.documents ||
-                    []
-                  )
-                    .filter(
-                      d =>
-                        d.is_required
-                    )
-                    .map(
-                      d =>
-                        d.document_name
-                    ),
-
-                slug:
-                  (
-                    svc.slug ||
-                    ''
-                  )
-                    .toLowerCase()
-                    .trim()
-              }))
-              .filter(svc => {
-                const svcSlug =
-                  (
-                    svc.slug ||
-                    svc.id ||
-                    ''
-                  )
-                    .toLowerCase()
-                    .trim();
-
-                const svcTitle =
-                  (
-                    svc.title ||
-                    ''
-                  )
-                    .toLowerCase()
-                    .trim();
-
-                if (hardcodedSlugs.includes(svcSlug)) return false;
-                if (hardcodedTitles.includes(svcTitle)) return false;
-                return true;
-              });
-
-          const uniqueDynamic = [];
-          const seen = new Set();
-
-          for (const svc of newDynamic) {
-            const key =
-              (
-                svc.slug ||
-                svc.title
-              )
-                .toLowerCase()
-                .trim();
-
-            if (!seen.has(key)) {
-              seen.add(key);
-              uniqueDynamic.push(svc);
-            }
-          }
-
-          setActiveServices([
-            ...Object.values(SERVICES),
-            ...uniqueDynamic
-          ]);
+          setActiveServices(combined);
         }
       })
       .catch(err =>
-        console.error(
-          '[CustomerPortal] Error fetching dynamic services:',
-          err
-        )
+        console.error('[CustomerPortal] Error fetching dynamic services:', err)
       );
   }, []);
+
+  useEffect(() => {
+    fetchDynamicServices();
+
+    const handleUpdate = () => fetchDynamicServices();
+    window.addEventListener('services_updated', handleUpdate);
+
+    let bc;
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('services_channel');
+      bc.onmessage = () => fetchDynamicServices();
+    }
+
+    return () => {
+      window.removeEventListener('services_updated', handleUpdate);
+      if (bc) bc.close();
+    };
+  }, [fetchDynamicServices]);
 
   useEffect(() => {
     if (
@@ -2140,8 +2608,13 @@ export default function CustomerPortal({
         const svcNameUpper = (svc.name || '').toUpperCase();
         const svcId = (svc.id || svc.slug || '').toLowerCase();
 
+        const isPanGroup =
+          svcId === 'srv_pancard' ||
+          svcId.includes('pan') ||
+          svcNameUpper.includes('PAN') ||
+          svcNameUpper.includes('पैन');
+
         const isCertGroup =
-          svc.isMerged ||
           svcId === 'srv_certificates' ||
           svcId.includes('aay') ||
           svcId.includes('jaati') ||
@@ -2159,6 +2632,10 @@ export default function CustomerPortal({
 
         if (isCertGroup) {
           setModalService(SERVICES.srv_certificates);
+          setShowCertPicker(true);
+          setSelectedCertType(null);
+        } else if (isPanGroup) {
+          setModalService(SERVICES.srv_pancard);
           setShowCertPicker(true);
           setSelectedCertType(null);
         } else {
@@ -2291,6 +2768,7 @@ export default function CustomerPortal({
               modalService?.isMerged &&
               !selectedCertType && (
                 <CertificatePickerModal
+                  service={modalService}
                   onSelect={
                     handleCertSelect
                   }
@@ -2576,6 +3054,7 @@ export default function CustomerPortal({
 
           {showCertPicker && (
             <CertificatePickerModal
+              service={modalService}
               onSelect={
                 handleCertSelect
               }

@@ -1,5 +1,5 @@
 export const SERVICES = {
-  // Merged certificate group (FIRST PRIORITY)
+  // 1. Merged certificate group (FIRST PRIORITY)
   srv_certificates: {
     id: 'srv_certificates',
     title: 'AAY / JAATI / NIWAS',
@@ -7,6 +7,7 @@ export const SERVICES = {
     description: 'Income Certificate (Aay), Caste Certificate (Jaati), Domicile Certificate (Niwas) — choose one to apply.',
     icon: 'fa-solid fa-file-shield',
     isMerged: true,
+    display_order: 1,
     subServices: ['aay', 'jaati', 'niwas', 'all'],
     requirements: [
       'Aadhar Card',
@@ -15,31 +16,165 @@ export const SERVICES = {
     ],
     uploadUrl: '/upload-certificates',
   },
+  // 2. PAN Card group
   srv_pancard: {
     id: 'srv_pancard',
     title: 'PAN Card Apply',
     hindiTitle: 'पैन कार्ड (नया एवं संशोधन)',
     description: 'Apply for a new PAN card or make corrections in your existing PAN card details.',
     icon: 'fa-solid fa-address-card',
+    isMerged: true,
+    display_order: 2,
+    subServices: ['new_pan', 'pan_correction'],
     requirements: [
-      'Aadhar Card (Mobile Number should be linked for OTP)',
-      'One Passport Size Photograph',
-      'Signature on plain white paper (photo or scan)',
+      'Aadhar Card (Front + Back)',
+      'Passport Size Photo',
+      'Age Proof (Voter ID / Birth Certificate / 10th Result)',
+      'Old PAN Card (For Correction)',
     ],
     uploadUrl: '/upload-pancard',
   },
+  // 3. Driving License
+  srv_driving: {
+    id: 'srv_driving',
+    title: 'Driving License',
+    hindiTitle: 'ड्राइविंग लाइसेंस (नया / नवीनीकरण)',
+    description: 'Apply for a new Learner / Driving License, Renewal, or Add Class of Vehicle.',
+    icon: 'fa-solid fa-id-badge',
+    display_order: 3,
+    requirements: [
+      'Aadhar Card (Front + Back)',
+      'Passport Size Photo',
+      'Age Proof (10th Result / Birth Certificate)',
+      'Medical Certificate (Form 1A - if applicable)',
+    ],
+    uploadUrl: '/upload-driving',
+  },
+  // 4. Ration Card
+  srv_ration: {
+    id: 'srv_ration',
+    title: 'Ration Card',
+    hindiTitle: 'राशन कार्ड (नया / नाम जोड़ना)',
+    description: 'Apply for a new family ration card or add / remove family members online.',
+    icon: 'fa-solid fa-wheat-awn',
+    display_order: 4,
+    requirements: [
+      'Family Head Aadhar Card',
+      'All Family Members Aadhar Card',
+      'Passport Size Photo of Family Head',
+      'Bank Passbook (Front Page)',
+      'Electricity Bill / Gas Connection Proof',
+    ],
+    uploadUrl: '/upload-ration',
+  },
+  // 5. Voter ID Card (Placed behind Driving License & Ration Card)
   srv_voterid: {
     id: 'srv_voterid',
     title: 'Voter ID Card',
     hindiTitle: 'वोटर आईडी (मतदाता पहचान पत्र)',
     description: 'Register as a new voter, download your digital voter card, or apply for corrections.',
     icon: 'fa-solid fa-id-card-clip',
+    display_order: 5,
     requirements: [
       'Aadhar Card / Age Proof (Birth Certificate or 10th Marksheet)',
       'One Passport Size Photograph',
       'Address Proof (Electricity Bill, Water Bill, or Gas Connection)',
     ],
     uploadUrl: '/upload-voterid',
+  },
+  // 6. Ayushman Bharat Card
+  srv_ayushman: {
+    id: 'srv_ayushman',
+    title: 'Ayushman Bharat Card',
+    hindiTitle: 'आयुष्मान भारत कार्ड (₹5 लाख फ्री इलाज)',
+    description: 'Apply or download Ayushman Golden Card for free hospital treatment up to ₹5 Lakhs.',
+    icon: 'fa-solid fa-hospital',
+    display_order: 6,
+    requirements: [
+      'Aadhar Card',
+      'Ration Card / PM Letter / Family ID',
+      'Mobile Number linked with Aadhar',
+    ],
+    uploadUrl: '/upload-ayushman',
+  },
+  // 7. Passport Seva (Placed behind Ayushman Card)
+  srv_passport: {
+    id: 'srv_passport',
+    title: 'Passport Seva',
+    hindiTitle: 'पासपोर्ट सेवा (नया / री-इश्यू)',
+    description: 'Fresh passport application, renewal, Tatkaal passport service assistance and appointment booking.',
+    icon: 'fa-solid fa-passport',
+    display_order: 7,
+    requirements: [
+      'Aadhar Card',
+      '10th Marksheet (for Non-ECR)',
+      'PAN Card / Voter ID',
+      'Bank Passbook with Photo',
+    ],
+    uploadUrl: '/upload-passport',
+  },
+  // 8. PF / EPFO Claim
+  srv_pf: {
+    id: 'srv_pf',
+    title: 'PF / EPFO Claim',
+    hindiTitle: 'पीएफ / पेंशन निकासी (EPFO Claim)',
+    description: 'Apply for PF withdrawal (Form 19), Pension withdrawal (Form 10C), or Advance PF (Form 31).',
+    icon: 'fa-solid fa-building-columns',
+    display_order: 8,
+    requirements: [
+      'UAN Number & Password',
+      'Aadhar Card',
+      'PAN Card',
+      'Cancelled Cheque / Bank Passbook with Seal',
+    ],
+    uploadUrl: '/upload-pf',
+  },
+};
+
+
+// Sub-service definitions for PAN Card group
+export const PAN_TYPES = {
+  new_pan: {
+    id: 'new_pan',
+    label: 'नया पैन कार्ड',
+    sublabel: 'New PAN Card Apply',
+    icon: 'fa-solid fa-id-card',
+    color: '#0284c7',
+    mandatoryDocType: 'age_proof',
+    fields: [
+      { name: 'applicantName', label: 'आवेदक का नाम / Applicant Name', type: 'text', placeholder: 'पूरा नाम (आधार कार्ड के अनुसार)', required: true },
+      { name: 'fatherHusbandName', label: 'पिता / पति का नाम / Father or Husband Name', type: 'text', placeholder: 'पिता या पति का नाम', required: true },
+      { name: 'dob', label: 'जन्म तिथि / Date of Birth', type: 'date', required: true },
+      { name: 'email', label: 'ईमेल आईडी / Email ID', type: 'email', placeholder: 'yourname@gmail.com', required: true },
+      { name: 'mobile', label: 'मोबाइल नंबर (आधार से लिंक) / Mobile (Aadhar Linked)', type: 'tel', placeholder: '10 अंक का मोबाइल नंबर', required: true },
+    ],
+    documents: [
+      'आधार कार्ड (Front + Back) / Aadhar Card',
+      'पासपोर्ट साइज फोटो / Passport Size Photo',
+      'उम्र प्रमाण पत्र / Age Proof (Voter ID / Birth Certificate / 10th Result) (अनिवार्य / Mandatory)',
+    ],
+  },
+  pan_correction: {
+    id: 'pan_correction',
+    label: 'पैन कार्ड संशोधन',
+    sublabel: 'PAN Card Correction',
+    icon: 'fa-solid fa-pen-to-square',
+    color: '#8b5cf6',
+    mandatoryDocType: 'old_pan',
+    fields: [
+      { name: 'applicantName', label: 'आवेदक का नाम / Applicant Name', type: 'text', placeholder: 'पूरा नाम (आधार कार्ड के अनुसार)', required: true },
+      { name: 'fatherHusbandName', label: 'पिता / पति का नाम / Father or Husband Name', type: 'text', placeholder: 'पिता या पति का नाम', required: true },
+      { name: 'dob', label: 'जन्म तिथि / Date of Birth', type: 'date', required: true },
+      { name: 'email', label: 'ईमेल आईडी / Email ID', type: 'email', placeholder: 'yourname@gmail.com', required: true },
+      { name: 'mobile', label: 'मोबाइल नंबर (आधार से लिंक) / Mobile (Aadhar Linked)', type: 'tel', placeholder: '10 अंक का मोबाइल नंबर', required: true },
+      { name: 'correctionNotes', label: 'संशोधन विवरण / Correction Details (वैकल्पिक / Optional)', type: 'text', placeholder: 'क्या सुधार करवाना है (उदा. नाम, जन्मतिथि आदि)', required: false },
+    ],
+    documents: [
+      'आधार कार्ड (Front + Back) / Aadhar Card',
+      'पासपोर्ट साइज फोटो / Passport Size Photo',
+      'पुराना पैन कार्ड / Old PAN Card (अनिवार्य / Mandatory)',
+      'उम्र प्रमाण पत्र / Age Proof (Voter ID / Birth Certificate / 10th Result) (अनिवार्य / Mandatory)',
+    ],
   },
 };
 
@@ -57,6 +192,7 @@ export const CERTIFICATE_TYPES = {
       { name: 'fatherHusbandName', label: 'पिता / पति का नाम / Father or Husband Name', type: 'text', placeholder: 'पिता या पति का नाम', required: true },
       { name: 'motherName', label: 'माता का नाम / Mother Name', type: 'text', placeholder: 'माता का नाम', required: true },
       { name: 'category', label: 'जाति श्रेणी / Category', type: 'select', options: ['OBC', 'SC', 'ST', 'Any other'], required: true },
+      { name: 'vyavsay', label: 'व्यवसाय / Occupation', type: 'select', options: ['कृषि', 'मजदूरी', 'व्यापार', 'नौकरी', 'अन्य'], required: true },
       { name: 'district', label: 'जिला / District', type: 'text', value: 'Ghazipur', fixed: true },
       { name: 'tahsil', label: 'तहसील / Tahsil', type: 'select', options: ['Ghazipur', 'Jakhaniya', 'Kasamabad', 'Mohamdabad', 'Saidpur', 'Sevrai', 'Jamaniya'], required: true },
       { name: 'mobile', label: 'मोबाइल नंबर (आधार से लिंक) / Mobile (Aadhar Linked)', type: 'tel', placeholder: '10 अंक का मोबाइल नंबर', required: true },
@@ -64,7 +200,7 @@ export const CERTIFICATE_TYPES = {
     documents: [
       'आधार कार्ड / Aadhar Card',
       'पासपोर्ट साइज फोटो / Passport Size Photo',
-      'पिता या माता की सैलरी स्लिप / Father or Mother Salary Slip',
+      'पिता या पति की सैलरी स्लिप / Father or Husband Salary Slip',
     ],
   },
   jaati: {
@@ -131,7 +267,7 @@ export const CERTIFICATE_TYPES = {
     documents: [
       'आधार कार्ड / Aadhar Card',
       'पासपोर्ट साइज फोटो / Passport Size Photo',
-      'पिता या माता की सैलरी स्लिप / Father or Mother Salary Slip',
+      'पिता या पति की सैलरी स्लिप / Father or Husband Salary Slip',
       'पति का आधार (यदि विवाहित हो) / Husband Aadhar (if married)',
       'ग्राम प्रधान द्वारा प्रमाणित निवास / Gram Pradhan Certified Niwas',
     ],

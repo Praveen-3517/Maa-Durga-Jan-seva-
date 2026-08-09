@@ -178,6 +178,12 @@ function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
         <td>
           <div className="cust-name">{sub.clientName}</div>
           <div className="cust-phone"><i className="fa-brands fa-whatsapp"></i> <a href={`https://wa.me/${sub.clientPhone}`} target="_blank" rel="noreferrer">{sub.clientPhone}</a></div>
+          {(sub.email || sub.clientEmail) && (
+            <div className="cust-email" style={{ fontSize: '0.78rem', color: 'var(--primary-color)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <i className="fa-solid fa-envelope"></i>
+              <a href={`mailto:${sub.email || sub.clientEmail}`} style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{sub.email || sub.clientEmail}</a>
+            </div>
+          )}
         </td>
         <td><span className="service-type-badge">{sub.serviceName}</span></td>
         <td>
@@ -377,22 +383,37 @@ function N8nSetupGuide({ adminToken }) {
 }
 
 // ─── Service Management Sub-tab ────────────────────────────────────────────────
+// ─── Service Management Sub-tab ────────────────────────────────────────────────
 function ServiceManagement({ adminToken, showToast }) {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editService, setEditService] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'active' | 'inactive'
 
   const loadServices = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/services');
-      const data = await res.json();
-      if (data.success) {
+      // Try admin endpoint first to get all services (active + inactive)
+      const res = await fetch('/api/admin/services', {
+        headers: {
+          'Authorization': 'Bearer ' + (adminToken || '')
+        }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
         setServices(data.data || []);
       } else {
-        showToast('Failed to load services from database. Please run the Supabase migration SQL first.', 'error');
-        setServices([]);
+        // Fallback to public services endpoint
+        const fallbackRes = await fetch('/api/services');
+        const fallbackData = await fallbackRes.json().catch(() => ({}));
+        if (fallbackData.success) {
+          setServices(fallbackData.data || []);
+        } else {
+          showToast('Could not load services from database.', 'error');
+          setServices([]);
+        }
       }
     } catch (err) {
       showToast('Could not connect to services API.', 'error');
@@ -419,32 +440,30 @@ function ServiceManagement({ adminToken, showToast }) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          // BUG-003 FIX: Removed hardcoded 'Pratap@321' password
           'Authorization': 'Bearer ' + (adminToken || ''),
         },
         body: JSON.stringify({ is_active: !svc.is_active })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || data.error || 'Failed to update service');
-      showToast(`Service ${!svc.is_active ? 'activated' : 'deactivated'} successfully!`);
+      showToast(`Service "${svc.name}" ${!svc.is_active ? 'activated' : 'deactivated'} successfully!`);
       loadServices();
       notifyServicesChanged();
     } catch (err) { showToast('Failed to update service: ' + err.message, 'error'); }
   };
 
   const handleDelete = async (svc) => {
-    if (!window.confirm(`Delete "${svc.name}"? This will remove it from the WhatsApp bot menu.`)) return;
+    if (!window.confirm(`Delete service "${svc.name}"?\n\nThis will remove it from the Customer Portal & WhatsApp bot menu.`)) return;
     try {
       const res = await fetch(`/api/admin/services/${svc.id}`, {
         method: 'DELETE',
         headers: {
-          // BUG-003 FIX: Removed hardcoded 'Pratap@321' password
           'Authorization': 'Bearer ' + (adminToken || ''),
         }
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || data.error || 'Failed to delete service');
-      showToast('Service deleted.');
+      showToast(`Service "${svc.name}" deleted successfully.`);
       loadServices();
       notifyServicesChanged();
     } catch (err) { showToast('Failed to delete service: ' + err.message, 'error'); }
@@ -454,12 +473,39 @@ function ServiceManagement({ adminToken, showToast }) {
   const openEdit = (svc) => { setEditService(svc); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setEditService(null); };
 
+  // Filter services by search & active state
+  const filteredServices = services.filter(svc => {
+    const matchesFilter =
+      filterTab === 'all' ? true :
+      filterTab === 'active' ? svc.is_active !== false :
+      svc.is_active === false;
+
+    if (!matchesFilter) return false;
+
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const nameMatch = (svc.name || '').toLowerCase().includes(q);
+    const hindiMatch = (svc.hindi_title || '').toLowerCase().includes(q);
+    const descMatch = (svc.description || '').toLowerCase().includes(q);
+    const docMatch = (svc.documents || []).some(d => (d.document_name || '').toLowerCase().includes(q));
+
+    return nameMatch || hindiMatch || descMatch || docMatch;
+  });
+
+  const activeCount = services.filter(s => s.is_active !== false).length;
+  const inactiveCount = services.filter(s => s.is_active === false).length;
+
   return (
     <div>
+      {/* Top Header & Actions Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>
-            These services are shown in the WhatsApp bot menu and on the customer portal. Changes take effect immediately.
+          <h3 style={{ margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <i className="fa-solid fa-list-check" style={{ color: 'var(--primary-color)' }}></i>
+            Service &amp; Documents Management
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0 }}>
+            Manage all services, customize required/optional documents, titles, icons, and order in real-time.
           </p>
         </div>
         <button className="btn btn-primary" onClick={openAdd} id="btn-add-service">
@@ -467,77 +513,211 @@ function ServiceManagement({ adminToken, showToast }) {
         </button>
       </div>
 
-      {loading ? (
-        <div className="loading-cell" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-          <i className="fa-solid fa-spinner fa-spin"></i> Loading services...
+      {/* Search & Filter Bar */}
+      <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.25rem', background: 'var(--bg-secondary)', padding: '0.8rem 1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+        <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
+          <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.88rem' }}></i>
+          <input
+            type="text"
+            placeholder="Search services or documents (e.g. PAN, Aadhar, Photo)..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{ width: '100%', paddingLeft: '2.3rem', fontSize: '0.88rem' }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+            >
+              &times;
+            </button>
+          )}
         </div>
-      ) : services.length === 0 ? (
+
+        {/* Filter Pills */}
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => setFilterTab('all')}
+            style={{
+              fontSize: '0.82rem',
+              padding: '0.4rem 0.8rem',
+              background: filterTab === 'all' ? 'var(--primary-color)' : 'transparent',
+              color: filterTab === 'all' ? '#000' : 'var(--text-color)',
+              borderColor: filterTab === 'all' ? 'var(--primary-color)' : 'var(--border-color)',
+              fontWeight: 600
+            }}
+          >
+            All ({services.length})
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => setFilterTab('active')}
+            style={{
+              fontSize: '0.82rem',
+              padding: '0.4rem 0.8rem',
+              background: filterTab === 'active' ? 'rgba(34,197,94,0.2)' : 'transparent',
+              color: filterTab === 'active' ? '#4ade80' : 'var(--text-muted)',
+              borderColor: filterTab === 'active' ? '#22c55e' : 'var(--border-color)',
+              fontWeight: 600
+            }}
+          >
+            Active ({activeCount})
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => setFilterTab('inactive')}
+            style={{
+              fontSize: '0.82rem',
+              padding: '0.4rem 0.8rem',
+              background: filterTab === 'inactive' ? 'rgba(239,68,68,0.2)' : 'transparent',
+              color: filterTab === 'inactive' ? '#f87171' : 'var(--text-muted)',
+              borderColor: filterTab === 'inactive' ? '#ef4444' : 'var(--border-color)',
+              fontWeight: 600
+            }}
+          >
+            Inactive ({inactiveCount})
+          </button>
+        </div>
+      </div>
+
+      {/* Services Table */}
+      {loading ? (
+        <div className="loading-cell" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+          <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
+          <div>Loading services &amp; documents...</div>
+        </div>
+      ) : filteredServices.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px dashed var(--border-color)' }}>
-          <i className="fa-solid fa-database" style={{ fontSize: '2.5rem', marginBottom: '1rem', opacity: 0.4 }}></i>
-          <p style={{ marginBottom: '0.5rem', fontWeight: 600 }}>No services found in database.</p>
-          <p style={{ fontSize: '0.85rem' }}>Run the SQL migration script in <code>data/supabase_migration.sql</code> in your Supabase SQL Editor to seed the initial services.</p>
+          <i className="fa-solid fa-folder-open" style={{ fontSize: '2.5rem', marginBottom: '1rem', opacity: 0.4 }}></i>
+          <p style={{ marginBottom: '0.5rem', fontWeight: 600 }}>
+            {searchQuery ? 'No matching services found.' : 'No services found.'}
+          </p>
+          <p style={{ fontSize: '0.85rem' }}>
+            {searchQuery ? 'Try clearing your search query.' : 'Click "+ Add New Service" above to create your first service.'}
+          </p>
+          {searchQuery && (
+            <button className="btn btn-outline" onClick={() => setSearchQuery('')} style={{ marginTop: '0.5rem' }}>
+              Clear Search
+            </button>
+          )}
         </div>
       ) : (
         <div className="table-responsive">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Order</th>
-                <th>Service Name</th>
+                <th style={{ width: '60px', textAlign: 'center' }}>Order</th>
+                <th>Service Details</th>
                 <th>Hindi Title</th>
-                <th>Required Docs</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Documents Required / Optional</th>
+                <th style={{ width: '100px', textAlign: 'center' }}>Status</th>
+                <th style={{ width: '130px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {services.map(svc => (
-                <tr key={svc.id} data-status={svc.is_active ? 'completed' : 'rejected'}>
-                  <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--primary-color)' }}>{svc.display_order}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <i className={svc.icon || 'fa-solid fa-file'} style={{ color: 'var(--primary-color)', fontSize: '1.1rem', minWidth: '1.2rem' }}></i>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{svc.name}</div>
-                        {svc.description && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>{svc.description.substring(0, 60)}{svc.description.length > 60 ? '...' : ''}</div>}
+              {filteredServices.map(svc => {
+                const reqDocs = (svc.documents || []).filter(d => d.is_required !== false);
+                const optDocs = (svc.documents || []).filter(d => d.is_required === false);
+
+                return (
+                  <tr key={svc.id} data-status={svc.is_active !== false ? 'completed' : 'rejected'}>
+                    <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--primary-color)' }}>
+                      #{svc.display_order ?? 0}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '8px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                          <i className={svc.icon || 'fa-solid fa-file'} style={{ color: 'var(--primary-color)', fontSize: '1rem' }}></i>
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{svc.name}</div>
+                          {svc.description && (
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: 1.3 }}>
+                              {svc.description.length > 75 ? svc.description.substring(0, 75) + '...' : svc.description}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{svc.hindi_title || '—'}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span style={{ background: 'var(--bg-tertiary)', padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 600 }}>
-                      {(svc.documents || []).length} docs
-                    </span>
-                  </td>
-                  <td>
-                    <span style={{
-                      padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700,
-                      background: svc.is_active ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
-                      color: svc.is_active ? '#4ade80' : '#f87171',
-                      border: `1px solid ${svc.is_active ? '#22c55e40' : '#ef444440'}`
-                    }}>
-                      {svc.is_active ? '● Active' : '○ Inactive'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="btn btn-outline btn-icon" title="Edit Service" onClick={() => openEdit(svc)}>
-                        <i className="fa-solid fa-pen-to-square"></i>
-                      </button>
-                      <button
-                        className={`btn btn-icon ${svc.is_active ? 'btn-delete-row' : 'btn-save-row'}`}
-                        title={svc.is_active ? 'Deactivate' : 'Activate'}
-                        onClick={() => handleToggleActive(svc)}
-                      >
-                        <i className={`fa-solid ${svc.is_active ? 'fa-toggle-on' : 'fa-toggle-off'}`}></i>
-                      </button>
-                      <button className="btn btn-delete-row btn-icon" title="Delete Service" onClick={() => handleDelete(svc)}>
-                        <i className="fa-solid fa-trash-can"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--primary-color)' }}>
+                      {svc.hindi_title ? (
+                        <span><i className="fa-solid fa-language" style={{ marginRight: 4, opacity: 0.7 }}></i> {svc.hindi_title}</span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--primary-color)', border: '1px solid rgba(245,158,11,0.3)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                            {reqDocs.length} Mandatory
+                          </span>
+                          {optDocs.length > 0 && (
+                            <span style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: '1px solid var(--border-color)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>
+                              {optDocs.length} Optional
+                            </span>
+                          )}
+                          {svc.email_requirement === 'required' && (
+                            <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>
+                              <i className="fa-solid fa-envelope" style={{ marginRight: 3 }}></i> Email Required
+                            </span>
+                          )}
+                          {svc.email_requirement === 'none' && (
+                            <span style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: '1px solid var(--border-color)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>
+                              No Email
+                            </span>
+                          )}
+                        </div>
+                        {/* Preview first 3 docs */}
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: 2 }}>
+                          {(svc.documents || []).slice(0, 3).map((d, i) => (
+                            <span key={i} style={{ fontSize: '0.72rem', background: 'var(--bg-tertiary)', borderRadius: '4px', padding: '1px 6px', color: d.is_required !== false ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
+                              {d.document_name}
+                            </span>
+                          ))}
+                          {(svc.documents || []).length > 3 && (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--primary-color)', fontWeight: 600 }}>
+                              +{(svc.documents || []).length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span style={{
+                        padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700,
+                        background: svc.is_active !== false ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+                        color: svc.is_active !== false ? '#4ade80' : '#f87171',
+                        border: `1px solid ${svc.is_active !== false ? '#22c55e40' : '#ef444440'}`,
+                        display: 'inline-block'
+                      }}>
+                        {svc.is_active !== false ? '● Active' : '○ Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons" style={{ justifyContent: 'center' }}>
+                        <button className="btn btn-outline btn-icon" title="Edit Service & Documents" onClick={() => openEdit(svc)}>
+                          <i className="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button
+                          className={`btn btn-icon ${svc.is_active !== false ? 'btn-delete-row' : 'btn-save-row'}`}
+                          title={svc.is_active !== false ? 'Deactivate Service' : 'Activate Service'}
+                          onClick={() => handleToggleActive(svc)}
+                        >
+                          <i className={`fa-solid ${svc.is_active !== false ? 'fa-toggle-on' : 'fa-toggle-off'}`}></i>
+                        </button>
+                        <button className="btn btn-delete-row btn-icon" title="Delete Service" onClick={() => handleDelete(svc)}>
+                          <i className="fa-solid fa-trash-can"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -556,20 +736,38 @@ function ServiceManagement({ adminToken, showToast }) {
   );
 }
 
+// ─── Service Modal (Full Service & Document Editor) ────────────────────────────
 function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) {
   const isEdit = !!editService;
   const [form, setForm] = useState({
     name: editService?.name || '',
     hindi_title: editService?.hindi_title || '',
     description: editService?.description || '',
-    icon: editService?.icon || 'fa-solid fa-file',
+    icon: editService?.icon || 'fa-solid fa-file-shield',
     display_order: editService?.display_order ?? 0,
     is_active: editService?.is_active !== false,
+    email_requirement: editService?.email_requirement || 'optional',
   });
-  const [documents, setDocuments] = useState(editService?.documents || []);
+  const [documents, setDocuments] = useState(() => (editService?.documents || []).map((d, i) => ({ ...d, display_order: d.display_order ?? i })));
   const [newDoc, setNewDoc] = useState('');
   const [newDocRequired, setNewDocRequired] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Common quick icon presets for Cyber Cafe / CSC services
+  const ICON_PRESETS = [
+    { icon: 'fa-solid fa-address-card', label: '🪪 ID / PAN' },
+    { icon: 'fa-solid fa-file-shield', label: '📄 Certificate' },
+    { icon: 'fa-solid fa-id-card-clip', label: '🗳️ Voter ID' },
+    { icon: 'fa-solid fa-id-badge', label: '🚗 License' },
+    { icon: 'fa-solid fa-wheat-awn', label: '🌾 Ration' },
+    { icon: 'fa-solid fa-hospital', label: '🏥 Ayushman' },
+    { icon: 'fa-solid fa-passport', label: '✈️ Passport' },
+    { icon: 'fa-solid fa-graduation-cap', label: '🎓 Student' },
+    { icon: 'fa-solid fa-building-columns', label: '🏦 Banking' },
+    { icon: 'fa-solid fa-bolt', label: '⚡ Utility' },
+    { icon: 'fa-solid fa-file-lines', label: '📑 Form' },
+    { icon: 'fa-solid fa-mobile-screen', label: '📱 Mobile' },
+  ];
 
   const addDoc = () => {
     const trimmed = newDoc.trim();
@@ -579,19 +777,27 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
     setNewDocRequired(true);
   };
 
-  const removeDoc = async (doc, idx) => {
-    if (isEdit && doc.id && !doc._new) {
-      // Delete from DB immediately
-      try {
-        await fetch(`/api/admin/services/${editService.id}/documents/${doc.id}`, {
-          method: 'DELETE',
-          headers: {
-            // BUG-003 FIX: Removed hardcoded 'Pratap@321' password
-            'Authorization': 'Bearer ' + (adminToken || ''),
-          }
-        });
-      } catch (_) {}
-    }
+  const updateDocName = (idx, newName) => {
+    setDocuments(prev => prev.map((d, i) => i === idx ? { ...d, document_name: newName } : d));
+  };
+
+  const toggleDocRequired = (idx) => {
+    setDocuments(prev => prev.map((d, i) => i === idx ? { ...d, is_required: !d.is_required } : d));
+  };
+
+  const moveDoc = (idx, direction) => {
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= documents.length) return;
+    setDocuments(prev => {
+      const arr = [...prev];
+      const temp = arr[idx];
+      arr[idx] = arr[newIdx];
+      arr[newIdx] = temp;
+      return arr.map((d, i) => ({ ...d, display_order: i }));
+    });
+  };
+
+  const removeDoc = (idx) => {
     setDocuments(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -602,7 +808,7 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
     try {
       let serviceId = editService?.id;
 
-      // Auto-include typed document text if admin forgot to click + Add button
+      // Auto-include typed document text if admin typed without clicking + Add button
       let finalDocs = [...documents];
       if (newDoc.trim()) {
         const autoAdded = { document_name: newDoc.trim(), is_required: newDocRequired, display_order: finalDocs.length, _new: true };
@@ -613,45 +819,42 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
 
       const headers = {
         'Content-Type': 'application/json',
-        // BUG-003 FIX: Removed hardcoded 'Pratap@321' password — JWT token is the secure auth method
         'Authorization': 'Bearer ' + (adminToken || ''),
       };
 
+      const payload = {
+        ...form,
+        documents: finalDocs.map((d, i) => ({
+          id: d.id,
+          document_name: (d.document_name || '').trim(),
+          is_required: d.is_required !== false,
+          display_order: i,
+          _new: d._new || !d.id
+        })).filter(d => d.document_name)
+      };
+
       if (isEdit) {
-        // Update service fields
+        // Update service & sync documents
         const res = await fetch(`/api/admin/services/${serviceId}`, {
           method: 'PUT',
           headers,
-          body: JSON.stringify(form)
+          body: JSON.stringify(payload)
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.message || data.error || 'Failed to update service');
       } else {
-        // Create service
-        const newDocs = finalDocs.map((d, i) => ({ document_name: d.document_name, is_required: d.is_required, display_order: i }));
+        // Create service with documents
         const res = await fetch('/api/admin/services', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ ...form, documents: newDocs })
+          body: JSON.stringify(payload)
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.message || data.error || 'Failed to create service');
         serviceId = data.data?.id;
       }
 
-      // For edit mode, add any new documents
-      if (isEdit) {
-        const newDocsToSave = finalDocs.filter(d => d._new);
-        for (const doc of newDocsToSave) {
-          await fetch(`/api/admin/services/${serviceId}/documents`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ document_name: doc.document_name, is_required: doc.is_required, display_order: doc.display_order || 0 })
-          });
-        }
-      }
-
-      showToast(isEdit ? 'Service updated successfully!' : 'Service created successfully!');
+      showToast(isEdit ? `Service "${form.name}" updated successfully!` : `Service "${form.name}" created successfully!`);
       window.dispatchEvent(new Event('services_updated'));
       if (typeof BroadcastChannel !== 'undefined') {
         const bc = new BroadcastChannel('services_channel');
@@ -666,87 +869,321 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
     }
   };
 
-  const field = (key) => ({ value: form[key], onChange: e => setForm(f => ({ ...f, [key]: e.target.value })) });
+  const field = (key) => ({ value: form[key] || '', onChange: e => setForm(f => ({ ...f, [key]: e.target.value })) });
 
   return (
-    <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content" style={{ maxWidth: '600px' }}>
-        <div className="modal-header">
-          <h3><i className={form.icon || 'fa-solid fa-file'}></i> {isEdit ? `Edit: ${editService.name}` : 'Add New Service'}</h3>
+    <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()} style={{ padding: '1rem' }}>
+      <div className="modal-content" style={{ maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '8px', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className={form.icon || 'fa-solid fa-file-shield'} style={{ color: 'var(--primary-color)', fontSize: '1rem' }}></i>
+            </div>
+            {isEdit ? `Edit Service: ${editService.name}` : 'Add New Service'}
+          </h3>
           <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
-        <div className="modal-body">
+
+        <div className="modal-body" style={{ padding: '1.25rem' }}>
           <form onSubmit={handleSave} id="service-form">
+            {/* Basic Info */}
             <div className="form-grid-2">
               <div className="form-group">
-                <label>Service Name <span style={{ color: '#ef4444' }}>*</span></label>
+                <label>Service Name (English) <span style={{ color: '#ef4444' }}>*</span></label>
                 <input type="text" placeholder="e.g. PAN Card Apply" required {...field('name')} />
               </div>
               <div className="form-group">
-                <label>Hindi Title</label>
-                <input type="text" placeholder="पैन कार्ड" {...field('hindi_title')} />
+                <label>Hindi Title (हिंदी शीर्षक)</label>
+                <input type="text" placeholder="उदा. पैन कार्ड (नया एवं संशोधन)" {...field('hindi_title')} />
               </div>
             </div>
+
             <div className="form-group">
-              <label>Description</label>
-              <textarea rows="2" placeholder="Brief description of this service..." {...field('description')} />
+              <label>Description (सेवा विवरण)</label>
+              <textarea
+                rows="2"
+                placeholder="उदा. नए पैन कार्ड के लिए आवेदन करें अथवा पुराने पैन कार्ड में नाम, जन्मतिथि आदि संशोधन करवाएं।"
+                {...field('description')}
+              />
             </div>
+
+            {/* Icon Picker & Display Order */}
             <div className="form-grid-2">
               <div className="form-group">
                 <label>FontAwesome Icon Class</label>
-                <input type="text" placeholder="fa-solid fa-address-card" {...field('icon')} />
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div style={{ width: 38, height: 38, borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className={form.icon || 'fa-solid fa-file'} style={{ color: 'var(--primary-color)' }}></i>
+                  </div>
+                  <input type="text" placeholder="fa-solid fa-address-card" {...field('icon')} style={{ flex: 1 }} />
+                </div>
               </div>
               <div className="form-group">
-                <label>Display Order</label>
-                <input type="number" min="0" {...field('display_order')} onChange={e => setForm(f => ({ ...f, display_order: parseInt(e.target.value) || 0 }))} />
+                <label>Display Order (प्रदर्शन क्रम)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.display_order}
+                  onChange={e => setForm(f => ({ ...f, display_order: parseInt(e.target.value) || 0 }))}
+                />
               </div>
-            </div>
-            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <label style={{ margin: 0 }}>Active (show in WhatsApp bot & portal)</label>
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} style={{ width: 'auto', accentColor: 'var(--primary-color)', transform: 'scale(1.4)' }} />
             </div>
 
-            <div className="divider"></div>
-            <div className="form-group">
-              <label>Required Documents</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                {documents.map((doc, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <i className={`fa-solid fa-${doc.is_required ? 'star' : 'circle'}`} style={{ color: doc.is_required ? 'var(--primary-color)' : 'var(--text-muted)', fontSize: '0.75rem' }}></i>
-                    <span style={{ flex: 1, fontSize: '0.88rem' }}>{doc.document_name}</span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{doc.is_required ? 'Required' : 'Optional'}</span>
-                    <button type="button" style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 0.25rem' }} onClick={() => removeDoc(doc, idx)}>×</button>
-                  </div>
+            {/* Quick Icon Chips */}
+            <div className="form-group" style={{ marginTop: '-0.25rem' }}>
+              <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                Quick Icon Suggestions (क्लिक करके चुनें):
+              </label>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {ICON_PRESETS.map((p, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, icon: p.icon }))}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: '6px',
+                      background: form.icon === p.icon ? 'rgba(245,158,11,0.2)' : 'var(--bg-tertiary)',
+                      color: form.icon === p.icon ? 'var(--primary-color)' : 'var(--text-color)',
+                      border: `1px solid ${form.icon === p.icon ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
+                    }}
+                  >
+                    <i className={p.icon}></i> {p.label}
+                  </button>
                 ))}
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            </div>
+
+            {/* Service Status and Email ID Requirement in 2 columns */}
+            <div className="form-grid-2">
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--bg-secondary)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <input
+                  type="checkbox"
+                  id="service-active-toggle"
+                  checked={form.is_active}
+                  onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))}
+                  style={{ width: 'auto', accentColor: 'var(--primary-color)', transform: 'scale(1.3)', cursor: 'pointer' }}
+                />
+                <label htmlFor="service-active-toggle" style={{ margin: 0, cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem' }}>
+                  Active Service (पोर्टल एवं बॉट में दिखाएं)
+                </label>
+              </div>
+
+              <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: '0.65rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', margin: 0 }}>
+                <label style={{ margin: '0 0 4px 0', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <i className="fa-solid fa-envelope" style={{ color: 'var(--primary-color)' }}></i>
+                  Customer Email ID Requirement:
+                </label>
+                <select
+                  value={form.email_requirement || 'optional'}
+                  onChange={e => setForm(f => ({ ...f, email_requirement: e.target.value }))}
+                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.35rem 0.5rem', width: '100%', fontSize: '0.82rem', fontWeight: 600 }}
+                >
+                  <option value="optional">○ Optional Email (वैकल्पिक)</option>
+                  <option value="required">★ Mandatory Email (अनिवार्य)</option>
+                  <option value="none">❌ Don't Ask Email (न मांगें)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="divider" style={{ margin: '1.25rem 0' }}></div>
+
+            {/* ─── Documents Management Section ─── */}
+            <div className="form-group">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                <label style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <i className="fa-solid fa-file-lines" style={{ color: 'var(--primary-color)' }}></i>
+                  आवश्यक दस्तावेज़ / Required &amp; Optional Documents
+                </label>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Total: {documents.length} Docs
+                </span>
+              </div>
+
+              {/* Documents List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                {documents.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '1.2rem', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    No documents configured yet. Add documents using the box below.
+                  </div>
+                ) : (
+                  documents.map((doc, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.75rem',
+                        background: 'var(--bg-tertiary)',
+                        borderRadius: '8px',
+                        border: `1px solid ${doc.is_required !== false ? 'rgba(245,158,11,0.3)' : 'var(--border-color)'}`,
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      {/* Reorder Arrows */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => moveDoc(idx, -1)}
+                          style={{ background: 'none', border: 'none', color: idx === 0 ? 'var(--text-muted)' : 'var(--text-color)', cursor: idx === 0 ? 'not-allowed' : 'pointer', fontSize: '0.7rem', padding: 0, opacity: idx === 0 ? 0.3 : 0.8 }}
+                          title="Move Up"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === documents.length - 1}
+                          onClick={() => moveDoc(idx, 1)}
+                          style={{ background: 'none', border: 'none', color: idx === documents.length - 1 ? 'var(--text-muted)' : 'var(--text-color)', cursor: idx === documents.length - 1 ? 'not-allowed' : 'pointer', fontSize: '0.7rem', padding: 0, opacity: idx === documents.length - 1 ? 0.3 : 0.8 }}
+                          title="Move Down"
+                        >
+                          ▼
+                        </button>
+                      </div>
+
+                      {/* Document Name Inline Input */}
+                      <input
+                        type="text"
+                        value={doc.document_name || ''}
+                        onChange={e => updateDocName(idx, e.target.value)}
+                        placeholder="Document Name (e.g. Aadhar Card)"
+                        style={{
+                          flex: 1,
+                          minWidth: '160px',
+                          background: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          padding: '0.4rem 0.6rem',
+                          fontSize: '0.85rem'
+                        }}
+                      />
+
+                      {/* Required / Optional Toggle Badge Button */}
+                      <button
+                        type="button"
+                        onClick={() => toggleDocRequired(idx)}
+                        style={{
+                          background: doc.is_required !== false ? 'rgba(245,158,11,0.2)' : 'rgba(148,163,184,0.15)',
+                          color: doc.is_required !== false ? 'var(--primary-color)' : 'var(--text-muted)',
+                          border: `1px solid ${doc.is_required !== false ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem'
+                        }}
+                        title="Click to toggle Required / Optional"
+                      >
+                        <i className={`fa-solid fa-${doc.is_required !== false ? 'star' : 'circle-notch'}`}></i>
+                        {doc.is_required !== false ? '★ Mandatory' : '○ Optional'}
+                      </button>
+
+                      {/* Delete Document Button */}
+                      <button
+                        type="button"
+                        onClick={() => removeDoc(idx)}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.3rem', fontSize: '1rem', display: 'flex', alignItems: 'center' }}
+                        title="Remove Document"
+                      >
+                        <i className="fa-solid fa-trash-can"></i>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Add New Document Input Bar */}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg-secondary)', padding: '0.75rem', borderRadius: '8px', border: '1px dashed var(--primary-color)' }}>
                 <input
                   type="text"
-                  placeholder="Document name (e.g. Aadhar Card)"
+                  placeholder="Type document or text field name (उदा. Email ID / 10th Result / Bank Passbook)..."
                   value={newDoc}
                   onChange={e => setNewDoc(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addDoc())}
-                  style={{ flex: 1, minWidth: '180px' }}
+                  style={{ flex: 1, minWidth: '180px', fontSize: '0.85rem' }}
                 />
                 <select
                   value={newDocRequired ? 'required' : 'optional'}
                   onChange={e => setNewDocRequired(e.target.value === 'required')}
-                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.5rem', fontSize: '0.85rem' }}
+                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0.5rem', fontSize: '0.82rem', fontWeight: 600 }}
                 >
-                  <option value="required">Required</option>
-                  <option value="optional">Optional</option>
+                  <option value="required">★ Mandatory (अनिवार्य)</option>
+                  <option value="optional">○ Optional (वैकल्पिक)</option>
                 </select>
-                <button type="button" className="btn btn-outline" onClick={addDoc}>
+                <button type="button" className="btn btn-primary" onClick={addDoc} style={{ fontSize: '0.82rem', padding: '0.45rem 0.9rem' }}>
                   <i className="fa-solid fa-plus"></i> Add
                 </button>
+              </div>
+
+              {/* Quick Preset Suggestion Chips */}
+              <div style={{ marginTop: '0.6rem' }}>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                  💡 Quick Suggestions (क्लिक करके सीधे जोड़ें):
+                </div>
+                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  {[
+                    { name: 'Email ID (ईमेल आईडी)', isField: true, icon: '✉️' },
+                    { name: 'आधार कार्ड (Front + Back)', icon: '🪪' },
+                    { name: 'पासपोर्ट साइज फोटो', icon: '🖼️' },
+                    { name: '10th Result / Marksheet', icon: '🎓' },
+                    { name: 'बैंक पासबुक (Bank Passbook)', icon: '🏦' },
+                    { name: 'Old Passport Number', isField: true, icon: '✈️' },
+                    { name: 'Old PAN Card Number', isField: true, icon: '🔢' },
+                    { name: 'राशन कार्ड (Ration Card)', icon: '🌾' },
+                    { name: 'बिजली बिल / Gas Bill', icon: '⚡' },
+                    { name: 'पिता / पति का नाम', isField: true, icon: '👨' },
+                  ].map((preset, pIdx) => (
+                    <button
+                      key={pIdx}
+                      type="button"
+                      onClick={() => {
+                        setDocuments(prev => [...prev, { document_name: preset.name, is_required: true, display_order: prev.length, _new: true }]);
+                        if (preset.name.toLowerCase().includes('email')) {
+                          setForm(f => ({ ...f, email_requirement: 'required' }));
+                        }
+                      }}
+                      style={{
+                        fontSize: '0.72rem',
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '4px',
+                        background: preset.isField ? 'rgba(59,130,246,0.12)' : 'var(--bg-tertiary)',
+                        color: preset.isField ? '#60a5fa' : 'var(--text-primary)',
+                        border: `1px solid ${preset.isField ? 'rgba(59,130,246,0.3)' : 'var(--border-color)'}`,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      <span>{preset.icon}</span> {preset.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </form>
         </div>
-        <div className="modal-footer">
-          <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button type="submit" form="service-form" className="btn btn-primary" disabled={saving}>
-            {saving ? <span className="spinner"></span> : <><i className="fa-solid fa-floppy-disk"></i> {isEdit ? 'Save Changes' : 'Create Service'}</>}
+
+        <div className="modal-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', padding: '1rem 1.25rem' }}>
+          <button type="button" className="btn btn-outline" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" form="service-form" className="btn btn-primary" disabled={saving} style={{ minWidth: '150px' }}>
+            {saving ? (
+              <><span className="spinner"></span> Saving...</>
+            ) : (
+              <><i className="fa-solid fa-floppy-disk"></i> {isEdit ? 'Save Changes' : 'Create Service'}</>
+            )}
           </button>
         </div>
       </div>

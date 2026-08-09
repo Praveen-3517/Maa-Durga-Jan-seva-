@@ -332,6 +332,8 @@ app.post('/api/admin/login', loginLimiter, async (req, res) => {
 const submissionValidators = [
   body('clientName').optional().trim(),
   body('clientPhone').optional().trim(),
+  body('clientEmail').optional().trim(),
+  body('email').optional().trim(),
   body('serviceType').optional().trim(),
   body('serviceName').optional().trim(),
   body('name').optional().trim(),
@@ -350,13 +352,28 @@ const handleUploadAndSubmission = async (req, res) => {
 
     const name = req.body.name || req.body.clientName;
     const phone = req.body.phone || req.body.clientPhone;
+    const email = req.body.email || req.body.clientEmail || "";
     const service = req.body.service || req.body.serviceName || req.body.serviceType;
-    const remarks = req.body.remarks || req.body.notes || "";
+    let remarks = req.body.remarks || req.body.notes || "";
 
     if (!name || !phone || !service) {
       return res.status(400).json({
         success: false,
         message: "Missing required fields. 'name', 'phone', and 'service' are mandatory."
+      });
+    }
+
+    // Preserve email in remarks if provided
+    if (email && !remarks.includes(email)) {
+      remarks = `[Email: ${email}] ${remarks}`.trim();
+    }
+
+    // ── Mandatory File Validation: Aadhaar Front + Back + Passport Photo required ──
+    const filesUploaded = req.files ? req.files.length : 0;
+    if (filesUploaded < 3) {
+      return res.status(400).json({
+        success: false,
+        message: "कृपया आधार कार्ड (Front + Back) और पासपोर्ट साइज फोटो अनिवार्य रूप से अपलोड करें। / Aadhaar Card (Front + Back) and Passport Photo are mandatory for every application."
       });
     }
 
@@ -465,7 +482,7 @@ const handleUploadAndSubmission = async (req, res) => {
       const cleanAdminPhone = adminPhone.replace(/[^0-9]/g, '');
       const docCount = (uploadedFiles || []).length;
       
-      const adminNotifMsg = `🔔 *New Application Received!*\n\n👤 *Customer Name:* ${name}\n📞 *WhatsApp / Phone:* ${phone}\n📋 *Service:* ${service}\n📄 *Uploaded Documents:* ${docCount} file(s)\n${remarks ? `📝 *Details / Notes:* ${remarks}\n` : ''}\n🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n_Log in to view documents & process application._`;
+      const adminNotifMsg = `🔔 *New Application Received!*\n\n👤 *Customer Name:* ${name}\n📞 *WhatsApp / Phone:* ${phone}\n${email ? `✉️ *Email ID:* ${email}\n` : ''}📋 *Service:* ${service}\n📄 *Uploaded Documents:* ${docCount} file(s)\n${remarks ? `📝 *Details / Notes:* ${remarks}\n` : ''}\n🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n_Log in to view documents & process application._`;
 
       await sendWhatsAppMessage(cleanAdminPhone, adminNotifMsg);
       console.log(`[WhatsApp Admin Notification] Sent to ${cleanAdminPhone}`);
@@ -527,21 +544,34 @@ app.get('/api/submissions', checkAdmin, async (req, res) => {
     }
 
     // Format fields so both new Supabase schema keys and frontend legacy keys work seamlessly
-    const formattedData = (data || []).map(row => ({
-      id: row.id,
-      name: row.name,
-      clientName: row.name,
-      phone: row.phone,
-      clientPhone: row.phone,
-      service: row.service,
-      serviceName: row.service,
-      serviceType: row.service,
-      status: row.status,
-      remarks: row.remarks || "",
-      created_at: row.created_at,
-      createdAt: row.created_at,
-      files: row.files || []
-    }));
+    const formattedData = (data || []).map(row => {
+      let email = row.email || "";
+      if (!email && row.remarks && row.remarks.includes('[Email:')) {
+        const match = row.remarks.match(/\[Email:\s*([^\]]+)\]/i);
+        if (match) email = match[1].trim();
+      } else if (!email && row.remarks && row.remarks.includes('Email:')) {
+        const match = row.remarks.match(/Email:\s*([^\s,;]+)/i);
+        if (match) email = match[1].trim();
+      }
+
+      return {
+        id: row.id,
+        name: row.name,
+        clientName: row.name,
+        phone: row.phone,
+        clientPhone: row.phone,
+        email: email,
+        clientEmail: email,
+        service: row.service,
+        serviceName: row.service,
+        serviceType: row.service,
+        status: row.status,
+        remarks: row.remarks || "",
+        created_at: row.created_at,
+        createdAt: row.created_at,
+        files: row.files || []
+      };
+    });
 
     res.json(formattedData);
   } catch (error) {
@@ -1278,6 +1308,28 @@ const getActiveServices = async () => {
   }));
 };
 
+// ─── Helper: Fetch ALL services (active + inactive) for Admin ─────────────
+const getAllServicesAdmin = async () => {
+  const { data: services, error: svcErr } = await supabase
+    .from('services')
+    .select('*')
+    .order('display_order', { ascending: true });
+
+  if (svcErr) throw new Error('Failed to fetch services: ' + svcErr.message);
+
+  const { data: docs, error: docErr } = await supabase
+    .from('service_documents')
+    .select('*')
+    .order('display_order', { ascending: true });
+
+  if (docErr) throw new Error('Failed to fetch service documents: ' + docErr.message);
+
+  return (services || []).map(s => ({
+    ...s,
+    documents: (docs || []).filter(d => d.service_id === s.id)
+  }));
+};
+
 // ─── PUBLIC: GET /api/services — list active services with documents ────────
 app.get('/api/services', async (req, res) => {
   try {
@@ -1286,6 +1338,17 @@ app.get('/api/services', async (req, res) => {
   } catch (err) {
     console.error('[Services GET] Error:', err.message);
     res.status(500).json({ success: false, message: 'Failed to fetch services.' });
+  }
+});
+
+// ─── ADMIN: GET /api/admin/services — list all services for Admin ────────────
+app.get('/api/admin/services', checkAdmin, async (req, res) => {
+  try {
+    const services = await getAllServicesAdmin();
+    res.json({ success: true, data: services });
+  } catch (err) {
+    console.error('[Admin Services GET] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch services: ' + err.message });
   }
 });
 
@@ -1323,12 +1386,13 @@ app.post('/api/admin/services', checkAdmin, [
   body('icon').optional().trim(),
   body('is_active').optional(),
   body('display_order').optional(),
+  body('email_requirement').optional().trim(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, message: errors.array()[0].msg });
 
   try {
-    const { name, slug, description, short_description, hindi_title, icon, is_active, display_order, documents } = req.body;
+    const { name, slug, description, short_description, hindi_title, icon, is_active, display_order, email_requirement, documents } = req.body;
     let baseSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     if (!baseSlug) baseSlug = 'service-' + Date.now();
 
@@ -1348,7 +1412,8 @@ app.post('/api/admin/services', checkAdmin, [
         hindi_title: hindi_title || '',
         icon: icon || 'fa-solid fa-file',
         is_active: is_active !== false,
-        display_order: parseInt(display_order) || 0
+        display_order: parseInt(display_order) || 0,
+        email_requirement: email_requirement || 'optional'
       }])
       .select()
       .single();
@@ -1379,11 +1444,11 @@ app.post('/api/admin/services', checkAdmin, [
   }
 });
 
-// ─── ADMIN: PUT /api/admin/services/:id — update service ───────────────────
+// ─── ADMIN: PUT /api/admin/services/:id — update service & sync documents ──
 app.put('/api/admin/services/:id', checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, short_description, hindi_title, icon, is_active, display_order } = req.body;
+    const { name, description, short_description, hindi_title, icon, is_active, display_order, email_requirement, documents } = req.body;
 
     const updates = { updated_at: new Date().toISOString() };
     if (name !== undefined) updates.name = name;
@@ -1393,14 +1458,40 @@ app.put('/api/admin/services/:id', checkAdmin, async (req, res) => {
     if (icon !== undefined) updates.icon = icon;
     if (is_active !== undefined) updates.is_active = is_active;
     if (display_order !== undefined) updates.display_order = display_order;
+    if (email_requirement !== undefined) updates.email_requirement = email_requirement;
 
     const { data, error } = await supabase.from('services').update(updates).eq('id', id).select().single();
     if (error || !data) return res.status(404).json({ success: false, message: 'Service not found.' });
 
+    // Synchronize documents if provided in payload
+    if (documents && Array.isArray(documents)) {
+      for (let i = 0; i < documents.length; i++) {
+        const doc = documents[i];
+        if (!doc.document_name || !doc.document_name.trim()) continue;
+
+        if (doc._new || !doc.id) {
+          // Insert new document
+          await supabase.from('service_documents').insert([{
+            service_id: id,
+            document_name: doc.document_name.trim(),
+            is_required: doc.is_required !== false,
+            display_order: doc.display_order !== undefined ? doc.display_order : i
+          }]);
+        } else {
+          // Update existing document
+          await supabase.from('service_documents').update({
+            document_name: doc.document_name.trim(),
+            is_required: doc.is_required !== false,
+            display_order: doc.display_order !== undefined ? doc.display_order : i
+          }).eq('id', doc.id);
+        }
+      }
+    }
+
     res.json({ success: true, message: 'Service updated successfully!', data });
   } catch (err) {
     console.error('[Admin Services PUT] Error:', err.message);
-    res.status(500).json({ success: false, message: 'Failed to update service.' });
+    res.status(500).json({ success: false, message: 'Failed to update service: ' + err.message });
   }
 });
 
@@ -1408,6 +1499,8 @@ app.put('/api/admin/services/:id', checkAdmin, async (req, res) => {
 app.delete('/api/admin/services/:id', checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    // Cascade delete documents first
+    await supabase.from('service_documents').delete().eq('service_id', id);
     const { error } = await supabase.from('services').delete().eq('id', id);
     if (error) throw new Error(error.message);
     res.json({ success: true, message: 'Service deleted successfully.' });
@@ -1441,6 +1534,31 @@ app.post('/api/admin/services/:id/documents', checkAdmin, [
   } catch (err) {
     console.error('[Admin Service Docs POST] Error:', err.message);
     res.status(500).json({ success: false, message: 'Failed to add document.' });
+  }
+});
+
+// ─── ADMIN: PUT /api/admin/services/:id/documents/:docId — update document ──
+app.put('/api/admin/services/:id/documents/:docId', checkAdmin, async (req, res) => {
+  try {
+    const { docId } = req.params;
+    const { document_name, is_required, display_order } = req.body;
+    const updates = {};
+    if (document_name !== undefined) updates.document_name = document_name.trim();
+    if (is_required !== undefined) updates.is_required = is_required;
+    if (display_order !== undefined) updates.display_order = display_order;
+
+    const { data, error } = await supabase
+      .from('service_documents')
+      .update(updates)
+      .eq('id', docId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    res.json({ success: true, message: 'Document updated successfully.', data });
+  } catch (err) {
+    console.error('[Admin Service Docs PUT] Error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to update document: ' + err.message });
   }
 });
 

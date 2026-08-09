@@ -67,19 +67,24 @@ const fetchWithWakeUp = async (url, options, onRetrying) => {
 /* ─── Small helper ─── */
 function ServiceCard({ service, onApply }) {
   const isMerged = service.isMerged;
-  const isPan = service.id === 'srv_pancard' || service.slug === 'srv_pancard' || (service.title || '').toLowerCase().includes('pan');
+  const isPan = service.isPan || service.id === 'srv_pancard' || service.slug === 'srv_pancard';
   const subTypes = isPan ? PAN_TYPES : CERTIFICATE_TYPES;
+
+  const cardId = service.id || service.slug;
+  const title = service.title || service.name;
+  const hindiTitle = service.hindiTitle || service.hindi_title || '';
+  const icon = service.icon || 'fa-solid fa-file-shield';
 
   return (
     <div
       className="service-card"
       role="button"
-      onClick={() => onApply(service.id)}
+      onClick={() => onApply(cardId)}
       style={{ cursor: 'pointer' }}
     >
       <div className="service-header">
         <div className="service-icon">
-          <i className={service.icon}></i>
+          <i className={icon}></i>
         </div>
 
         <span className="service-badge">
@@ -88,21 +93,23 @@ function ServiceCard({ service, onApply }) {
       </div>
 
       <h3 className="service-title">
-        {service.title}
+        {title}
       </h3>
 
-      <p
-        className="service-hindi-title"
-        style={{
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          color: 'var(--primary-color)',
-          marginTop: '-6px',
-          marginBottom: '8px'
-        }}
-      >
-        <i className="fa-solid fa-language"></i> {service.hindiTitle}
-      </p>
+      {hindiTitle && (
+        <p
+          className="service-hindi-title"
+          style={{
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            color: 'var(--primary-color)',
+            marginTop: '-6px',
+            marginBottom: '8px'
+          }}
+        >
+          <i className="fa-solid fa-language"></i> {hindiTitle}
+        </p>
+      )}
 
       {isMerged && (
         <div
@@ -2412,154 +2419,54 @@ export default function CustomerPortal({
     fetch('/api/services')
       .then(r => r.json())
       .then(data => {
-        if (data.success && Array.isArray(data.data)) {
-          const coreServicesMap = { ...SERVICES };
-          const dynamicList = [];
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          const dbServices = data.data.filter(s => s.is_active !== false);
 
-          data.data.forEach(svc => {
+          const mappedServices = dbServices.map(svc => {
             const svcSlug = (svc.slug || '').toLowerCase().trim();
             const svcName = (svc.name || '').toLowerCase().trim();
-            const docsList = (svc.documents || []).filter(d => d.is_required !== false).map(d => d.document_name);
+            const docsList = (svc.documents || [])
+              .filter(d => d.is_required !== false)
+              .map(d => d.document_name);
             const reqs = docsList.length > 0 ? docsList : (svc.requirements || []);
 
-            // Check if matches srv_pancard
-            if (svcSlug === 'srv_pancard' || svcSlug.includes('pan') || svcName.includes('pan card') || svcName.includes('पैन कार्ड')) {
-              coreServicesMap.srv_pancard = {
-                ...coreServicesMap.srv_pancard,
-                title: svc.name || coreServicesMap.srv_pancard.title,
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_pancard.hindiTitle,
-                description: svc.description || coreServicesMap.srv_pancard.description,
-                icon: svc.icon || coreServicesMap.srv_pancard.icon,
-                display_order: svc.display_order ?? coreServicesMap.srv_pancard.display_order,
-                email_requirement: svc.email_requirement || coreServicesMap.srv_pancard.email_requirement,
-                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_pancard.requirements,
-                documents: svc.documents || []
-              };
-            } else if (svcSlug === 'srv_certificates' || svcSlug.includes('certificate') || svcName.includes('aay') || svcName.includes('आय') || svcName.includes('जाति')) {
-              coreServicesMap.srv_certificates = {
-                ...coreServicesMap.srv_certificates,
-                title: svc.name || coreServicesMap.srv_certificates.title,
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_certificates.hindiTitle,
-                description: svc.description || coreServicesMap.srv_certificates.description,
-                icon: svc.icon || coreServicesMap.srv_certificates.icon,
-                display_order: svc.display_order ?? coreServicesMap.srv_certificates.display_order,
-                email_requirement: svc.email_requirement || coreServicesMap.srv_certificates.email_requirement,
-                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_certificates.requirements,
-                documents: svc.documents || []
-              };
-            } else if (svcSlug === 'srv_ration' || svcSlug.includes('ration') || svcName.includes('ration') || svcName.includes('राशन')) {
-              coreServicesMap.srv_ration = {
-                ...coreServicesMap.srv_ration,
-                title: svc.name || coreServicesMap.srv_ration.title,
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_ration.hindiTitle,
-                description: svc.description || coreServicesMap.srv_ration.description,
-                icon: svc.icon || coreServicesMap.srv_ration.icon,
-                display_order: svc.display_order ?? coreServicesMap.srv_ration.display_order,
-                email_requirement: svc.email_requirement || coreServicesMap.srv_ration.email_requirement,
-                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_ration.requirements,
-                documents: svc.documents || []
-              };
-            } else if (svcSlug === 'srv_police_verification' || svcSlug.includes('police') || svcSlug.includes('verification') || svcName.includes('police') || svcName.includes('पुलिस') || svcName.includes('चरित्र')) {
-              coreServicesMap.srv_police_verification = {
-                ...(coreServicesMap.srv_police_verification || {}),
-                id: 'srv_police_verification',
-                title: svc.name || coreServicesMap.srv_police_verification?.title || 'Police Verification',
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_police_verification?.hindiTitle || 'पुलिस वेरिफिकेशन (चरित्र प्रमाण पत्र)',
-                description: svc.description || coreServicesMap.srv_police_verification?.description,
-                icon: svc.icon || coreServicesMap.srv_police_verification?.icon || 'fa-solid fa-building-shield',
-                display_order: svc.display_order ?? coreServicesMap.srv_police_verification?.display_order ?? 4,
-                hasThana: true,
-                email_requirement: svc.email_requirement || 'optional',
-                requirements: reqs.length > 0 ? reqs : (coreServicesMap.srv_police_verification?.requirements || []),
-                documents: svc.documents || []
-              };
-            } else if (svcSlug === 'srv_driving' || svcSlug.includes('driving') || svcName.includes('driving') || svcName.includes('ड्राइविंग')) {
-              coreServicesMap.srv_driving = {
-                ...coreServicesMap.srv_driving,
-                title: svc.name || coreServicesMap.srv_driving.title,
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_driving.hindiTitle,
-                description: svc.description || coreServicesMap.srv_driving.description,
-                icon: svc.icon || coreServicesMap.srv_driving.icon,
-                display_order: svc.display_order ?? coreServicesMap.srv_driving.display_order,
-                email_requirement: svc.email_requirement || coreServicesMap.srv_driving.email_requirement,
-                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_driving.requirements,
-                documents: svc.documents || []
-              };
-            } else if (svcSlug === 'srv_voterid' || svcSlug.includes('voter') || svcName.includes('voter') || svcName.includes('वोटर')) {
-              coreServicesMap.srv_voterid = {
-                ...coreServicesMap.srv_voterid,
-                title: svc.name || coreServicesMap.srv_voterid.title,
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_voterid.hindiTitle,
-                description: svc.description || coreServicesMap.srv_voterid.description,
-                icon: svc.icon || coreServicesMap.srv_voterid.icon,
-                display_order: svc.display_order ?? coreServicesMap.srv_voterid.display_order,
-                email_requirement: svc.email_requirement || coreServicesMap.srv_voterid.email_requirement,
-                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_voterid.requirements,
-                documents: svc.documents || []
-              };
-            } else if (svcSlug === 'srv_ayushman' || svcSlug.includes('ayushman') || svcName.includes('ayushman') || svcName.includes('आयुष्मान')) {
-              coreServicesMap.srv_ayushman = {
-                ...coreServicesMap.srv_ayushman,
-                title: svc.name || coreServicesMap.srv_ayushman.title,
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_ayushman.hindiTitle,
-                description: svc.description || coreServicesMap.srv_ayushman.description,
-                icon: svc.icon || coreServicesMap.srv_ayushman.icon,
-                display_order: svc.display_order ?? coreServicesMap.srv_ayushman.display_order,
-                email_requirement: svc.email_requirement || coreServicesMap.srv_ayushman.email_requirement,
-                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_ayushman.requirements,
-                documents: svc.documents || []
-              };
-            } else if (svcSlug === 'srv_passport' || svcSlug.includes('passport') || svcName.includes('passport') || svcName.includes('पासपोर्ट')) {
-              coreServicesMap.srv_passport = {
-                ...coreServicesMap.srv_passport,
-                title: svc.name || coreServicesMap.srv_passport.title,
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_passport.hindiTitle,
-                description: svc.description || coreServicesMap.srv_passport.description,
-                icon: svc.icon || coreServicesMap.srv_passport.icon,
-                display_order: svc.display_order ?? coreServicesMap.srv_passport.display_order,
-                email_requirement: svc.email_requirement || coreServicesMap.srv_passport.email_requirement,
-                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_passport.requirements,
-                documents: svc.documents || []
-              };
-            } else if (svcSlug === 'srv_pf' || svcSlug.includes('pf') || svcName.includes('pf') || svcName.includes('पीएफ')) {
-              coreServicesMap.srv_pf = {
-                ...coreServicesMap.srv_pf,
-                title: svc.name || coreServicesMap.srv_pf.title,
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_pf.hindiTitle,
-                description: svc.description || coreServicesMap.srv_pf.description,
-                icon: svc.icon || coreServicesMap.srv_pf.icon,
-                display_order: svc.display_order ?? coreServicesMap.srv_pf.display_order,
-                email_requirement: svc.email_requirement || coreServicesMap.srv_pf.email_requirement,
-                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_pf.requirements,
-                documents: svc.documents || []
-              };
-            } else {
-              // Custom / Dynamic service from Admin
-              dynamicList.push({
-                id: svc.id || svc.slug,
-                slug: svc.slug || `svc-${svc.id}`,
-                title: svc.name || svc.title,
-                name: svc.name || svc.title,
-                icon: svc.icon || 'fa-solid fa-file-shield',
-                hindiTitle: svc.hindi_title || svc.hindiTitle || '',
-                description: svc.description || '',
-                email_requirement: svc.email_requirement || 'optional',
-                requirements: reqs,
-                documents: svc.documents || [],
-                display_order: svc.display_order ?? 99
-              });
-            }
+            const isCertGroup = svcSlug === 'srv_certificates' || svcSlug === 'aay-jaati-niwas' || svcSlug === 'aay_jaati_niwas';
+            const isPanGroup = svcSlug === 'srv_pancard' || svcSlug === 'pan-card-apply' || svcSlug === 'pan_card_apply';
+            const isPoliceGroup = svcSlug === 'srv_police_verification' || svcSlug.includes('police') || svcName.includes('police') || svcName.includes('पुलिस') || svcName.includes('चरित्र');
+
+            return {
+              id: String(svc.id || svc.slug),
+              slug: svc.slug || `svc-${svc.id}`,
+              title: svc.name || svc.title,
+              name: svc.name || svc.title,
+              hindiTitle: svc.hindi_title || svc.hindiTitle || '',
+              description: svc.description || '',
+              icon: svc.icon || (isPoliceGroup ? 'fa-solid fa-building-shield' : 'fa-solid fa-file-shield'),
+              display_order: Number(svc.display_order ?? 99),
+              email_requirement: svc.email_requirement || 'optional',
+              requirements: reqs,
+              documents: svc.documents || [],
+              isMerged: isCertGroup || isPanGroup,
+              isPan: isPanGroup,
+              hasThana: isPoliceGroup || (svc.documents || []).some(d => (d.document_name || '').toLowerCase().includes('thana') || (d.document_name || '').includes('थाना')),
+              subServices: isCertGroup ? ['aay', 'jaati', 'niwas', 'all'] : (isPanGroup ? ['new_pan', 'pan_correction'] : undefined),
+              uploadUrl: isCertGroup ? '/upload-certificates' : (isPanGroup ? '/upload-pancard' : `/upload-${svc.slug || svc.id}`)
+            };
           });
 
-          const combined = [
-            ...Object.values(coreServicesMap),
-            ...dynamicList
-          ];
+          // Check if any standard defaults from SERVICES are missing from DB
+          const dbSlugs = new Set(dbServices.map(s => (s.slug || '').toLowerCase()));
+          const missingDefaults = Object.values(SERVICES).filter(defSvc => {
+            const defId = (defSvc.id || '').toLowerCase();
+            return !dbSlugs.has(defId) && !dbSlugs.has(defId.replace('srv_', ''));
+          });
 
-          // Sort strictly by display_order
-          combined.sort((a, b) => (a.display_order ?? 99) - (b.display_order ?? 99));
+          const combined = [...mappedServices, ...missingDefaults];
+          combined.sort((a, b) => (Number(a.display_order ?? 99) - Number(b.display_order ?? 99)));
 
           setActiveServices(combined);
+        } else {
+          setActiveServices(Object.values(SERVICES).sort((a, b) => (a.display_order ?? 99) - (b.display_order ?? 99)));
         }
       })
       .catch(err =>
@@ -2772,7 +2679,7 @@ export default function CustomerPortal({
 
     const svc =
       activeServices.find(
-        s => s.id === serviceId
+        s => String(s.id) === String(serviceId) || String(s.slug) === String(serviceId)
       );
 
     setOpenAsPage(true);

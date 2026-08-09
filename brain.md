@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.7.0` (Police Verification with Thana Option, New Services Order: Aay Jati Niwas -> PAN -> Ration -> Police Verification, Admin Auto-Scroll to Top on Edit)
+- **Version**: `3.7.1` (1-to-1 Synchronization of all Services from Service Management to Customer Portal Dashboard)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -538,25 +538,16 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **Active State**: All features built and verified. Police Verification with Thana, reordered services, and auto-scroll to top on Edit live.
-- **What was just accomplished (v3.7.0 — 2026-08-09)**:
-  - **Reordered Services Sequence on Customer Portal**:
-    1. AAY / JAATI / NIWAS (आय / जाति / निवास प्रमाण पत्र) — #1
-    2. PAN Card Apply (पैन कार्ड नया एवं संशोधन) — #2
-    3. Ration Card (राशन कार्ड नया / नाम जोड़ना) — #3
-    4. Police Verification (पुलिस वेरिफिकेशन / चरित्र प्रमाण पत्र) — #4
-    5. Driving License (ड्राइविंग लाइसेंस नया / नवीनीकरण) — #5
-    6. Voter ID Card (वोटर आईडी पहचान पत्र) — #6
-    7. Ayushman Bharat Card (आयुष्मान भारत कार्ड ₹5 लाख फ्री इलाज) — #7
-    8. Passport Seva (पासपोर्ट सेवा नया / री-इश्यू) — #8
-    9. PF / EPFO Claim (पीएफ / पेंशन निकासी) — #9
-  - **Police Verification with Thana (थाना / Police Station) Field**:
-    - Dedicated searchable datalist of Ghazipur Police Stations (`GHAZIPUR_THANAS`) + custom text input.
-    - Attached `[थाना / Police Station: ...]` to submission notes, admin dashboard, and WhatsApp notifications.
-  - **Admin Dashboard Auto-Scroll to Top on Edit / Add Service**:
-    - When Admin clicks `Edit Service` or `Add New Service`, page and modal smoothly scroll directly to the top.
-  - **What was previously accomplished (v3.6.1)**:
-    - Dynamic Text Input Fields Rendering & Document Separation.
+- **Active State**: All features built and verified. Complete 1-to-1 synchronization of all services from Service Management to Customer Portal live.
+- **What was just accomplished (v3.7.1 — 2026-08-09)**:
+  - **1-to-1 Full Service Synchronization between Admin Service Management & Customer Portal**:
+    - Fixed greedy keyword matching that was previously merging newly added services into the 9 default templates.
+    - Every active service created in Admin Service Management (`services` table) now renders directly as its own distinct card on the Customer Portal dashboard.
+    - Updated backend `getActiveServices` query in `server.js` (`neq('is_active', false)`) so no active service is skipped.
+    - Updated `handleApply` in `CustomerPortal` to seamlessly match both numeric database IDs and alphanumeric slugs.
+    - Simplified Police Verification Thana field to a clean, direct text input box.
+  - **What was previously accomplished (v3.7.0)**:
+    - Services reordering, Police Verification with Thana, Admin Auto-Scroll to Top on Edit.
 - **What was previously accomplished (v3.5.0)**:
   - **Dynamic Service & Document Management (Admin Control)**: Full editable documents with 1-click mandatory/optional toggles, reordering, icon presets, and real-time portal syncing.
 - **What was previously accomplished (v3.4.2)**:

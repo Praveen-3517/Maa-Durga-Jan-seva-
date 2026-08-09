@@ -1301,7 +1301,7 @@ const getActiveServices = async () => {
   const { data: services, error: svcErr } = await supabase
     .from('services')
     .select('*')
-    .eq('is_active', true)
+    .neq('is_active', false)
     .order('display_order', { ascending: true });
 
   if (svcErr) throw new Error('Failed to fetch services: ' + svcErr.message);

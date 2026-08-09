@@ -2430,9 +2430,26 @@ export default function CustomerPortal({
               .map(d => d.document_name);
             const reqs = docsList.length > 0 ? docsList : (svc.requirements || []);
 
-            const isCertGroup = svcSlug === 'srv_certificates' || svcSlug === 'aay-jaati-niwas' || svcSlug === 'aay_jaati_niwas';
-            const isPanGroup = svcSlug === 'srv_pancard' || svcSlug === 'pan-card-apply' || svcSlug === 'pan_card_apply';
-            const isPoliceGroup = svcSlug === 'srv_police_verification' || svcSlug.includes('police') || svcName.includes('police') || svcName.includes('पुलिस') || svcName.includes('चरित्र');
+            // Identify special multi-flow services
+            const isCertGroup = svcSlug === 'srv_certificates' ||
+              svcSlug.includes('aay') ||
+              svcSlug.includes('certificate') ||
+              svcName.includes('aay') ||
+              svcName.includes('आय') ||
+              svcName.includes('जाति') ||
+              svcName.includes('निवास');
+
+            const isPanGroup = svcSlug === 'srv_pancard' ||
+              svcSlug.includes('pan') ||
+              svcName.includes('pan') ||
+              svcName.includes('पैन');
+
+            const isPoliceGroup = svcSlug === 'srv_police_verification' ||
+              svcSlug.includes('police') ||
+              svcSlug.includes('verification') ||
+              svcName.includes('police') ||
+              svcName.includes('पुलिस') ||
+              svcName.includes('चरित्र');
 
             return {
               id: String(svc.id || svc.slug),
@@ -2441,7 +2458,7 @@ export default function CustomerPortal({
               name: svc.name || svc.title,
               hindiTitle: svc.hindi_title || svc.hindiTitle || '',
               description: svc.description || '',
-              icon: svc.icon || (isPoliceGroup ? 'fa-solid fa-building-shield' : 'fa-solid fa-file-shield'),
+              icon: svc.icon || (isPoliceGroup ? 'fa-solid fa-building-shield' : (isCertGroup ? 'fa-solid fa-file-shield' : (isPanGroup ? 'fa-solid fa-address-card' : 'fa-solid fa-file-lines'))),
               display_order: Number(svc.display_order ?? 99),
               email_requirement: svc.email_requirement || 'optional',
               requirements: reqs,
@@ -2454,17 +2471,10 @@ export default function CustomerPortal({
             };
           });
 
-          // Check if any standard defaults from SERVICES are missing from DB
-          const dbSlugs = new Set(dbServices.map(s => (s.slug || '').toLowerCase()));
-          const missingDefaults = Object.values(SERVICES).filter(defSvc => {
-            const defId = (defSvc.id || '').toLowerCase();
-            return !dbSlugs.has(defId) && !dbSlugs.has(defId.replace('srv_', ''));
-          });
+          // Sort strictly by display_order set by Admin
+          mappedServices.sort((a, b) => (Number(a.display_order ?? 99) - Number(b.display_order ?? 99)));
 
-          const combined = [...mappedServices, ...missingDefaults];
-          combined.sort((a, b) => (Number(a.display_order ?? 99) - Number(b.display_order ?? 99)));
-
-          setActiveServices(combined);
+          setActiveServices(mappedServices);
         } else {
           setActiveServices(Object.values(SERVICES).sort((a, b) => (a.display_order ?? 99) - (b.display_order ?? 99)));
         }

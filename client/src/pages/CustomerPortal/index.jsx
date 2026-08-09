@@ -2451,6 +2451,20 @@ export default function CustomerPortal({
               svcName.includes('पुलिस') ||
               svcName.includes('चरित्र');
 
+            let bestIcon = svc.icon && svc.icon !== 'fa-solid fa-file' && svc.icon !== 'fa-solid fa-file-shield' ? svc.icon : null;
+            if (!bestIcon) {
+              if (isCertGroup) bestIcon = 'fa-solid fa-file-shield';
+              else if (isPanGroup) bestIcon = 'fa-solid fa-address-card';
+              else if (svcSlug.includes('rashan') || svcSlug.includes('ration') || svcName.includes('राशन')) bestIcon = 'fa-solid fa-wheat-awn';
+              else if (isPoliceGroup) bestIcon = 'fa-solid fa-building-shield';
+              else if (svcSlug.includes('passport') || svcName.includes('पासपोर्ट')) bestIcon = 'fa-solid fa-passport';
+              else if (svcSlug.includes('varasat') || svcName.includes('वरासत')) bestIcon = 'fa-solid fa-scroll';
+              else if (svcSlug.includes('insurance') || svcSlug.includes('bike') || svcName.includes('बीमा')) bestIcon = 'fa-solid fa-motorcycle';
+              else if (svcSlug.includes('driving') || svcName.includes('ड्राइविंग')) bestIcon = 'fa-solid fa-id-badge';
+              else if (svcSlug.includes('voter') || svcName.includes('वोटर')) bestIcon = 'fa-solid fa-id-card-clip';
+              else bestIcon = 'fa-solid fa-file-lines';
+            }
+
             return {
               id: String(svc.id || svc.slug),
               slug: svc.slug || `svc-${svc.id}`,
@@ -2458,7 +2472,7 @@ export default function CustomerPortal({
               name: svc.name || svc.title,
               hindiTitle: svc.hindi_title || svc.hindiTitle || '',
               description: svc.description || '',
-              icon: svc.icon || (isPoliceGroup ? 'fa-solid fa-building-shield' : (isCertGroup ? 'fa-solid fa-file-shield' : (isPanGroup ? 'fa-solid fa-address-card' : 'fa-solid fa-file-lines'))),
+              icon: bestIcon,
               display_order: Number(svc.display_order ?? 99),
               email_requirement: svc.email_requirement || 'optional',
               requirements: reqs,

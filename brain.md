@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.7.1` (1-to-1 Synchronization of all Services from Service Management to Customer Portal Dashboard)
+- **Version**: `3.7.2` (Top 4 Fixed Services Sequence & 1-to-1 Service Management Sync)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -538,23 +538,34 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **Active State**: All features built and verified. Complete 1-to-1 synchronization of all services from Service Management to Customer Portal live.
-- **What was just accomplished (v3.7.1 — 2026-08-09)**:
-  - **1-to-1 Full Service Synchronization between Admin Service Management & Customer Portal**:
-    - Fixed greedy keyword matching that was previously merging newly added services into the 9 default templates.
-    - Every active service created in Admin Service Management (`services` table) now renders directly as its own distinct card on the Customer Portal dashboard.
-    - Updated backend `getActiveServices` query in `server.js` (`neq('is_active', false)`) so no active service is skipped.
-    - Updated `handleApply` in `CustomerPortal` to seamlessly match both numeric database IDs and alphanumeric slugs.
-    - Simplified Police Verification Thana field to a clean, direct text input box.
-  - **What was previously accomplished (v3.7.0)**:
-    - Services reordering, Police Verification with Thana, Admin Auto-Scroll to Top on Edit.
+- **Active State**: All features built and verified. Complete 1-to-1 synchronization of all services and Top 4 fixed sequence live.
+- **What was just accomplished (v3.7.2 — 2026-08-09)**:
+  - **Fixed Top 4 Services Sequence in Database & Customer Portal**:
+    1. **AAY / JAATI / NIWAS** (आय / जाति / निवास प्रमाण पत्र) — `display_order: 1`
+    2. **PAN Card Apply** (पैन कार्ड नया एवं संशोधन) — `display_order: 2`
+    3. **Rashan Card** (राशन कार्ड नया एवं संशोधन) — `display_order: 3`
+    4. **Police Verification** (पुलिस वेरीफिकेशन / चरित्र प्रमाण पत्र) — `display_order: 4`
+    5. **Passport Seva** (पासपोर्ट सेवा) — `display_order: 5`
+    6. **Varasat Online** (वरासत हेतु आवेदन) — `display_order: 6`
+    7. **Bike Insurance (Third Party)** (वाहन बीमा) — `display_order: 7`
+  - **1-to-1 Full Service Synchronization**:
+    - Database `services` table is the exact single source of truth for Customer Portal.
+    - Added smart automatic icon mapping for all services (Certificate, PAN, Ration, Police, Passport, Varasat, Bike Insurance, etc.).
+    - Fixed keyword greedy overwriting bug in `CustomerPortal/index.jsx`.
+    - Pushed production commits (`b176621`, `f455718`, `8bc2b99`) to GitHub `main` branch.
+  - **Meta WhatsApp Billing Policy Context Documented**:
+    - Meta provides 1,000 free service conversations per month per WhatsApp Business Account (₹0 cost).
+    - Beyond 1,000 conversations, charge is ~₹0.30 - ₹0.35 per 24-hour customer conversation.
+    - Card verification is a ₹2 temporary refundable test.
+    - User postponed adding payment card to Meta Business Account (`Maa-Durga-Online` ID: `1044096971603756`) to a later date.
+- **What was previously accomplished (v3.7.0)**:
+  - Services reordering, Police Verification with direct text Thana field, Admin Auto-Scroll to Top on Edit.
 - **What was previously accomplished (v3.5.0)**:
-  - **Dynamic Service & Document Management (Admin Control)**: Full editable documents with 1-click mandatory/optional toggles, reordering, icon presets, and real-time portal syncing.
-- **What was previously accomplished (v3.4.2)**:
-  - **PAN Card & PAN Card Correction Age Proof**: Enforced mandatory Age Proof (Voter ID / Birth Certificate / 10th Result) replacing 10th marksheet.
+  - Dynamic Service & Document Management (Admin Control): Full editable documents with 1-click mandatory/optional toggles.
 - **Admin Password**: `Pratap@135`
 - **WhatsApp Verify Token**: `maa_durga_verify_token_2026`
-- **Next Step**: Run Supabase SQL migration → Connect real WhatsApp phone when available.
+- **WhatsApp Business Account ID**: `1044096971603756`
+- **Next Step**: Add payment card in Meta Business Suite when convenient → Test WhatsApp bot live.
 
 ---
 

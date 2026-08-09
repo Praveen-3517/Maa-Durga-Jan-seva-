@@ -469,8 +469,16 @@ function ServiceManagement({ adminToken, showToast }) {
     } catch (err) { showToast('Failed to delete service: ' + err.message, 'error'); }
   };
 
-  const openAdd = () => { setEditService(null); setShowModal(true); };
-  const openEdit = (svc) => { setEditService(svc); setShowModal(true); };
+  const openAdd = () => {
+    setEditService(null);
+    setShowModal(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const openEdit = (svc) => {
+    setEditService(svc);
+    setShowModal(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const closeModal = () => { setShowModal(false); setEditService(null); };
 
   // Filter services by search & active state
@@ -739,6 +747,15 @@ function ServiceManagement({ adminToken, showToast }) {
 // ─── Service Modal (Full Service & Document Editor) ────────────────────────────
 function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) {
   const isEdit = !!editService;
+  const modalContentRef = useRef(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (modalContentRef.current) {
+      modalContentRef.current.scrollTop = 0;
+    }
+  }, [editService]);
+
   const [form, setForm] = useState({
     name: editService?.name || '',
     hindi_title: editService?.hindi_title || '',
@@ -755,11 +772,12 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
 
   // Common quick icon presets for Cyber Cafe / CSC services
   const ICON_PRESETS = [
+    { icon: 'fa-solid fa-building-shield', label: '👮 Police / Verification' },
     { icon: 'fa-solid fa-address-card', label: '🪪 ID / PAN' },
     { icon: 'fa-solid fa-file-shield', label: '📄 Certificate' },
-    { icon: 'fa-solid fa-id-card-clip', label: '🗳️ Voter ID' },
-    { icon: 'fa-solid fa-id-badge', label: '🚗 License' },
     { icon: 'fa-solid fa-wheat-awn', label: '🌾 Ration' },
+    { icon: 'fa-solid fa-id-badge', label: '🚗 License' },
+    { icon: 'fa-solid fa-id-card-clip', label: '🗳️ Voter ID' },
     { icon: 'fa-solid fa-hospital', label: '🏥 Ayushman' },
     { icon: 'fa-solid fa-passport', label: '✈️ Passport' },
     { icon: 'fa-solid fa-graduation-cap', label: '🎓 Student' },
@@ -803,60 +821,41 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) { showToast('Service name is required.', 'error'); return; }
+    if (!form.name.trim()) {
+      showToast('Service Name is required', 'error');
+      return;
+    }
     setSaving(true);
     try {
-      let serviceId = editService?.id;
-
-      // Auto-include typed document text if admin typed without clicking + Add button
-      let finalDocs = [...documents];
-      if (newDoc.trim()) {
-        const autoAdded = { document_name: newDoc.trim(), is_required: newDocRequired, display_order: finalDocs.length, _new: true };
-        finalDocs.push(autoAdded);
-        setDocuments(finalDocs);
-        setNewDoc('');
-      }
-
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + (adminToken || ''),
-      };
+      const url = isEdit ? `/api/admin/services/${editService.id || editService.slug}` : '/api/admin/services';
+      const method = isEdit ? 'PUT' : 'POST';
 
       const payload = {
         ...form,
-        documents: finalDocs.map((d, i) => ({
+        slug: isEdit ? (editService.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')) : (form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now()),
+        display_order: Number(form.display_order) || 0,
+        documents: documents.map((d, idx) => ({
           id: d.id,
-          document_name: (d.document_name || '').trim(),
+          document_name: d.document_name,
           is_required: d.is_required !== false,
-          display_order: i,
-          _new: d._new || !d.id
-        })).filter(d => d.document_name)
+          display_order: idx
+        }))
       };
 
-      if (isEdit) {
-        // Update service & sync documents
-        const res = await fetch(`/api/admin/services/${serviceId}`, {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || data.error || 'Failed to update service');
-      } else {
-        // Create service with documents
-        const res = await fetch('/api/admin/services', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || data.error || 'Failed to create service');
-        serviceId = data.data?.id;
-      }
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + adminToken
+        },
+        body: JSON.stringify(payload)
+      });
 
-      showToast(isEdit ? `Service "${form.name}" updated successfully!` : `Service "${form.name}" created successfully!`);
-      window.dispatchEvent(new Event('services_updated'));
-      if (typeof BroadcastChannel !== 'undefined') {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || 'Failed to save service');
+
+      showToast(`Service "${form.name}" ${isEdit ? 'updated' : 'created'} successfully.`);
+      if (typeof window !== 'undefined' && window.BroadcastChannel) {
         const bc = new BroadcastChannel('services_channel');
         bc.postMessage('updated');
         bc.close();
@@ -873,7 +872,7 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
 
   return (
     <div className="modal open" onClick={e => e.target === e.currentTarget && onClose()} style={{ padding: '1rem' }}>
-      <div className="modal-content" style={{ maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="modal-content" ref={modalContentRef} style={{ maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <div style={{ width: 34, height: 34, borderRadius: '8px', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

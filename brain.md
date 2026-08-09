@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.6.1` (Interactive Text Input Fields & Email ID Input rendering on Customer Portal + Document Separation)
+- **Version**: `3.7.0` (Police Verification with Thana Option, New Services Order: Aay Jati Niwas -> PAN -> Ration -> Police Verification, Admin Auto-Scroll to Top on Edit)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -538,15 +538,25 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **Active State**: All features built and verified. Interactive Text Fields & Email ID Input rendering live.
-- **What was just accomplished (v3.6.1 — 2026-08-09)**:
-  - **Dynamic Text Input Fields Rendering in Customer Form (`UploadModal`)**:
-    - Automatic separation of **File Upload Documents** vs **Text Input Fields** (Email ID, Old Passport No., Father Name, Old PAN No., etc.).
-    - When Email ID is required or added in documents, it renders as a dedicated **Email ID Text Input Field** (`<input type="email" />`) with live regex validation, instead of showing as a file upload requirement.
-    - Added support for custom dynamic text fields (e.g. `Old Passport Number`, `Old PAN Card Number`, `Father's Name`, `UAN Number`, etc.) to render interactive text fields on the customer portal and attach directly to submission details.
-    - Added 1-Click Quick Preset Chips in `ServiceModal` (Admin Dashboard) for both file documents and text fields.
-  - **What was previously accomplished (v3.6.0)**:
-    - **Email ID Configuration per Service & Reordered Services**: Voter ID placed at #5 (behind Driving License & Ration Card), Passport Seva at #7 (behind Ayushman Card).
+- **Active State**: All features built and verified. Police Verification with Thana, reordered services, and auto-scroll to top on Edit live.
+- **What was just accomplished (v3.7.0 — 2026-08-09)**:
+  - **Reordered Services Sequence on Customer Portal**:
+    1. AAY / JAATI / NIWAS (आय / जाति / निवास प्रमाण पत्र) — #1
+    2. PAN Card Apply (पैन कार्ड नया एवं संशोधन) — #2
+    3. Ration Card (राशन कार्ड नया / नाम जोड़ना) — #3
+    4. Police Verification (पुलिस वेरिफिकेशन / चरित्र प्रमाण पत्र) — #4
+    5. Driving License (ड्राइविंग लाइसेंस नया / नवीनीकरण) — #5
+    6. Voter ID Card (वोटर आईडी पहचान पत्र) — #6
+    7. Ayushman Bharat Card (आयुष्मान भारत कार्ड ₹5 लाख फ्री इलाज) — #7
+    8. Passport Seva (पासपोर्ट सेवा नया / री-इश्यू) — #8
+    9. PF / EPFO Claim (पीएफ / पेंशन निकासी) — #9
+  - **Police Verification with Thana (थाना / Police Station) Field**:
+    - Dedicated searchable datalist of Ghazipur Police Stations (`GHAZIPUR_THANAS`) + custom text input.
+    - Attached `[थाना / Police Station: ...]` to submission notes, admin dashboard, and WhatsApp notifications.
+  - **Admin Dashboard Auto-Scroll to Top on Edit / Add Service**:
+    - When Admin clicks `Edit Service` or `Add New Service`, page and modal smoothly scroll directly to the top.
+  - **What was previously accomplished (v3.6.1)**:
+    - Dynamic Text Input Fields Rendering & Document Separation.
 - **What was previously accomplished (v3.5.0)**:
   - **Dynamic Service & Document Management (Admin Control)**: Full editable documents with 1-click mandatory/optional toggles, reordering, icon presets, and real-time portal syncing.
 - **What was previously accomplished (v3.4.2)**:

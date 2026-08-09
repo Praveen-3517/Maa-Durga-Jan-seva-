@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { SERVICES, CERTIFICATE_TYPES, PAN_TYPES, OBC_SUBCASTES } from '../../constants/services';
+import { SERVICES, CERTIFICATE_TYPES, PAN_TYPES, OBC_SUBCASTES, GHAZIPUR_THANAS } from '../../constants/services';
 
 const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? 'http://localhost:3000'
@@ -1566,6 +1566,11 @@ function UploadModal({
     return l.includes('email') || l.includes('ईमेल');
   };
 
+  const isThanaDoc = (name) => {
+    const l = (name || '').toLowerCase().trim();
+    return l.includes('thana') || l.includes('थाना') || l.includes('police station');
+  };
+
   const isEmailRequired = service.email_requirement === 'required' ||
     (service.documents || []).some(d => isEmailDoc(d.document_name) && d.is_required !== false) ||
     (service.requirements || []).some(r => isEmailDoc(typeof r === 'string' ? r : ''));
@@ -1575,10 +1580,20 @@ function UploadModal({
 
   const showEmailField = hasEmailInDocs || service.email_requirement === 'required' || service.email_requirement === 'optional' || !service.email_requirement;
 
+  const isThanaRequired = service.hasThana ||
+    service.id === 'srv_police_verification' ||
+    (service.slug || '').includes('police') ||
+    (service.slug || '').includes('verification') ||
+    (service.name || '').toLowerCase().includes('police') ||
+    (service.name || '').toLowerCase().includes('चरित्र') ||
+    (service.title || '').toLowerCase().includes('police') ||
+    (service.documents || []).some(d => isThanaDoc(d.document_name)) ||
+    (service.requirements || []).some(r => isThanaDoc(typeof r === 'string' ? r : ''));
+
   const customTextFields = (service.documents || [])
     .filter(d => {
       const name = (d.document_name || '').toLowerCase().trim();
-      if (isEmailDoc(name)) return false;
+      if (isEmailDoc(name) || isThanaDoc(name)) return false;
       return (
         name.includes('number') ||
         name.includes('नंबर') ||
@@ -1622,6 +1637,7 @@ function UploadModal({
   const nameRef = useRef();
   const phoneRef = useRef();
   const emailRef = useRef();
+  const thanaRef = useRef();
   const notesRef = useRef();
 
   if (!service) return null;
@@ -1655,6 +1671,7 @@ function UploadModal({
     e.preventDefault();
 
     const emailVal = emailRef.current ? emailRef.current.value.trim() : '';
+    const thanaVal = thanaRef.current ? thanaRef.current.value.trim() : '';
 
     if (isEmailRequired && !emailVal) {
       showToast(
@@ -1672,6 +1689,15 @@ function UploadModal({
       return;
     }
 
+    if (isThanaRequired && !thanaVal) {
+      showToast(
+        'कृपया अपने संबंधित थाने (Police Station) का नाम चुनें या दर्ज करें।',
+        'error'
+      );
+      return;
+    }
+
+    // Validate any required custom text fields
     for (const f of customTextFields) {
       if (f.isRequired && (!customFieldValues[f.name] || !customFieldValues[f.name].trim())) {
         showToast(`कृपया ${f.name} दर्ज करें। / Please enter ${f.name}.`, 'error');
@@ -1735,8 +1761,10 @@ function UploadModal({
       service.name
     );
 
+    // Combine email, thana, custom fields, and user notes
     const notesParts = [];
     if (emailVal) notesParts.push(`[Email: ${emailVal}]`);
+    if (thanaVal) notesParts.push(`[थाना / Police Station: ${thanaVal}]`);
     Object.entries(customFieldValues).forEach(([k, v]) => {
       if (v && v.trim()) notesParts.push(`[${k}: ${v.trim()}]`);
     });
@@ -1820,7 +1848,7 @@ function UploadModal({
     ? service.documents.map(d => d.document_name)
     : (service.requirements || []);
 
-  const fileRequirementsList = rawList.filter(r => !isEmailDoc(r) && !customFieldNamesSet.has(r));
+  const fileRequirementsList = rawList.filter(r => !isEmailDoc(r) && !isThanaDoc(r) && !customFieldNamesSet.has(r));
 
   return (
     <div
@@ -2003,6 +2031,57 @@ function UploadModal({
                 />
               </div>
             )}
+
+            {/* Thana / Police Station Field */}
+            {isThanaRequired && (
+              <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: '0.9rem', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, color: 'var(--primary-color)' }}>
+                  <i className="fa-solid fa-building-shield"></i>
+                  थाना / Police Station (Thana) <span style={{ color: '#ef4444' }}>* (अनिवार्य / Mandatory)</span>
+                </label>
+                <div style={{ position: 'relative', marginTop: '0.4rem' }}>
+                  <input
+                    type="text"
+                    list="ghazipur-thanas-list"
+                    ref={thanaRef}
+                    placeholder="अपना थाना चुनें या टाइप करें (उदा. कोतवाली, जमानिया, मोहम्मदाबाद, सैदपुर...)"
+                    required
+                    style={{ width: '100%', padding: '0.65rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
+                  />
+                  <datalist id="ghazipur-thanas-list">
+                    {(GHAZIPUR_THANAS || []).map((thana, tIdx) => (
+                      <option key={tIdx} value={thana} />
+                    ))}
+                  </datalist>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                  <i className="fa-solid fa-circle-info" style={{ marginRight: 4, color: 'var(--primary-color)' }}></i>
+                  सूची से अपना संबंधित थाना चुनें अथवा अपने थाने का नाम टाइप करें
+                </span>
+              </div>
+            )}
+
+            {/* Dynamic Custom Text Input Fields */}
+            {customTextFields.map((f, fIdx) => (
+              <div className="form-group" key={fIdx}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <i className="fa-solid fa-pen-to-square" style={{ color: 'var(--primary-color)' }}></i>
+                  {f.name}
+                  {f.isRequired ? (
+                    <span style={{ color: '#ef4444', marginLeft: 4, fontWeight: 700 }}>* (अनिवार्य / Mandatory)</span>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginLeft: 4 }}>(वैकल्पिक / Optional)</span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  placeholder={`Enter ${f.name}`}
+                  value={customFieldValues[f.name] || ''}
+                  onChange={e => setCustomFieldValues(prev => ({ ...prev, [f.name]: e.target.value }))}
+                  required={f.isRequired}
+                />
+              </div>
+            ))}
 
             <div className="form-group">
               <label>
@@ -2380,18 +2459,6 @@ export default function CustomerPortal({
                 requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_certificates.requirements,
                 documents: svc.documents || []
               };
-            } else if (svcSlug === 'srv_driving' || svcSlug.includes('driving') || svcName.includes('driving') || svcName.includes('ड्राइविंग')) {
-              coreServicesMap.srv_driving = {
-                ...coreServicesMap.srv_driving,
-                title: svc.name || coreServicesMap.srv_driving.title,
-                hindiTitle: svc.hindi_title || coreServicesMap.srv_driving.hindiTitle,
-                description: svc.description || coreServicesMap.srv_driving.description,
-                icon: svc.icon || coreServicesMap.srv_driving.icon,
-                display_order: svc.display_order ?? coreServicesMap.srv_driving.display_order,
-                email_requirement: svc.email_requirement || coreServicesMap.srv_driving.email_requirement,
-                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_driving.requirements,
-                documents: svc.documents || []
-              };
             } else if (svcSlug === 'srv_ration' || svcSlug.includes('ration') || svcName.includes('ration') || svcName.includes('राशन')) {
               coreServicesMap.srv_ration = {
                 ...coreServicesMap.srv_ration,
@@ -2402,6 +2469,32 @@ export default function CustomerPortal({
                 display_order: svc.display_order ?? coreServicesMap.srv_ration.display_order,
                 email_requirement: svc.email_requirement || coreServicesMap.srv_ration.email_requirement,
                 requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_ration.requirements,
+                documents: svc.documents || []
+              };
+            } else if (svcSlug === 'srv_police_verification' || svcSlug.includes('police') || svcSlug.includes('verification') || svcName.includes('police') || svcName.includes('पुलिस') || svcName.includes('चरित्र')) {
+              coreServicesMap.srv_police_verification = {
+                ...(coreServicesMap.srv_police_verification || {}),
+                id: 'srv_police_verification',
+                title: svc.name || coreServicesMap.srv_police_verification?.title || 'Police Verification',
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_police_verification?.hindiTitle || 'पुलिस वेरिफिकेशन (चरित्र प्रमाण पत्र)',
+                description: svc.description || coreServicesMap.srv_police_verification?.description,
+                icon: svc.icon || coreServicesMap.srv_police_verification?.icon || 'fa-solid fa-building-shield',
+                display_order: svc.display_order ?? coreServicesMap.srv_police_verification?.display_order ?? 4,
+                hasThana: true,
+                email_requirement: svc.email_requirement || 'optional',
+                requirements: reqs.length > 0 ? reqs : (coreServicesMap.srv_police_verification?.requirements || []),
+                documents: svc.documents || []
+              };
+            } else if (svcSlug === 'srv_driving' || svcSlug.includes('driving') || svcName.includes('driving') || svcName.includes('ड्राइविंग')) {
+              coreServicesMap.srv_driving = {
+                ...coreServicesMap.srv_driving,
+                title: svc.name || coreServicesMap.srv_driving.title,
+                hindiTitle: svc.hindi_title || coreServicesMap.srv_driving.hindiTitle,
+                description: svc.description || coreServicesMap.srv_driving.description,
+                icon: svc.icon || coreServicesMap.srv_driving.icon,
+                display_order: svc.display_order ?? coreServicesMap.srv_driving.display_order,
+                email_requirement: svc.email_requirement || coreServicesMap.srv_driving.email_requirement,
+                requirements: reqs.length > 0 ? reqs : coreServicesMap.srv_driving.requirements,
                 documents: svc.documents || []
               };
             } else if (svcSlug === 'srv_voterid' || svcSlug.includes('voter') || svcName.includes('voter') || svcName.includes('वोटर')) {

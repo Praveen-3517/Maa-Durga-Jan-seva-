@@ -34,30 +34,14 @@ export const SERVICES = {
     ],
     uploadUrl: '/upload-pancard',
   },
-  // 3. Driving License
-  srv_driving: {
-    id: 'srv_driving',
-    title: 'Driving License',
-    hindiTitle: 'ड्राइविंग लाइसेंस (नया / नवीनीकरण)',
-    description: 'Apply for a new Learner / Driving License, Renewal, or Add Class of Vehicle.',
-    icon: 'fa-solid fa-id-badge',
-    display_order: 3,
-    requirements: [
-      'Aadhar Card (Front + Back)',
-      'Passport Size Photo',
-      'Age Proof (10th Result / Birth Certificate)',
-      'Medical Certificate (Form 1A - if applicable)',
-    ],
-    uploadUrl: '/upload-driving',
-  },
-  // 4. Ration Card
+  // 3. Ration Card (Third Priority as requested)
   srv_ration: {
     id: 'srv_ration',
     title: 'Ration Card',
     hindiTitle: 'राशन कार्ड (नया / नाम जोड़ना)',
     description: 'Apply for a new family ration card or add / remove family members online.',
     icon: 'fa-solid fa-wheat-awn',
-    display_order: 4,
+    display_order: 3,
     requirements: [
       'Family Head Aadhar Card',
       'All Family Members Aadhar Card',
@@ -67,14 +51,47 @@ export const SERVICES = {
     ],
     uploadUrl: '/upload-ration',
   },
-  // 5. Voter ID Card (Placed behind Driving License & Ration Card)
+  // 4. Police Verification (Fourth Priority as requested)
+  srv_police_verification: {
+    id: 'srv_police_verification',
+    title: 'Police Verification',
+    hindiTitle: 'पुलिस वेरिफिकेशन (चरित्र प्रमाण पत्र)',
+    description: 'Apply for UP Police Character Verification Certificate (चरित्र प्रमाण पत्र) with official Thana (थाना) verification.',
+    icon: 'fa-solid fa-building-shield',
+    display_order: 4,
+    hasThana: true,
+    requirements: [
+      'Aadhar Card (Front + Back)',
+      'Passport Size Photo',
+      'थाने का नाम / Police Station (Thana)',
+      'Affidavit / Gram Pradhan Character Letter (यदि लागू हो)',
+    ],
+    uploadUrl: '/upload-police-verification',
+  },
+  // 5. Driving License
+  srv_driving: {
+    id: 'srv_driving',
+    title: 'Driving License',
+    hindiTitle: 'ड्राइविंग लाइसेंस (नया / नवीनीकरण)',
+    description: 'Apply for a new Learner / Driving License, Renewal, or Add Class of Vehicle.',
+    icon: 'fa-solid fa-id-badge',
+    display_order: 5,
+    requirements: [
+      'Aadhar Card (Front + Back)',
+      'Passport Size Photo',
+      'Age Proof (10th Result / Birth Certificate)',
+      'Medical Certificate (Form 1A - if applicable)',
+    ],
+    uploadUrl: '/upload-driving',
+  },
+  // 6. Voter ID Card
   srv_voterid: {
     id: 'srv_voterid',
     title: 'Voter ID Card',
     hindiTitle: 'वोटर आईडी (मतदाता पहचान पत्र)',
     description: 'Register as a new voter, download your digital voter card, or apply for corrections.',
     icon: 'fa-solid fa-id-card-clip',
-    display_order: 5,
+    display_order: 6,
     requirements: [
       'Aadhar Card / Age Proof (Birth Certificate or 10th Marksheet)',
       'One Passport Size Photograph',
@@ -82,14 +99,14 @@ export const SERVICES = {
     ],
     uploadUrl: '/upload-voterid',
   },
-  // 6. Ayushman Bharat Card
+  // 7. Ayushman Bharat Card
   srv_ayushman: {
     id: 'srv_ayushman',
     title: 'Ayushman Bharat Card',
     hindiTitle: 'आयुष्मान भारत कार्ड (₹5 लाख फ्री इलाज)',
     description: 'Apply or download Ayushman Golden Card for free hospital treatment up to ₹5 Lakhs.',
     icon: 'fa-solid fa-hospital',
-    display_order: 6,
+    display_order: 7,
     requirements: [
       'Aadhar Card',
       'Ration Card / PM Letter / Family ID',
@@ -97,14 +114,14 @@ export const SERVICES = {
     ],
     uploadUrl: '/upload-ayushman',
   },
-  // 7. Passport Seva (Placed behind Ayushman Card)
+  // 8. Passport Seva
   srv_passport: {
     id: 'srv_passport',
     title: 'Passport Seva',
     hindiTitle: 'पासपोर्ट सेवा (नया / री-इश्यू)',
     description: 'Fresh passport application, renewal, Tatkaal passport service assistance and appointment booking.',
     icon: 'fa-solid fa-passport',
-    display_order: 7,
+    display_order: 8,
     requirements: [
       'Aadhar Card',
       '10th Marksheet (for Non-ECR)',
@@ -113,14 +130,14 @@ export const SERVICES = {
     ],
     uploadUrl: '/upload-passport',
   },
-  // 8. PF / EPFO Claim
+  // 9. PF / EPFO Claim
   srv_pf: {
     id: 'srv_pf',
     title: 'PF / EPFO Claim',
     hindiTitle: 'पीएफ / पेंशन निकासी (EPFO Claim)',
     description: 'Apply for PF withdrawal (Form 19), Pension withdrawal (Form 10C), or Advance PF (Form 31).',
     icon: 'fa-solid fa-building-columns',
-    display_order: 8,
+    display_order: 9,
     requirements: [
       'UAN Number & Password',
       'Aadhar Card',
@@ -130,6 +147,29 @@ export const SERVICES = {
     uploadUrl: '/upload-pf',
   },
 };
+
+export const GHAZIPUR_THANAS = [
+  'कोतवाली (Kotwali Ghazipur)',
+  'जमानिया (Jamaniya)',
+  'मोहम्मदाबाद (Mohamdabad)',
+  'सैदपुर (Saidpur)',
+  'कासिमाबाद (Kasamabad)',
+  'जखानियां (Jakhaniya)',
+  'दिलदारनगर (Dildarnagar)',
+  'नंदगंज (Nandganj)',
+  'शादियाबाद (Shadiyabad)',
+  'जंगीपुर (Jangipur)',
+  'करंडा (Karanda)',
+  'गहमर (Gahmar)',
+  'सुहवल (Suhwal)',
+  'भांवरकोल (Bhanwarkol)',
+  'रेवतीपुर (Revatipur)',
+  'नोनहरा (Nonhara)',
+  'बहरियाबाद (Bahariyabad)',
+  'खानपुर (Khanpur)',
+  'बिरनो (Birno)',
+  'अन्य (Other Police Station)'
+];
 
 
 // Sub-service definitions for PAN Card group

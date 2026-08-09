@@ -11,7 +11,7 @@
     "build": "cd client && npm install --include=dev && npm run build",
     "postinstall": "cd client && npm install --include=dev && npm run build",
     "lint-staged": "lint-staged",
-    "prepare": "husky"
+    "prepare": "node -e \"if (process.env.NODE_ENV !== 'production' && !process.env.RENDER) { try { require('child_process').execSync('husky', { stdio: 'inherit' }); } catch (e) {} }\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

@@ -2034,30 +2034,18 @@ function UploadModal({
 
             {/* Thana / Police Station Field */}
             {isThanaRequired && (
-              <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: '0.9rem', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, color: 'var(--primary-color)' }}>
-                  <i className="fa-solid fa-building-shield"></i>
-                  थाना / Police Station (Thana) <span style={{ color: '#ef4444' }}>* (अनिवार्य / Mandatory)</span>
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <i className="fa-solid fa-building-shield" style={{ color: 'var(--primary-color)' }}></i>
+                  थाना / Police Station (Thana)
+                  <span style={{ color: '#ef4444', marginLeft: 4, fontWeight: 700 }}>* (अनिवार्य / Mandatory)</span>
                 </label>
-                <div style={{ position: 'relative', marginTop: '0.4rem' }}>
-                  <input
-                    type="text"
-                    list="ghazipur-thanas-list"
-                    ref={thanaRef}
-                    placeholder="अपना थाना चुनें या टाइप करें (उदा. कोतवाली, जमानिया, मोहम्मदाबाद, सैदपुर...)"
-                    required
-                    style={{ width: '100%', padding: '0.65rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
-                  />
-                  <datalist id="ghazipur-thanas-list">
-                    {(GHAZIPUR_THANAS || []).map((thana, tIdx) => (
-                      <option key={tIdx} value={thana} />
-                    ))}
-                  </datalist>
-                </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                  <i className="fa-solid fa-circle-info" style={{ marginRight: 4, color: 'var(--primary-color)' }}></i>
-                  सूची से अपना संबंधित थाना चुनें अथवा अपने थाने का नाम टाइप करें
-                </span>
+                <input
+                  type="text"
+                  ref={thanaRef}
+                  placeholder="अपने थाने का नाम लिखें (उदा. कोतवाली, जमानिया, मोहम्मदाबाद, सैदपुर...)"
+                  required
+                />
               </div>
             )}
 

@@ -78,14 +78,25 @@ app.use(helmet({
 app.use(compression());
 app.use(morgan('combined'));
 
-// Serve static frontend assets early so they are NOT blocked by CORS policies.
-// Serve from both public and client/dist to prevent Render cache issues
+// Serve static frontend assets with proper caching headers (no-cache for HTML to ensure instant live updates)
 const publicPath = path.join(__dirname, 'public');
 const distPath = path.join(__dirname, 'client', 'dist');
 
-app.use(express.static(publicPath));
+const staticOptions = {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html') || filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    } else if (filePath.includes(path.sep + 'assets' + path.sep) || filePath.includes('/assets/')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+};
+
+app.use(express.static(publicPath, staticOptions));
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, staticOptions));
 }
 
 // ── FIX 2: CORS — Lock to Allowed Origins ────────────────────────────────────

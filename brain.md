@@ -71,18 +71,21 @@ f:/chat bot/
 ├── brain.md                    # ← This file: Single Source of Truth
 ├── package.json                # Root scripts (dev, build:client, etc.)
 ├── server.js                   # Express backend ← +500 lines: WhatsApp routes, services API
+├── fonts/                      # ← NEW: Permanent Unicode fonts (Mangal, FreeSans, NotoSans) - immune to Vite build
 ├── data/
 │   ├── settings.json           # Shop settings & Admin config (persistent)
-│   └── supabase_migration.sql  # ← NEW: Run in Supabase SQL Editor
-├── public/                     # Static assets served by Express
+│   └── supabase_migration.sql  # ← Run in Supabase SQL Editor
+├── public/                     # Static assets served by Express (built by Vite)
 │   ├── abhi.jpg                # Abhishek's footer avatar
 │   ├── logo.jpeg               # Shop logo / favicon
 │   ├── prave.png               # Praveen's footer avatar
-│   └── n8n_whatsapp_workflow.json  # ← UPDATED: Dynamic services + upload session
+│   └── n8n_whatsapp_workflow.json  # Dynamic services + upload session
 └── client/                     # ← React (Vite) frontend app
     ├── index.html              # App entry point
     ├── vite.config.js          # Proxy /api → :3000, build outDir → ../public
     ├── package.json            # React deps
+    └── public/
+        └── fonts/              # ← Mirrored fonts copied into ../public/fonts during build
     └── src/
         ├── main.jsx            # React entry (createRoot)
         ├── App.jsx             # Root: hash router, tab state, layout
@@ -509,6 +512,8 @@ npm run build             # from f:\chat bot\
 | DEC-010 | Direct mode + n8n mode for WhatsApp | If N8N_WEBHOOK_URL is set, forward to n8n. Otherwise handle directly in Express. Allows testing without n8n. |
 | DEC-011 | Services stored in Supabase (not hardcoded) | Admin can add/remove/edit services without code changes. Keeps n8n workflow stable. |
 | DEC-012 | Bot Simulator falls back to hardcoded SERVICES | Allows simulator to work even if Supabase tables not yet created |
+| DEC-013 | Universal TTF Fonts for PDFKit (`Mangal`, `FreeSans`) | Single font supporting both Devanagari (Hindi) and Latin (English) to avoid mixed-script font switching bugs in PDFKit |
+| DEC-014 | Root `fonts/` directory outside `public/` | Vite build runs with `emptyOutDir: true` targeting `../public`; placing fonts in root `fonts/` prevents them from being wiped during production deployment |
 
 ---
 
@@ -553,34 +558,25 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **Active State**: All features built and verified. Complete 1-to-1 synchronization of all services and Top 4 fixed sequence live.
-- **What was just accomplished (v3.7.2 — 2026-08-09)**:
-  - **Fixed Top 4 Services Sequence in Database & Customer Portal**:
-    1. **AAY / JAATI / NIWAS** (आय / जाति / निवास प्रमाण पत्र) — `display_order: 1`
-    2. **PAN Card Apply** (पैन कार्ड नया एवं संशोधन) — `display_order: 2`
-    3. **Rashan Card** (राशन कार्ड नया एवं संशोधन) — `display_order: 3`
-    4. **Police Verification** (पुलिस वेरीफिकेशन / चरित्र प्रमाण पत्र) — `display_order: 4`
-    5. **Passport Seva** (पासपोर्ट सेवा) — `display_order: 5`
-    6. **Varasat Online** (वरासत हेतु आवेदन) — `display_order: 6`
-    7. **Bike Insurance (Third Party)** (वाहन बीमा) — `display_order: 7`
-  - **1-to-1 Full Service Synchronization**:
-    - Database `services` table is the exact single source of truth for Customer Portal.
-    - Added smart automatic icon mapping for all services (Certificate, PAN, Ration, Police, Passport, Varasat, Bike Insurance, etc.).
-    - Fixed keyword greedy overwriting bug in `CustomerPortal/index.jsx`.
-    - Pushed production commits (`b176621`, `f455718`, `8bc2b99`) to GitHub `main` branch.
-  - **Meta WhatsApp Billing Policy Context Documented**:
-    - Meta provides 1,000 free service conversations per month per WhatsApp Business Account (₹0 cost).
-    - Beyond 1,000 conversations, charge is ~₹0.30 - ₹0.35 per 24-hour customer conversation.
-    - Card verification is a ₹2 temporary refundable test.
-    - User postponed adding payment card to Meta Business Account (`Maa-Durga-Online` ID: `1044096971603756`) to a later date.
+- **Active State**: All features built and verified. PDF Receipt and Admin ZIP Summary Devanagari (Hindi) & English Unicode font rendering 100% verified on live production website (`https://durgaonline.info`).
+- **What was just accomplished (v3.7.4 — 2026-08-10)**:
+  - **Resolved PDF Receipt Hindi (Devanagari) & English (Latin) Broken Characters (`□□□`)**:
+    - Identified that `Helvetica` lacks Devanagari script support.
+    - Discovered that Vite client build on Render runs `emptyOutDir: true` targeting `../public`, which deleted `public/fonts/` during deployment and forced a fallback to `Helvetica`.
+    - Moved permanent fonts to dedicated root `fonts/` directory and mirrored in `client/public/fonts/`.
+    - Bundled `Mangal-Regular.ttf` & `Mangal-Bold.ttf` (for Windows dev) and `FreeSans.ttf` & `FreeSans-Bold.ttf` (for Linux/Render production) which support both Devanagari and Latin Unicode.
+    - Added `getUniversalFonts()` helper in `server.js` searching across `fonts/`, `public/fonts/`, and `client/public/fonts/`.
+    - Applied universal fonts and dynamic height box layout across both `/api/submissions/:id/receipt` and `generatePdfSummaryBuffer` (Admin ZIP download).
+    - Pushed production commits (`f7db085`, `3f69ebe`) to GitHub `main` branch.
+    - User tested on live production `https://durgaonline.info` and confirmed: **"done it is working"** ✅.
+- **What was previously accomplished (v3.7.2)**:
+  - Fixed Top 4 Services Sequence in Database & Customer Portal.
+  - 1-to-1 Full Service Synchronization between DB and frontend.
 - **What was previously accomplished (v3.7.0)**:
   - Services reordering, Police Verification with direct text Thana field, Admin Auto-Scroll to Top on Edit.
-- **What was previously accomplished (v3.5.0)**:
-  - Dynamic Service & Document Management (Admin Control): Full editable documents with 1-click mandatory/optional toggles.
 - **Admin Password**: `Pratap@135`
 - **WhatsApp Verify Token**: `maa_durga_verify_token_2026`
 - **WhatsApp Business Account ID**: `1044096971603756`
-- **Next Step**: Add payment card in Meta Business Suite when convenient → Test WhatsApp bot live.
 
 ---
 

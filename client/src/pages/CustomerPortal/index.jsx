@@ -1602,14 +1602,27 @@ function UploadModal({
     (service.documents || []).some(d => isThanaDoc(d.document_name)) ||
     (service.requirements || []).some(r => isThanaDoc(typeof r === 'string' ? r : ''));
 
-  const isRationService = service.id === 'srv_ration' ||
-    (service.slug || '').includes('ration') ||
-    (service.name || '').toLowerCase().includes('ration') ||
-    (service.name || '').toLowerCase().includes('राशन') ||
-    (service.title || '').toLowerCase().includes('ration') ||
-    (service.title || '').toLowerCase().includes('राशन') ||
+  const serviceText = [
+    service.id || '',
+    service.slug || '',
+    service.name || '',
+    service.title || '',
+    service.hindiTitle || '',
+    service.hindi_title || '',
+    service.description || ''
+  ].join(' ').toLowerCase();
+
+  const isRationService = Boolean(
+    service.isRation ||
+    service.id === 'srv_ration' ||
+    serviceText.includes('ration') ||
+    serviceText.includes('rashan') ||
+    serviceText.includes('rasan') ||
+    serviceText.includes('राशन') ||
+    serviceText.includes('रासन') ||
     (service.documents || []).some(d => isKotedarDoc(d.document_name)) ||
-    (service.requirements || []).some(r => isKotedarDoc(typeof r === 'string' ? r : ''));
+    (service.requirements || []).some(r => isKotedarDoc(typeof r === 'string' ? r : ''))
+  );
 
   const customTextFields = (service.documents || [])
     .filter(d => {
@@ -2493,11 +2506,23 @@ export default function CustomerPortal({
               svcName.includes('पुलिस') ||
               svcName.includes('चरित्र');
 
+            const isRationGroup = svcSlug === 'srv_ration' ||
+              svcSlug.includes('rashan') ||
+              svcSlug.includes('ration') ||
+              svcSlug.includes('rasan') ||
+              svcName.includes('rashan') ||
+              svcName.includes('ration') ||
+              svcName.includes('rasan') ||
+              svcName.includes('राशन') ||
+              svcName.includes('रासन') ||
+              (svc.hindi_title || '').includes('राशन') ||
+              (svc.hindi_title || '').includes('रासन');
+
             let bestIcon = svc.icon && svc.icon !== 'fa-solid fa-file' && svc.icon !== 'fa-solid fa-file-shield' ? svc.icon : null;
             if (!bestIcon) {
               if (isCertGroup) bestIcon = 'fa-solid fa-file-shield';
               else if (isPanGroup) bestIcon = 'fa-solid fa-address-card';
-              else if (svcSlug.includes('rashan') || svcSlug.includes('ration') || svcName.includes('राशन')) bestIcon = 'fa-solid fa-wheat-awn';
+              else if (isRationGroup) bestIcon = 'fa-solid fa-wheat-awn';
               else if (isPoliceGroup) bestIcon = 'fa-solid fa-building-shield';
               else if (svcSlug.includes('passport') || svcName.includes('पासपोर्ट')) bestIcon = 'fa-solid fa-passport';
               else if (svcSlug.includes('varasat') || svcName.includes('वरासत')) bestIcon = 'fa-solid fa-scroll';
@@ -2521,6 +2546,7 @@ export default function CustomerPortal({
               documents: svc.documents || [],
               isMerged: isCertGroup || isPanGroup,
               isPan: isPanGroup,
+              isRation: isRationGroup,
               hasThana: isPoliceGroup || (svc.documents || []).some(d => (d.document_name || '').toLowerCase().includes('thana') || (d.document_name || '').includes('थाना')),
               subServices: isCertGroup ? ['aay', 'jaati', 'niwas', 'all'] : (isPanGroup ? ['new_pan', 'pan_correction'] : undefined),
               uploadUrl: isCertGroup ? '/upload-certificates' : (isPanGroup ? '/upload-pancard' : `/upload-${svc.slug || svc.id}`)

@@ -574,7 +574,8 @@ npm run build             # from f:\chat bot\
     - Admin table in [AdminDashboard](file:///f:/chat%20bot/client/src/pages/AdminDashboard/index.jsx) now displays a sleek monospace App ID badge (`MD-D3B07384`) beneath the submission date.
     - Instant WhatsApp Admin notification and customer status update messages now include `🆔 *App ID:* MD-D3B07384`.
   - **3. Ration Card (राशन कार्ड) Dedicated Kotedar / Dealer Name Field**:
-    - Added `isKotedarDoc` and `isRationService` detectors in `UploadModal` in [CustomerPortal](file:///f:/chat%20bot/client/src/pages/CustomerPortal/index.jsx).
+    - Added `isKotedarDoc` and robust multi-variant `isRationService` detector in `UploadModal` in [CustomerPortal](file:///f:/chat%20bot/client/src/pages/CustomerPortal/index.jsx) (supporting `srv_ration`, `rashan-card`, `ration-card`, `Rashan Card`, `राशन`, `रासन`, `kotedar`, etc.).
+    - Synced `service_documents` table in Supabase to include `कोटेदार का नाम / Kotedar Name` row.
     - Added dedicated input box: `कोटेदार का नाम / Kotedar (Dealer) Name` with required validation.
     - Appends `[कोटेदार का नाम / Kotedar: <name>]` into the submission notes for the receipt and admin summary.
     - Filtered Kotedar out from file attachment checklist to avoid asking for unnecessary document uploads.

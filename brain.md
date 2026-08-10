@@ -579,6 +579,8 @@ npm run build             # from f:\chat bot\
     - Added dedicated input box: `कोटेदार का नाम / Kotedar (Dealer) Name` with required validation.
     - Appends `[कोटेदार का नाम / Kotedar: <name>]` into the submission notes for the receipt and admin summary.
     - Filtered Kotedar out from file attachment checklist to avoid asking for unnecessary document uploads.
+    - Pushed production commit (`b370468`) to GitHub `main` branch.
+    - User tested on live production `https://durgaonline.info` and confirmed: **"yes Aab sahi hai"** ✅.
 - **What was previously accomplished (v3.7.4)**:
   - Resolved PDF Receipt Hindi (Devanagari) & English (Latin) Broken Characters using permanent `fonts/` directory.
 - **What was previously accomplished (v3.7.2)**:

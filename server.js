@@ -804,13 +804,38 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
         .trim();
     };
 
-    // BUG-004 FIX: Previously used path.join(__dirname, 'C:\\Windows\\...') which is wrong
-    // path.join with an absolute path APPENDS it to __dirname instead of using it directly.
-    // Font only exists on Windows dev machine; on Linux/Render servers it won't be found.
-    const fontPath = process.platform === 'win32'
-      ? 'C:\\Windows\\Fonts\\ARIALUNI.TTF'
-      : '/usr/share/fonts/truetype/freefont/FreeSans.ttf';
-    const hasUnicodeFont = fs.existsSync(fontPath);
+    // ── FONT FIX v2: Use a SINGLE UNIVERSAL font supporting BOTH Hindi + English ──
+    // Problem: NotoSansDevanagari has no Latin glyphs → Latin text shows as □ boxes
+    // Solution: Use ONE font that supports BOTH Devanagari AND Latin scripts.
+    //
+    // Priority order:
+    //   1. Mangal-Regular.ttf (bundled from Windows, supports Devanagari + Latin) ← LOCAL DEV
+    //   2. FreeSans.ttf (GNU FreeFont, bundled, supports Devanagari + Latin) ← PRODUCTION
+    //   3. NotoSansDevanagari (Devanagari-only fallback — mixed text may still show boxes)
+    const fontsDir = path.join(__dirname, 'public', 'fonts');
+    const mangalPath     = path.join(fontsDir, 'Mangal-Regular.ttf');
+    const mangalBoldPath = path.join(fontsDir, 'Mangal-Bold.ttf');
+    const freeSansPath   = path.join(fontsDir, 'FreeSans.ttf');
+    const freeSansBoldPath = path.join(fontsDir, 'FreeSans-Bold.ttf');
+    const notoRegularPath  = path.join(fontsDir, 'NotoSans-Regular.ttf');
+    const notoBoldPath     = path.join(fontsDir, 'NotoSans-Bold.ttf');
+    const devanagariPath   = path.join(fontsDir, 'NotoSansDevanagari-Regular.ttf');
+
+    // Pick best available regular font (supports both Latin + Devanagari)
+    let universalRegular, universalBold;
+    if (fs.existsSync(mangalPath)) {
+      universalRegular = mangalPath;
+      universalBold    = fs.existsSync(mangalBoldPath) ? mangalBoldPath : mangalPath;
+    } else if (fs.existsSync(freeSansPath)) {
+      universalRegular = freeSansPath;
+      universalBold    = fs.existsSync(freeSansBoldPath) ? freeSansBoldPath : freeSansPath;
+    } else if (fs.existsSync(devanagariPath)) {
+      universalRegular = devanagariPath;
+      universalBold    = devanagariPath;
+    } else {
+      universalRegular = null; // will use Helvetica (Latin only — last resort)
+      universalBold    = null;
+    }
 
     // Set response headers for PDF streaming
     res.setHeader('Content-Type', 'application/pdf');
@@ -822,10 +847,24 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     // Pipe PDF directly to HTTP response stream
     doc.pipe(res);
 
-    // Register Unicode font when available
-    if (hasUnicodeFont) {
-      doc.registerFont('UnicodeFont', fontPath);
+    // Register fonts — 'Regular' and 'Bold' both support Hindi + Latin
+    if (universalRegular) {
+      doc.registerFont('Regular', universalRegular);
+      doc.registerFont('Bold', universalBold);
+    } else {
+      doc.registerFont('Regular', 'Helvetica');
+      doc.registerFont('Bold', 'Helvetica-Bold');
     }
+    // Also register NotoSans-Bold for English-only section headings (crisper look)
+    if (fs.existsSync(notoBoldPath)) {
+      doc.registerFont('HeadingBold', notoBoldPath);
+    } else {
+      doc.registerFont('HeadingBold', universalBold || 'Helvetica-Bold');
+    }
+
+    // Single font functions — all content uses Universal (Hindi+Latin) fonts
+    const fontForValue = () => 'Regular';   // Hindi + Latin data values
+    const fontForBold  = () => 'Bold';      // Hindi + Latin bold labels
 
     // Color Palette
     const primaryColor = '#0f172a';   // Slate Dark
@@ -836,18 +875,19 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
 
     // 1. Header Banner Box
     doc.rect(40, 40, 515, 65).fill(primaryColor);
-    doc.fillColor('#ffffff').fontSize(18).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text((settings.shopName || 'Maa Durga Online Center').toUpperCase(), 55, 52);
-    doc.fontSize(9).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica').fillColor('#94a3b8').text('CSC & ONLINE DIGITAL SERVICES PORTAL', 55, 75);
+    const shopNameText = (settings.shopName || 'Maa Durga Online Center').toUpperCase();
+    doc.fillColor('#ffffff').fontSize(18).font('Bold').text(shopNameText, 55, 52);
+    doc.fontSize(9).font('Regular').fillColor('#94a3b8').text('CSC & ONLINE DIGITAL SERVICES PORTAL', 55, 75);
     doc.text(`Contact: ${settings.shopPhone || 'N/A'}`, 55, 87);
 
     // 2. Subheader & Receipt Badge
-    doc.fillColor(accentColor).fontSize(14).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text('SERVICE APPLICATION RECEIPT', 40, 120);
+    doc.fillColor(accentColor).fontSize(14).font('Bold').text('SERVICE APPLICATION RECEIPT', 40, 120);
 
     // Decorative Line
     doc.moveTo(40, 140).lineTo(555, 140).strokeColor(accentColor).lineWidth(2).stroke();
 
     // 3. Shop & Receipt Metadata Info
-    doc.fontSize(9).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica').fillColor(textColor);
+    doc.fontSize(9).font('Regular').fillColor(textColor);
     doc.text(`Shop Address: ${settings.shopAddress || 'N/A'}`, 40, 150, { width: 280 });
     
     const formattedDate = new Date(submission.created_at || submission.createdAt || Date.now()).toLocaleString('en-IN', {
@@ -860,16 +900,28 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
 
     doc.moveTo(40, 185).lineTo(555, 185).strokeColor(borderColor).lineWidth(1).stroke();
 
-    // 4. Details Table Container Box
+    // 4. Details Box — dynamic height based on remarks length
     const startY = 200;
-    doc.rect(40, startY, 515, 205).fillAndStroke(lightBg, borderColor);
+    const remarksRaw = normalizeText(submission.remarks || submission.notes || 'No additional remarks.');
+    const serviceRaw = normalizeText(submission.service || submission.serviceName);
+    const fileCount = (submission.files && Array.isArray(submission.files)) ? submission.files.length : 0;
 
-    doc.fillColor(accentColor).fontSize(11).font('Helvetica-Bold').text('APPLICATION AND CUSTOMER DETAILS', 55, startY + 12);
+    // Estimate remarks height: ~14pt per 60 chars, minimum 1 line
+    const remarksLineCount = Math.max(1, Math.ceil(remarksRaw.length / 58));
+    const remarksHeight = remarksLineCount * 14;
+    // Estimate service name height
+    const serviceLineCount = Math.max(1, Math.ceil(serviceRaw.length / 58));
+    const serviceHeight = serviceLineCount * 14;
+
+    const boxHeight = 38 + 20 + 20 + serviceHeight + 20 + remarksHeight + 20 + 20;
+    doc.rect(40, startY, 515, boxHeight).fillAndStroke(lightBg, borderColor);
+
+    doc.fillColor(accentColor).fontSize(11).font('Bold').text('APPLICATION AND CUSTOMER DETAILS', 55, startY + 12);
     doc.moveTo(55, startY + 28).lineTo(540, startY + 28).strokeColor(borderColor).lineWidth(1).stroke();
 
-    // Helper row drawer
+    // Helper row drawer — supports multi-line values properly
     const drawDetailRow = (label, value, yPos, isStatus = false) => {
-      doc.fillColor('#64748b').fontSize(10).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text(label, 55, yPos);
+      doc.fillColor('#64748b').fontSize(10).font(fontForBold()).text(label, 55, yPos);
       
       if (isStatus) {
         const statusUpper = (value || 'PENDING').toUpperCase();
@@ -877,32 +929,39 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
         if (statusUpper === 'COMPLETED') statusColor = '#16a34a';
         if (statusUpper === 'IN-PROGRESS' || statusUpper === 'IN PROGRESS') statusColor = '#2563eb';
         if (statusUpper === 'REJECTED') statusColor = '#dc2626';
-
-        doc.fillColor(statusColor).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').fontSize(10).text(statusUpper, 200, yPos);
+        doc.fillColor(statusColor).font(fontForBold()).fontSize(10).text(statusUpper, 200, yPos);
       } else {
-        doc.fillColor(textColor).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica').fontSize(10).text(value || 'N/A', 200, yPos, { width: 330 });
+        doc.fillColor(textColor).font(fontForValue()).fontSize(10).text(value || 'N/A', 200, yPos, { width: 330 });
       }
     };
 
-    drawDetailRow('Application ID:', normalizeText(submission.id), startY + 38);
-    drawDetailRow('Customer Name:', normalizeText(submission.name || submission.clientName), startY + 58);
-    drawDetailRow('Mobile Number:', normalizeText(submission.phone || submission.clientPhone), startY + 78);
-    drawDetailRow('Service Name:', normalizeText(submission.service || submission.serviceName), startY + 98);
-    drawDetailRow('Application Status:', normalizeText(submission.status), startY + 118, true);
-    drawDetailRow('Remarks / Notes:', normalizeText(submission.remarks || submission.notes || 'No additional remarks.'), startY + 138);
+    let rowY = startY + 38;
+    drawDetailRow('Application ID:', normalizeText(submission.id), rowY);
+    rowY += 20;
+    drawDetailRow('Customer Name:', normalizeText(submission.name || submission.clientName), rowY);
+    rowY += 20;
+    drawDetailRow('Mobile Number:', normalizeText(submission.phone || submission.clientPhone), rowY);
+    rowY += 20;
+    // Service Name — may be multi-line (Hindi title)
+    drawDetailRow('Service Name:', serviceRaw, rowY);
+    rowY += serviceHeight + 6;
+    drawDetailRow('Application Status:', normalizeText(submission.status), rowY, true);
+    rowY += 20;
+    // Remarks — may be very long
+    drawDetailRow('Remarks / Notes:', remarksRaw, rowY);
+    rowY += remarksHeight + 6;
+    drawDetailRow('Uploaded Documents:', `${fileCount} file attachment(s)`, rowY);
 
-    const fileCount = (submission.files && Array.isArray(submission.files)) ? submission.files.length : 0;
-    drawDetailRow('Uploaded Documents:', normalizeText(`${fileCount} file attachment(s)`), startY + 175);
-
-    // 5. Uploaded Document List (if present)
-    let currentY = startY + 220;
+    // 5. Uploaded Document List (file names)
+    let currentY = startY + boxHeight + 15;
     if (fileCount > 0) {
-      doc.fillColor(primaryColor).fontSize(10).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica-Bold').text('Attached File Names:', 40, currentY);
+      doc.fillColor(primaryColor).fontSize(10).font('Bold').text('Attached File Names:', 40, currentY);
       currentY += 15;
 
       submission.files.forEach((f) => {
         const sizeKb = f.size ? (f.size / 1024).toFixed(1) : 'N/A';
-        doc.fillColor(textColor).fontSize(9).font(hasUnicodeFont ? 'UnicodeFont' : 'Helvetica').text(`  • ${normalizeText(f.originalname || f.filename)} (${sizeKb} KB)`, 50, currentY);
+        const fname = normalizeText(f.originalname || f.filename);
+        doc.fillColor(textColor).fontSize(9).font(fontForValue()).text(`  • ${fname} (${sizeKb} KB)`, 50, currentY, { width: 475 });
         currentY += 14;
       });
       currentY += 10;
@@ -912,18 +971,17 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
 
     // 6. Customer Notice Box
     doc.rect(40, currentY, 515, 55).fillAndStroke('#eff6ff', '#bfdbfe');
-      doc.fillColor('#1e40af').fontSize(10).font('Helvetica-Bold').text('Important Notice for Customer:', 55, currentY + 10);
-      // BUG-008 FIX: Missing x, y coordinates caused text to render at wrong position overlapping prior content.
-      doc.fillColor('#1e3a8a').fontSize(9).font('Helvetica').text(
-        'Keep this digital receipt safe. Use the Application ID when you ask about your request or contact support.',
-        55, currentY + 24, { width: 485 }
+    doc.fillColor('#1e40af').fontSize(10).font('Bold').text('Important Notice for Customer:', 55, currentY + 10);
+    doc.fillColor('#1e3a8a').fontSize(9).font('Regular').text(
+      'Keep this digital receipt safe. Use the Application ID when you ask about your request or contact support.',
+      55, currentY + 24, { width: 485 }
     );
 
     // 7. Footer Bar
-    const footerY = 730;
+    const footerY = Math.max(currentY + 75, 730);
     doc.moveTo(40, footerY).lineTo(555, footerY).strokeColor(borderColor).lineWidth(1).stroke();
 
-    doc.fillColor('#94a3b8').fontSize(8).font('Helvetica').text(
+    doc.fillColor('#94a3b8').fontSize(8).font('Regular').text(
       `Generated automatically by ${settings.shopName || 'Cyber Cafe Portal System'} • Timings: ${settings.shopTimings || '9 AM - 8 PM'}`,
       40, footerY + 10, { align: 'center', width: 515 }
     );

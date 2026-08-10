@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.7.2` (Top 4 Fixed Services Sequence & 1-to-1 Service Management Sync)
+- **Version**: `3.7.3` (PDF Receipt Font Fix — Hindi/Unicode rendering corrected)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -295,6 +295,13 @@ npm run build             # from f:\chat bot\
 ---
 
 ## 📜 Changelog
+
+- **2026-08-10 (v3.7.3 — PDF Receipt Font Fix — Hindi/Unicode Rendering)**:
+  - **Root Cause Identified**: PDF receipt was using `Helvetica` (default PDFKit font) which does NOT support Hindi/Devanagari script. On production Linux (Render), `FreeSans.ttf` was not present either.
+  - **Fix**: Bundled 4 Google Fonts TTF files into `public/fonts/`: `NotoSans-Regular.ttf`, `NotoSans-Bold.ttf`, `NotoSansDevanagari-Regular.ttf`, `NotoSansDevanagari-Bold.ttf`.
+  - **Smart Font Detection**: Added `hasDevanagari()` detector — automatically uses `NotoSansDevanagari` font when Hindi text is detected in Service Name, Remarks, etc., and `NotoSans` for all English/Latin text.
+  - **Dynamic Box Height**: Fixed remarks/notes overflow — details box now auto-expands based on remarks length (no more text outside box / overlap issues).
+  - **Layout Fix**: All section positions are now dynamic (`currentY` tracked properly) — no fixed `footerY=730` overlap on long receipts.
 
 - **2026-08-09 (v3.4.2 — PAN Card & Correction Age Proof Mandatory Update)**:
   - **PAN Card & Correction Age Proof Update**: Configured **`उम्र प्रमाण पत्र / Age Proof (Voter ID / Birth Certificate / 10th Result)`** as a mandatory document for both **New PAN Card** and **PAN Card Correction** applications across [constants/services.js](file:///f:/chat%20bot/client/src/constants/services.js) and [CustomerPortal/index.jsx](file:///f:/chat%20bot/client/src/pages/CustomerPortal/index.jsx).

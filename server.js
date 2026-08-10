@@ -241,6 +241,18 @@ const saveSettings = (settings) => {
   }
 };
 
+/**
+ * Helper function to format submission UUID into a clean, professional Application ID
+ * e.g. 'MD-D3B07384' instead of a raw 36-char UUID.
+ */
+const formatApplicationId = (id) => {
+  if (!id) return 'MD-00000000';
+  const str = String(id).trim();
+  if (/^MD(-[A-Z0-9]+)+$/i.test(str)) return str.toUpperCase();
+  const hex = str.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  return `MD-${hex.slice(0, 8)}`;
+};
+
 // ── Admin Auth Middleware — JWT with x-admin-password fallback ──────────────
 const checkAdmin = (req, res, next) => {
   let token;
@@ -492,11 +504,12 @@ const handleUploadAndSubmission = async (req, res) => {
       const adminPhone = process.env.ADMIN_PHONE_NUMBER || settings.shopPhone || '918707845206';
       const cleanAdminPhone = adminPhone.replace(/[^0-9]/g, '');
       const docCount = (uploadedFiles || []).length;
+      const appIdFormatted = formatApplicationId(insertedRecord?.id);
       
-      const adminNotifMsg = `🔔 *New Application Received!*\n\n👤 *Customer Name:* ${name}\n📞 *WhatsApp / Phone:* ${phone}\n${email ? `✉️ *Email ID:* ${email}\n` : ''}📋 *Service:* ${service}\n📄 *Uploaded Documents:* ${docCount} file(s)\n${remarks ? `📝 *Details / Notes:* ${remarks}\n` : ''}\n🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n_Log in to view documents & process application._`;
+      const adminNotifMsg = `🔔 *New Application Received!*\n\n🆔 *App ID:* ${appIdFormatted}\n👤 *Customer Name:* ${name}\n📞 *WhatsApp / Phone:* ${phone}\n${email ? `✉️ *Email ID:* ${email}\n` : ''}📋 *Service:* ${service}\n📄 *Uploaded Documents:* ${docCount} file(s)\n${remarks ? `📝 *Details / Notes:* ${remarks}\n` : ''}\n🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n_Log in to view documents & process application._`;
 
       await sendWhatsAppMessage(cleanAdminPhone, adminNotifMsg);
-      console.log(`[WhatsApp Admin Notification] Sent to ${cleanAdminPhone}`);
+      console.log(`[WhatsApp Admin Notification] Sent to ${cleanAdminPhone} (App ID: ${appIdFormatted})`);
     } catch (notifErr) {
       console.error('[WhatsApp Admin Notification Error]:', notifErr.message);
     }
@@ -505,6 +518,7 @@ const handleUploadAndSubmission = async (req, res) => {
       success: true,
       message: "Application submitted successfully to Supabase!",
       id: insertedRecord ? insertedRecord.id : null,
+      applicationId: insertedRecord ? formatApplicationId(insertedRecord.id) : null,
       submission: insertedRecord
     });
 
@@ -628,20 +642,21 @@ const handleStatusUpdate = async (req, res) => {
         const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
         const settings = getSettings();
         const shopName = settings.shopName || 'Maa Durga Online Center';
+        const appIdFormatted = formatApplicationId(updatedRecord.id);
         
         let statusMsg = '';
         const statusLower = (status || '').toLowerCase();
         if (statusLower === 'completed') {
-          statusMsg = `🎉 *Application Completed! - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\nAapka *${updatedRecord.service}* application poora ho gaya hai! ✅\n${remarks ? `📝 Notes: ${remarks}\n` : ''}\nAap dukan par aakar document le sakte hain. 🙏`;
+          statusMsg = `🎉 *Application Completed! - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\n🆔 *App ID:* ${appIdFormatted}\nAapka *${updatedRecord.service}* application poora ho gaya hai! ✅\n${remarks ? `📝 Notes: ${remarks}\n` : ''}\nAap dukan par aakar document le sakte hain. 🙏`;
         } else if (statusLower === 'in progress' || statusLower === 'in_progress') {
-          statusMsg = `⏳ *Application Update - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\nAapke *${updatedRecord.service}* application par kaam shuru ho gaya hai. Status: *In Progress* 🔄\n${remarks ? `📝 Notes: ${remarks}\n` : ''}`;
+          statusMsg = `⏳ *Application Update - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\n🆔 *App ID:* ${appIdFormatted}\nAapke *${updatedRecord.service}* application par kaam shuru ho gaya hai. Status: *In Progress* 🔄\n${remarks ? `📝 Notes: ${remarks}\n` : ''}`;
         } else if (statusLower === 'rejected') {
-          statusMsg = `⚠️ *Application Update - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\nAapke *${updatedRecord.service}* application me issue paaya gaya hai.\n${remarks ? `📝 Reason: ${remarks}\n` : ''}\nPlease center se sampark karein.`;
+          statusMsg = `⚠️ *Application Update - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\n🆔 *App ID:* ${appIdFormatted}\nAapke *${updatedRecord.service}* application me issue paaya gaya hai.\n${remarks ? `📝 Reason: ${remarks}\n` : ''}\nPlease center se sampark karein.`;
         }
 
         if (statusMsg) {
           await sendWhatsAppMessage(formattedPhone, statusMsg);
-          console.log(`[WhatsApp Customer Notification] Sent status update to ${formattedPhone}`);
+          console.log(`[WhatsApp Customer Notification] Sent status update to ${formattedPhone} (App ID: ${appIdFormatted})`);
         }
       } catch (custNotifErr) {
         console.error('[WhatsApp Customer Status Notification Error]:', custNotifErr.message);
@@ -785,6 +800,7 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
   try {
     const rawId = (req.params.id || '').trim();
     const hyphenatedId = rawId.replace(/\s+/g, '-');
+    const cleanId = rawId.replace(/^MD-?/i, '').replace(/[\s-]/g, '').toLowerCase();
 
     // Fetch submission from Supabase using flexible ID matching
     let data = null;
@@ -798,12 +814,15 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     data = queryRes.data;
     error = queryRes.error;
 
-    // Fallback search: match normalized string if not found
-    if ((!data || data.length === 0)) {
+    // Fallback search: match normalized string or short ID prefix if not found
+    if (!data || data.length === 0) {
       const allRes = await supabase.from('submissions').select('*').limit(100);
       if (allRes.data && allRes.data.length > 0) {
         const targetNorm = rawId.replace(/[\s-]/g, '').toLowerCase();
-        const found = allRes.data.find(s => (s.id || '').replace(/[\s-]/g, '').toLowerCase() === targetNorm);
+        const found = allRes.data.find(s => {
+          const sNorm = (s.id || '').replace(/[\s-]/g, '').toLowerCase();
+          return sNorm === targetNorm || sNorm === cleanId || sNorm.startsWith(cleanId) || sNorm.includes(cleanId);
+        });
         if (found) data = [found];
       }
     }
@@ -837,6 +856,7 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
 
     const submission = data[0];
     const settings = getSettings();
+    const appIdFormatted = formatApplicationId(submission.id);
 
     const normalizeText = (value) => {
       if (!value && value !== 0) return 'N/A';
@@ -858,7 +878,7 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
 
     // Set response headers for PDF streaming
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="Receipt_${submission.id}.pdf"`);
+    res.setHeader('Content-Disposition', `inline; filename="Receipt_${appIdFormatted}.pdf"`);
 
     // Create PDF document instance (A4 size with 40pt margins)
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
@@ -903,7 +923,7 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     });
     
     doc.text(`Date and Time: ${formattedDate}`, 320, 150, { align: 'right' });
-    doc.text(`Application ID: ${submission.id}`, 320, 165, { align: 'right' });
+    doc.text(`Application ID: ${appIdFormatted}`, 320, 165, { align: 'right' });
 
     doc.moveTo(40, 185).lineTo(555, 185).strokeColor(borderColor).lineWidth(1).stroke();
 
@@ -943,7 +963,7 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     };
 
     let rowY = startY + 38;
-    drawDetailRow('Application ID:', normalizeText(submission.id), rowY);
+    drawDetailRow('Application ID:', appIdFormatted, rowY);
     rowY += 20;
     drawDetailRow('Customer Name:', normalizeText(submission.name || submission.clientName), rowY);
     rowY += 20;
@@ -1022,6 +1042,7 @@ const generatePdfSummaryBuffer = (submission, settings) => {
 
       const fontForValue = () => 'Regular';
       const fontForBold  = () => 'Bold';
+      const appIdFormatted = formatApplicationId(submission.id);
 
       const normalizeText = (value) => {
         if (!value && value !== 0) return 'N/A';
@@ -1067,7 +1088,7 @@ const generatePdfSummaryBuffer = (submission, settings) => {
       });
 
       pdfDoc.text(`Date and Time: ${formattedDate}`, 320, 150, { align: 'right' });
-      pdfDoc.text(`Application ID: ${submission.id}`, 320, 165, { align: 'right' });
+      pdfDoc.text(`Application ID: ${appIdFormatted}`, 320, 165, { align: 'right' });
 
       pdfDoc.moveTo(40, 185).lineTo(555, 185).strokeColor(borderColor).lineWidth(1).stroke();
 
@@ -1104,7 +1125,7 @@ const generatePdfSummaryBuffer = (submission, settings) => {
       };
 
       let rowY = startY + 38;
-      drawRow('Application ID:', normalizeText(submission.id), rowY);
+      drawRow('Application ID:', appIdFormatted, rowY);
       rowY += 20;
       drawRow('Customer Name:', normalizeText(submission.name || submission.clientName), rowY);
       rowY += 20;
@@ -1168,6 +1189,7 @@ const handleZipDownload = async (req, res) => {
   try {
     const rawId = (req.params.id || '').trim();
     const hyphenatedId = rawId.replace(/\s+/g, '-');
+    const cleanId = rawId.replace(/^MD-?/i, '').replace(/[\s-]/g, '').toLowerCase();
 
     // Fetch submission record from Supabase
     let data = null;
@@ -1185,7 +1207,10 @@ const handleZipDownload = async (req, res) => {
       const allRes = await supabase.from('submissions').select('*').limit(100);
       if (allRes.data && allRes.data.length > 0) {
         const targetNorm = rawId.replace(/[\s-]/g, '').toLowerCase();
-        const found = allRes.data.find(s => (s.id || '').replace(/[\s-]/g, '').toLowerCase() === targetNorm);
+        const found = allRes.data.find(s => {
+          const sNorm = (s.id || '').replace(/[\s-]/g, '').toLowerCase();
+          return sNorm === targetNorm || sNorm === cleanId || sNorm.startsWith(cleanId) || sNorm.includes(cleanId);
+        });
         if (found) data = [found];
       }
     }
@@ -1196,12 +1221,13 @@ const handleZipDownload = async (req, res) => {
 
     const submission = data[0];
     const settings = getSettings();
+    const appIdFormatted = formatApplicationId(submission.id);
 
     // 1. Generate PDF summary buffer
     const pdfBuffer = await generatePdfSummaryBuffer(submission, settings);
 
     // 2. Set HTTP response headers for ZIP download stream
-    const zipFilename = `Submission_${submission.id}.zip`;
+    const zipFilename = `Submission_${appIdFormatted}.zip`;
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
 
@@ -1219,7 +1245,7 @@ const handleZipDownload = async (req, res) => {
     archive.pipe(res);
 
     // 4. Append PDF summary buffer to archive
-    archive.append(pdfBuffer, { name: 'Customer_Details.pdf' });
+    archive.append(pdfBuffer, { name: `Customer_Details_${appIdFormatted}.pdf` });
 
     // 5. Download and append original customer files from Supabase Storage
     if (submission.files && Array.isArray(submission.files) && submission.files.length > 0) {

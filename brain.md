@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.7.4` (Production PDF Receipt Font Persistence Fix — Vite build font safety)
+- **Version**: `3.8.0` (Combined Certificate Vyavsay, Clean App ID Formatting, Ration Card Kotedar Field)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -56,6 +56,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Phase 11: WhatsApp Upload Link Routing to Full Certificate Form ✅
   - Phase 12: Shop Name Rebranding to "Maa Durga Online Center" ✅
   - Phase 13: Instant Admin WhatsApp Notifications to Owner (`+91 87078 45206`) ✅
+  - Phase 14: Combined Form Vyavsay Select, Clean Application ID Formatting, Ration Card Kotedar Field ✅
 - **Pending Work**: None (Fully operational and live)
 
 ---
@@ -558,20 +559,29 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **Active State**: All features built and verified. PDF Receipt and Admin ZIP Summary Devanagari (Hindi) & English Unicode font rendering 100% verified on live production website (`https://durgaonline.info`).
-- **What was just accomplished (v3.7.4 — 2026-08-10)**:
-  - **Resolved PDF Receipt Hindi (Devanagari) & English (Latin) Broken Characters (`□□□`)**:
-    - Identified that `Helvetica` lacks Devanagari script support.
-    - Discovered that Vite client build on Render runs `emptyOutDir: true` targeting `../public`, which deleted `public/fonts/` during deployment and forced a fallback to `Helvetica`.
-    - Moved permanent fonts to dedicated root `fonts/` directory and mirrored in `client/public/fonts/`.
-    - Bundled `Mangal-Regular.ttf` & `Mangal-Bold.ttf` (for Windows dev) and `FreeSans.ttf` & `FreeSans-Bold.ttf` (for Linux/Render production) which support both Devanagari and Latin Unicode.
-    - Added `getUniversalFonts()` helper in `server.js` searching across `fonts/`, `public/fonts/`, and `client/public/fonts/`.
-    - Applied universal fonts and dynamic height box layout across both `/api/submissions/:id/receipt` and `generatePdfSummaryBuffer` (Admin ZIP download).
-    - Pushed production commits (`f7db085`, `3f69ebe`) to GitHub `main` branch.
-    - User tested on live production `https://durgaonline.info` and confirmed: **"done it is working"** ✅.
+- **Active State**: All requested changes built and verified. Vite client production bundle compiled cleanly.
+- **What was just accomplished (v3.8.0 — 2026-08-10)**:
+  - **1. Combined Certificate Form ("Sabhi / All Certificates") Occupation (व्यवसाय) Field**:
+    - Added `{ name: 'vyavsay', label: 'व्यवसाय / Occupation', type: 'select', options: ['कृषि', 'मजदूरी', 'व्यापार', 'नौकरी', 'अन्य'], required: true }` into `CERTIFICATE_TYPES.all` in [services.js](file:///f:/chat%20bot/client/src/constants/services.js).
+    - Now users applying for all 3 certificates (Aay + Jaati + Niwas) together can select their occupation just like in the individual Aay form.
+    - If `नौकरी` is chosen, the conditional salary slip upload requirement and validation triggers automatically.
+  - **2. Clean & Professional Application ID Formatting (e.g. `MD-D3B07384`)**:
+    - Resolved the long raw UUID issue (`d3b07384-d113-40e1-a08b-4b2e88a38c20`) on PDF receipts and Admin downloads.
+    - Implemented `formatApplicationId(id)` helper producing concise, uppercase formatted IDs (e.g. `MD-D3B07384`).
+    - Updated `GET /api/submissions/:id/receipt`: PDF header metadata, details table row, and download filename now display `Receipt_MD-D3B07384.pdf`.
+    - Enhanced route lookup to support both raw UUIDs and short IDs (`MD-D3B07384` / `D3B07384`).
+    - Updated `generatePdfSummaryBuffer` and `handleZipDownload`: ZIP package named `Submission_MD-D3B07384.zip` containing `Customer_Details_MD-D3B07384.pdf`.
+    - Admin table in [AdminDashboard](file:///f:/chat%20bot/client/src/pages/AdminDashboard/index.jsx) now displays a sleek monospace App ID badge (`MD-D3B07384`) beneath the submission date.
+    - Instant WhatsApp Admin notification and customer status update messages now include `🆔 *App ID:* MD-D3B07384`.
+  - **3. Ration Card (राशन कार्ड) Dedicated Kotedar / Dealer Name Field**:
+    - Added `isKotedarDoc` and `isRationService` detectors in `UploadModal` in [CustomerPortal](file:///f:/chat%20bot/client/src/pages/CustomerPortal/index.jsx).
+    - Added dedicated input box: `कोटेदार का नाम / Kotedar (Dealer) Name` with required validation.
+    - Appends `[कोटेदार का नाम / Kotedar: <name>]` into the submission notes for the receipt and admin summary.
+    - Filtered Kotedar out from file attachment checklist to avoid asking for unnecessary document uploads.
+- **What was previously accomplished (v3.7.4)**:
+  - Resolved PDF Receipt Hindi (Devanagari) & English (Latin) Broken Characters using permanent `fonts/` directory.
 - **What was previously accomplished (v3.7.2)**:
   - Fixed Top 4 Services Sequence in Database & Customer Portal.
-  - 1-to-1 Full Service Synchronization between DB and frontend.
 - **What was previously accomplished (v3.7.0)**:
   - Services reordering, Police Verification with direct text Thana field, Admin Auto-Scroll to Top on Edit.
 - **Admin Password**: `Pratap@135`

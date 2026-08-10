@@ -1578,6 +1578,11 @@ function UploadModal({
     return l.includes('thana') || l.includes('थाना') || l.includes('police station');
   };
 
+  const isKotedarDoc = (name) => {
+    const l = (name || '').toLowerCase().trim();
+    return l.includes('kotedar') || l.includes('कोटेदार') || l.includes('dealer') || l.includes('डीलर');
+  };
+
   const isEmailRequired = service.email_requirement === 'required' ||
     (service.documents || []).some(d => isEmailDoc(d.document_name) && d.is_required !== false) ||
     (service.requirements || []).some(r => isEmailDoc(typeof r === 'string' ? r : ''));
@@ -1597,10 +1602,19 @@ function UploadModal({
     (service.documents || []).some(d => isThanaDoc(d.document_name)) ||
     (service.requirements || []).some(r => isThanaDoc(typeof r === 'string' ? r : ''));
 
+  const isRationService = service.id === 'srv_ration' ||
+    (service.slug || '').includes('ration') ||
+    (service.name || '').toLowerCase().includes('ration') ||
+    (service.name || '').toLowerCase().includes('राशन') ||
+    (service.title || '').toLowerCase().includes('ration') ||
+    (service.title || '').toLowerCase().includes('राशन') ||
+    (service.documents || []).some(d => isKotedarDoc(d.document_name)) ||
+    (service.requirements || []).some(r => isKotedarDoc(typeof r === 'string' ? r : ''));
+
   const customTextFields = (service.documents || [])
     .filter(d => {
       const name = (d.document_name || '').toLowerCase().trim();
-      if (isEmailDoc(name) || isThanaDoc(name)) return false;
+      if (isEmailDoc(name) || isThanaDoc(name) || isKotedarDoc(name)) return false;
       return (
         name.includes('number') ||
         name.includes('नंबर') ||
@@ -1645,6 +1659,7 @@ function UploadModal({
   const phoneRef = useRef();
   const emailRef = useRef();
   const thanaRef = useRef();
+  const kotedarRef = useRef();
   const notesRef = useRef();
 
   if (!service) return null;
@@ -1679,6 +1694,7 @@ function UploadModal({
 
     const emailVal = emailRef.current ? emailRef.current.value.trim() : '';
     const thanaVal = thanaRef.current ? thanaRef.current.value.trim() : '';
+    const kotedarVal = kotedarRef.current ? kotedarRef.current.value.trim() : '';
 
     if (isEmailRequired && !emailVal) {
       showToast(
@@ -1699,6 +1715,14 @@ function UploadModal({
     if (isThanaRequired && !thanaVal) {
       showToast(
         'कृपया अपने संबंधित थाने (Police Station) का नाम चुनें या दर्ज करें।',
+        'error'
+      );
+      return;
+    }
+
+    if (isRationService && !kotedarVal) {
+      showToast(
+        'कृपया अपने कोटेदार का नाम दर्ज करें। / Please enter Kotedar (Dealer) Name.',
         'error'
       );
       return;
@@ -1768,10 +1792,11 @@ function UploadModal({
       service.name
     );
 
-    // Combine email, thana, custom fields, and user notes
+    // Combine email, thana, kotedar, custom fields, and user notes
     const notesParts = [];
     if (emailVal) notesParts.push(`[Email: ${emailVal}]`);
     if (thanaVal) notesParts.push(`[थाना / Police Station: ${thanaVal}]`);
+    if (kotedarVal) notesParts.push(`[कोटेदार का नाम / Kotedar: ${kotedarVal}]`);
     Object.entries(customFieldValues).forEach(([k, v]) => {
       if (v && v.trim()) notesParts.push(`[${k}: ${v.trim()}]`);
     });
@@ -1855,7 +1880,7 @@ function UploadModal({
     ? service.documents.map(d => d.document_name)
     : (service.requirements || []);
 
-  const fileRequirementsList = rawList.filter(r => !isEmailDoc(r) && !isThanaDoc(r) && !customFieldNamesSet.has(r));
+  const fileRequirementsList = rawList.filter(r => !isEmailDoc(r) && !isThanaDoc(r) && !isKotedarDoc(r) && !customFieldNamesSet.has(r));
 
   return (
     <div
@@ -2051,6 +2076,23 @@ function UploadModal({
                   type="text"
                   ref={thanaRef}
                   placeholder="अपने थाने का नाम लिखें (उदा. कोतवाली, जमानिया, मोहम्मदाबाद, सैदपुर...)"
+                  required
+                />
+              </div>
+            )}
+
+            {/* Kotedar / Ration Dealer Field (for Ration Card) */}
+            {isRationService && (
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <i className="fa-solid fa-wheat-awn" style={{ color: 'var(--primary-color)' }}></i>
+                  कोटेदार का नाम / Kotedar (Dealer) Name
+                  <span style={{ color: '#ef4444', marginLeft: 4, fontWeight: 700 }}>* (अनिवार्य / Mandatory)</span>
+                </label>
+                <input
+                  type="text"
+                  ref={kotedarRef}
+                  placeholder="अपने कोटेदार (राशन डीलर) का नाम दर्ज करें"
                   required
                 />
               </div>

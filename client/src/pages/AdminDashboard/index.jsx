@@ -7,6 +7,14 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function formatAppId(id) {
+  if (!id) return 'MD-00000000';
+  const str = String(id).trim();
+  if (/^MD(-[A-Z0-9]+)+$/i.test(str)) return str.toUpperCase();
+  const hex = str.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  return `MD-${hex.slice(0, 8)}`;
+}
+
 function LoginCard({ onLogin }) {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -174,7 +182,23 @@ function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
     const dateStr = new Date(sub.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
     return (
       <tr key={sub.id} data-status={rows[sub.id]?.status || sub.status}>
-        <td>{dateStr}</td>
+        <td>
+          <div style={{ fontWeight: 600 }}>{dateStr}</div>
+          <div style={{
+            fontSize: '0.74rem',
+            color: 'var(--primary-color)',
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            marginTop: '3px',
+            background: 'rgba(245, 158, 11, 0.12)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            padding: '1px 6px',
+            borderRadius: '4px',
+            display: 'inline-block'
+          }}>
+            {formatAppId(sub.id)}
+          </div>
+        </td>
         <td>
           <div className="cust-name">{sub.clientName}</div>
           <div className="cust-phone"><i className="fa-brands fa-whatsapp"></i> <a href={`https://wa.me/${sub.clientPhone}`} target="_blank" rel="noreferrer">{sub.clientPhone}</a></div>

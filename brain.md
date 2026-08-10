@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.7.3` (PDF Receipt Font Fix — Hindi/Unicode rendering corrected)
+- **Version**: `3.7.4` (Production PDF Receipt Font Persistence Fix — Vite build font safety)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -295,6 +295,14 @@ npm run build             # from f:\chat bot\
 ---
 
 ## 📜 Changelog
+
+- **2026-08-10 (v3.7.4 — Production PDF Receipt Font Persistence Fix)**:
+  - **Root Cause Identified**: On Render, Vite build (`npm run build`) runs `emptyOutDir: true` targeting `../public`, which was deleting the `public/fonts/` directory during deployment. When `server.js` started on production, no font files existed in `public/fonts/`, forcing a fallback to `Helvetica` (which cannot render Hindi/Devanagari, producing `□□□` boxes).
+  - **Fix**:
+    1. Placed permanent fonts in root `fonts/` directory (immune to Vite build cleanup).
+    2. Also mirrored fonts in `client/public/fonts/` (automatically copied to `public/fonts/` by Vite build).
+    3. Added `getUniversalFonts()` in `server.js` searching across `fonts/`, `public/fonts/`, and `client/public/fonts/`.
+    4. Updated `generatePdfSummaryBuffer` (Admin ZIP download) and `/api/submissions/:id/receipt` to use the unified font helper and dynamic layout.
 
 - **2026-08-10 (v3.7.3 — PDF Receipt Font Fix — Hindi/Unicode Rendering)**:
   - **Root Cause Identified**: PDF receipt was using `Helvetica` (default PDFKit font) which does NOT support Hindi/Devanagari script. On production Linux (Render), `FreeSans.ttf` was not present either.

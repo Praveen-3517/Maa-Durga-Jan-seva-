@@ -725,6 +725,58 @@ app.delete('/api/submissions/:id', checkAdmin, async (req, res) => {
 });
 
 /**
+ * Helper to locate bundled universal fonts supporting both Hindi (Devanagari) & English (Latin).
+ * Checks root 'fonts/', 'public/fonts/', and 'client/public/fonts/' to guarantee availability
+ * even when Vite build clears the public directory on production.
+ */
+const getUniversalFonts = () => {
+  const possibleDirs = [
+    path.join(__dirname, 'fonts'),
+    path.join(__dirname, 'public', 'fonts'),
+    path.join(__dirname, 'client', 'public', 'fonts')
+  ];
+
+  const fontCandidates = [
+    { reg: 'Mangal-Regular.ttf', bold: 'Mangal-Bold.ttf' },
+    { reg: 'FreeSans.ttf', bold: 'FreeSans-Bold.ttf' },
+    { reg: 'NotoSansDevanagari-Regular.ttf', bold: 'NotoSansDevanagari-Bold.ttf' }
+  ];
+
+  for (const dir of possibleDirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const item of fontCandidates) {
+      const regPath = path.join(dir, item.reg);
+      const boldPath = path.join(dir, item.bold);
+      if (fs.existsSync(regPath)) {
+        const headingBoldPath = path.join(dir, 'NotoSans-Bold.ttf');
+        return {
+          regular: regPath,
+          bold: fs.existsSync(boldPath) ? boldPath : regPath,
+          headingBold: fs.existsSync(headingBoldPath) ? headingBoldPath : (fs.existsSync(boldPath) ? boldPath : regPath)
+        };
+      }
+    }
+  }
+  return { regular: null, bold: null, headingBold: null };
+};
+
+/**
+ * Configure standard fonts on a PDFKit document instance.
+ */
+const setupPdfFonts = (doc) => {
+  const fonts = getUniversalFonts();
+  if (fonts.regular) {
+    doc.registerFont('Regular', fonts.regular);
+    doc.registerFont('Bold', fonts.bold);
+    doc.registerFont('HeadingBold', fonts.headingBold);
+  } else {
+    doc.registerFont('Regular', 'Helvetica');
+    doc.registerFont('Bold', 'Helvetica-Bold');
+    doc.registerFont('HeadingBold', 'Helvetica-Bold');
+  }
+};
+
+/**
  * Route: GET /api/submissions/:id/receipt
  * Generates a clean, professional PDF application & payment receipt using PDFKit.
  * Printable/downloadable by shop owner or customer.
@@ -804,39 +856,6 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
         .trim();
     };
 
-    // ── FONT FIX v2: Use a SINGLE UNIVERSAL font supporting BOTH Hindi + English ──
-    // Problem: NotoSansDevanagari has no Latin glyphs → Latin text shows as □ boxes
-    // Solution: Use ONE font that supports BOTH Devanagari AND Latin scripts.
-    //
-    // Priority order:
-    //   1. Mangal-Regular.ttf (bundled from Windows, supports Devanagari + Latin) ← LOCAL DEV
-    //   2. FreeSans.ttf (GNU FreeFont, bundled, supports Devanagari + Latin) ← PRODUCTION
-    //   3. NotoSansDevanagari (Devanagari-only fallback — mixed text may still show boxes)
-    const fontsDir = path.join(__dirname, 'public', 'fonts');
-    const mangalPath     = path.join(fontsDir, 'Mangal-Regular.ttf');
-    const mangalBoldPath = path.join(fontsDir, 'Mangal-Bold.ttf');
-    const freeSansPath   = path.join(fontsDir, 'FreeSans.ttf');
-    const freeSansBoldPath = path.join(fontsDir, 'FreeSans-Bold.ttf');
-    const notoRegularPath  = path.join(fontsDir, 'NotoSans-Regular.ttf');
-    const notoBoldPath     = path.join(fontsDir, 'NotoSans-Bold.ttf');
-    const devanagariPath   = path.join(fontsDir, 'NotoSansDevanagari-Regular.ttf');
-
-    // Pick best available regular font (supports both Latin + Devanagari)
-    let universalRegular, universalBold;
-    if (fs.existsSync(mangalPath)) {
-      universalRegular = mangalPath;
-      universalBold    = fs.existsSync(mangalBoldPath) ? mangalBoldPath : mangalPath;
-    } else if (fs.existsSync(freeSansPath)) {
-      universalRegular = freeSansPath;
-      universalBold    = fs.existsSync(freeSansBoldPath) ? freeSansBoldPath : freeSansPath;
-    } else if (fs.existsSync(devanagariPath)) {
-      universalRegular = devanagariPath;
-      universalBold    = devanagariPath;
-    } else {
-      universalRegular = null; // will use Helvetica (Latin only — last resort)
-      universalBold    = null;
-    }
-
     // Set response headers for PDF streaming
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="Receipt_${submission.id}.pdf"`);
@@ -847,24 +866,12 @@ app.get('/api/submissions/:id/receipt', async (req, res) => {
     // Pipe PDF directly to HTTP response stream
     doc.pipe(res);
 
-    // Register fonts — 'Regular' and 'Bold' both support Hindi + Latin
-    if (universalRegular) {
-      doc.registerFont('Regular', universalRegular);
-      doc.registerFont('Bold', universalBold);
-    } else {
-      doc.registerFont('Regular', 'Helvetica');
-      doc.registerFont('Bold', 'Helvetica-Bold');
-    }
-    // Also register NotoSans-Bold for English-only section headings (crisper look)
-    if (fs.existsSync(notoBoldPath)) {
-      doc.registerFont('HeadingBold', notoBoldPath);
-    } else {
-      doc.registerFont('HeadingBold', universalBold || 'Helvetica-Bold');
-    }
+    // Register Hindi+Latin universal fonts
+    setupPdfFonts(doc);
 
-    // Single font functions — all content uses Universal (Hindi+Latin) fonts
-    const fontForValue = () => 'Regular';   // Hindi + Latin data values
-    const fontForBold  = () => 'Bold';      // Hindi + Latin bold labels
+    // Font selection helpers
+    const fontForValue = () => 'Regular';
+    const fontForBold  = () => 'Bold';
 
     // Color Palette
     const primaryColor = '#0f172a';   // Slate Dark
@@ -1011,6 +1018,28 @@ const generatePdfSummaryBuffer = (submission, settings) => {
       pdfDoc.on('end', () => resolve(Buffer.concat(buffers)));
       pdfDoc.on('error', err => reject(err));
 
+      setupPdfFonts(pdfDoc);
+
+      const fontForValue = () => 'Regular';
+      const fontForBold  = () => 'Bold';
+
+      const normalizeText = (value) => {
+        if (!value && value !== 0) return 'N/A';
+        return String(value)
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&#x2F;/g, '/')
+          .replace(/&#x2f;/g, '/')
+          .replace(/&#39;/g, "'")
+          .replace(/&quot;/g, '"')
+          .replace(/[\uFFFD]/g, '')
+          // eslint-disable-next-line no-control-regex
+          .replace(/[\x00-\x1F\x7F]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+
       const primaryColor = '#0f172a';   // Slate Dark
       const accentColor = '#2563eb';    // Royal Blue
       const lightBg = '#f8fafc';        // Light Gray Background
@@ -1019,16 +1048,17 @@ const generatePdfSummaryBuffer = (submission, settings) => {
 
       // Header Banner Box
       pdfDoc.rect(40, 40, 515, 65).fill(primaryColor);
-      pdfDoc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text((settings.shopName || 'Maa Durga Online Center').toUpperCase(), 55, 52);
-      pdfDoc.fontSize(9).font('Helvetica').fillColor('#94a3b8').text('CSC AND ONLINE DIGITAL SERVICES PORTAL', 55, 75);
+      const shopNameText = (settings.shopName || 'Maa Durga Online Center').toUpperCase();
+      pdfDoc.fillColor('#ffffff').fontSize(18).font(fontForBold()).text(shopNameText, 55, 52);
+      pdfDoc.fontSize(9).font(fontForValue()).fillColor('#94a3b8').text('CSC AND ONLINE DIGITAL SERVICES PORTAL', 55, 75);
       pdfDoc.text(`Contact: ${settings.shopPhone || 'N/A'}`, 55, 87);
 
       // Subheader Badge
-      pdfDoc.fillColor(accentColor).fontSize(14).font('Helvetica-Bold').text('CUSTOMER APPLICATION SUMMARY', 40, 120);
+      pdfDoc.fillColor(accentColor).fontSize(14).font('HeadingBold').text('CUSTOMER APPLICATION SUMMARY', 40, 120);
       pdfDoc.moveTo(40, 140).lineTo(555, 140).strokeColor(accentColor).lineWidth(2).stroke();
 
       // Metadata Info
-      pdfDoc.fontSize(9).font('Helvetica').fillColor(textColor);
+      pdfDoc.fontSize(9).font(fontForValue()).fillColor(textColor);
       pdfDoc.text(`Shop Address: ${settings.shopAddress || 'N/A'}`, 40, 150, { width: 280 });
 
       const formattedDate = new Date(submission.created_at || submission.createdAt || Date.now()).toLocaleString('en-IN', {
@@ -1041,15 +1071,25 @@ const generatePdfSummaryBuffer = (submission, settings) => {
 
       pdfDoc.moveTo(40, 185).lineTo(555, 185).strokeColor(borderColor).lineWidth(1).stroke();
 
-      // Application & Customer Details Box
+      // Application & Customer Details Box — dynamic height
       const startY = 200;
-      pdfDoc.rect(40, startY, 515, 205).fillAndStroke(lightBg, borderColor);
+      const remarksRaw = normalizeText(submission.remarks || submission.notes || 'No additional remarks.');
+      const serviceRaw = normalizeText(submission.service || submission.serviceName);
+      const fileCount = (submission.files && Array.isArray(submission.files)) ? submission.files.length : 0;
 
-      pdfDoc.fillColor(accentColor).fontSize(11).font('Helvetica-Bold').text('APPLICATION AND CUSTOMER DETAILS', 55, startY + 12);
+      const remarksLineCount = Math.max(1, Math.ceil(remarksRaw.length / 58));
+      const remarksHeight = remarksLineCount * 14;
+      const serviceLineCount = Math.max(1, Math.ceil(serviceRaw.length / 58));
+      const serviceHeight = serviceLineCount * 14;
+
+      const boxHeight = 38 + 20 + 20 + serviceHeight + 20 + remarksHeight + 20 + 20;
+      pdfDoc.rect(40, startY, 515, boxHeight).fillAndStroke(lightBg, borderColor);
+
+      pdfDoc.fillColor(accentColor).fontSize(11).font('HeadingBold').text('APPLICATION AND CUSTOMER DETAILS', 55, startY + 12);
       pdfDoc.moveTo(55, startY + 28).lineTo(540, startY + 28).strokeColor(borderColor).lineWidth(1).stroke();
 
       const drawRow = (label, value, yPos, isStatus = false) => {
-        pdfDoc.fillColor('#64748b').fontSize(10).font('Helvetica-Bold').text(label, 55, yPos);
+        pdfDoc.fillColor('#64748b').fontSize(10).font(fontForBold()).text(label, 55, yPos);
         if (isStatus) {
           const statusUpper = (value || 'PENDING').toUpperCase();
           let statusColor = '#d97706';
@@ -1057,31 +1097,37 @@ const generatePdfSummaryBuffer = (submission, settings) => {
           if (statusUpper === 'IN-PROGRESS' || statusUpper === 'IN PROGRESS') statusColor = '#2563eb';
           if (statusUpper === 'REJECTED') statusColor = '#dc2626';
 
-          pdfDoc.fillColor(statusColor).font('Helvetica-Bold').fontSize(10).text(statusUpper, 200, yPos);
+          pdfDoc.fillColor(statusColor).font(fontForBold()).fontSize(10).text(statusUpper, 200, yPos);
         } else {
-          pdfDoc.fillColor(textColor).font('Helvetica').fontSize(10).text(value || 'N/A', 200, yPos, { width: 330 });
+          pdfDoc.fillColor(textColor).font(fontForValue()).fontSize(10).text(value || 'N/A', 200, yPos, { width: 330 });
         }
       };
 
-      drawRow('Application ID:', submission.id, startY + 38);
-      drawRow('Customer Name:', submission.name || submission.clientName, startY + 58);
-      drawRow('Mobile Number:', submission.phone || submission.clientPhone, startY + 78);
-      drawRow('Service Name:', submission.service || submission.serviceName, startY + 98);
-      drawRow('Status:', submission.status, startY + 118, true);
-      drawRow('Remarks:', submission.remarks || submission.notes || 'None', startY + 138);
-
-      const fileCount = (submission.files && Array.isArray(submission.files)) ? submission.files.length : 0;
-      drawRow('Files Uploaded:', `${fileCount} file(s)`, startY + 175);
+      let rowY = startY + 38;
+      drawRow('Application ID:', normalizeText(submission.id), rowY);
+      rowY += 20;
+      drawRow('Customer Name:', normalizeText(submission.name || submission.clientName), rowY);
+      rowY += 20;
+      drawRow('Mobile Number:', normalizeText(submission.phone || submission.clientPhone), rowY);
+      rowY += 20;
+      drawRow('Service Name:', serviceRaw, rowY);
+      rowY += serviceHeight + 6;
+      drawRow('Status:', normalizeText(submission.status), rowY, true);
+      rowY += 20;
+      drawRow('Remarks:', remarksRaw, rowY);
+      rowY += remarksHeight + 6;
+      drawRow('Files Uploaded:', `${fileCount} file attachment(s)`, rowY);
 
       // Document List
-      let currentY = startY + 220;
+      let currentY = startY + boxHeight + 15;
       if (fileCount > 0) {
-        pdfDoc.fillColor(primaryColor).fontSize(10).font('Helvetica-Bold').text('Attached Original Files:', 40, currentY);
+        pdfDoc.fillColor(primaryColor).fontSize(10).font('HeadingBold').text('Attached Original Files:', 40, currentY);
         currentY += 15;
 
         submission.files.forEach((f) => {
           const sizeKb = f.size ? (f.size / 1024).toFixed(1) : 'N/A';
-          pdfDoc.fillColor(textColor).fontSize(9).font('Helvetica').text(`  - ${f.originalname || f.filename} (${sizeKb} KB)`, 50, currentY);
+          const fname = normalizeText(f.originalname || f.filename);
+          pdfDoc.fillColor(textColor).fontSize(9).font(fontForValue()).text(`  • ${fname} (${sizeKb} KB)`, 50, currentY, { width: 475 });
           currentY += 14;
         });
         currentY += 10;
@@ -1091,16 +1137,16 @@ const generatePdfSummaryBuffer = (submission, settings) => {
 
       // Important Notice Box
       pdfDoc.rect(40, currentY, 515, 55).fillAndStroke('#eff6ff', '#bfdbfe');
-      pdfDoc.fillColor('#1e40af').fontSize(10).font('Helvetica-Bold').text('Important Notice:', 55, currentY + 10);
-      pdfDoc.fillColor('#1e3a8a').fontSize(9).font('Helvetica').text(
+      pdfDoc.fillColor('#1e40af').fontSize(10).font('HeadingBold').text('Important Notice:', 55, currentY + 10);
+      pdfDoc.fillColor('#1e3a8a').fontSize(9).font(fontForValue()).text(
         'Keep this receipt safe. Use the Application ID when checking status or contacting support.',
         55, currentY + 24, { width: 485 }
       );
 
       // Footer
-      const footerY = 730;
+      const footerY = Math.max(currentY + 75, 730);
       pdfDoc.moveTo(40, footerY).lineTo(555, footerY).strokeColor(borderColor).lineWidth(1).stroke();
-      pdfDoc.fillColor('#94a3b8').fontSize(8).font('Helvetica').text(
+      pdfDoc.fillColor('#94a3b8').fontSize(8).font(fontForValue()).text(
         `Generated automatically by ${settings.shopName || 'Cyber Cafe Portal System'} - Timings: ${settings.shopTimings || '9 AM - 8 PM'}`,
         40, footerY + 10, { align: 'center', width: 515 }
       );

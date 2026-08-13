@@ -297,6 +297,7 @@ npm run build             # from f:\chat bot\
 | B-016 | 2026-07-29 | High | Admin | Failed to create services due to RLS blocking anon key. Fixed by using `service_role` key in .env | Resolved |
 | B-017 | 2026-07-31 | High | Auth / UI | Password hash mismatch in settings.json & broken password eye toggle styling in Admin Login | Resolved |
 | B-018 | 2026-08-13 | High | UI / Admin | `Uncaught ReferenceError: useCallback is not defined` in AdminDashboard. Fixed by importing useCallback from react. | Resolved |
+| B-019 | 2026-08-13 | High | Bot / Logic | Inbound single-digit service numbers (e.g. '2') were caught in `text.length <= 3` greeting check. Fixed by prioritizing numeric service selection before greeting detection. | Resolved |
 
 ---
 

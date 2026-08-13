@@ -336,6 +336,244 @@ function ShopSettingsForm({ adminToken, showToast, onRefreshSettings }) {
   );
 }
 
+function WhatsAppLiveBotManager({ adminToken, showToast }) {
+  const [status, setStatus] = useState({ connected: false, state: 'connecting', user: null, qrAvailable: false });
+  const [qrCode, setQrCode] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    if (!adminToken) return;
+    try {
+      const res = await fetch('/api/whatsapp-web/status', {
+        headers: { 'Authorization': 'Bearer ' + adminToken }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setStatus(data);
+          if (data.state === 'qr_ready' || data.qrAvailable) {
+            fetchQR();
+          } else {
+            setQrCode(null);
+          }
+        }
+      }
+    } catch (e) {
+    } finally {
+      setLoading(false);
+    }
+  }, [adminToken]);
+
+  const fetchQR = async () => {
+    try {
+      const res = await fetch('/api/whatsapp-web/qr', {
+        headers: { 'Authorization': 'Bearer ' + adminToken }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.qr) {
+          setQrCode(data.qr);
+        }
+      }
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    fetchStatus();
+    // Poll every 3 seconds while not connected or if QR is shown
+    const interval = setInterval(() => {
+      fetchStatus();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [fetchStatus]);
+
+  const handleRestart = async () => {
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/whatsapp-web/restart', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + adminToken }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('WhatsApp engine restarted. Generating QR code...', 'success');
+        setQrCode(null);
+        setTimeout(fetchStatus, 1500);
+      } else {
+        showToast(data.message || 'Restart failed', 'error');
+      }
+    } catch (e) {
+      showToast('Action failed: ' + e.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!window.confirm('Are you sure you want to disconnect WhatsApp? You will need to scan QR code again.')) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/whatsapp-web/logout', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + adminToken }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('WhatsApp disconnected.', 'info');
+        setQrCode(null);
+        setTimeout(fetchStatus, 1500);
+      } else {
+        showToast(data.message || 'Logout failed', 'error');
+      }
+    } catch (e) {
+      showToast('Action failed: ' + e.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSendTest = async () => {
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/whatsapp-web/send-test', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Test message sent to owner WhatsApp!', 'success');
+      } else {
+        showToast(data.message || 'Test send failed', 'error');
+      }
+    } catch (e) {
+      showToast('Test send failed: ' + e.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  return (
+    <div className="wa-bot-manager-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>
+      {/* Status & Connection Card */}
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <i className="fa-brands fa-whatsapp" style={{ fontSize: '2rem', color: '#25d366' }}></i>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)' }}>WhatsApp Live Bot</h3>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Self-hosted 24/7 QR-connected Bot Engine</p>
+            </div>
+          </div>
+          <span style={{
+            padding: '0.35rem 0.9rem',
+            borderRadius: '30px',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            background: status.connected ? 'rgba(34, 197, 94, 0.15)' : (status.state === 'qr_ready' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)'),
+            color: status.connected ? '#4ade80' : (status.state === 'qr_ready' ? '#fbbf24' : '#f87171'),
+            border: `1px solid ${status.connected ? '#22c55e' : (status.state === 'qr_ready' ? '#f59e0b' : '#ef4444')}`
+          }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor', display: 'inline-block' }}></span>
+            {status.connected ? 'CONNECTED (Active)' : (status.state === 'qr_ready' ? 'SCAN QR CODE' : 'DISCONNECTED')}
+          </span>
+        </div>
+
+        {status.connected ? (
+          <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', padding: '1.25rem', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(37, 211, 102, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#25d366', fontSize: '1.4rem' }}>
+                <i className="fa-solid fa-phone-volume"></i>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{status.user?.name || 'Maa Durga Online Center'}</div>
+                <div style={{ fontFamily: 'monospace', color: '#4ade80', fontSize: '0.95rem' }}>+{status.user?.phone || 'Connected'}</div>
+              </div>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1rem', lineHeight: '1.5' }}>
+              ✅ <strong>Bot is live and listening.</strong> Customers messaging "Hi", "1", "PAN Card", "Certificates", etc., will automatically receive the digital services menu and secure document upload links.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button className="btn btn-primary" onClick={handleSendTest} disabled={actionLoading} style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+                <i className="fa-solid fa-paper-plane"></i> Send Test Message
+              </button>
+              <button className="btn btn-outline" onClick={handleLogout} disabled={actionLoading} style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', color: '#f87171', borderColor: 'rgba(239,68,68,0.4)' }}>
+                <i className="fa-solid fa-arrow-right-from-bracket"></i> Disconnect / Switch
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '1.5rem 1rem', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+            {qrCode ? (
+              <div>
+                <div style={{ background: '#ffffff', padding: '12px', borderRadius: '12px', display: 'inline-block', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', marginBottom: '1rem' }}>
+                  <img src={qrCode} alt="WhatsApp Web QR Code" style={{ width: '220px', height: '220px', display: 'block' }} />
+                </div>
+                <h4 style={{ margin: '0 0 0.5rem', color: 'var(--text-primary)' }}>Scan with WhatsApp to Connect</h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>QR code updates automatically. Scan from your phone's WhatsApp.</p>
+              </div>
+            ) : (
+              <div style={{ padding: '2rem 1rem' }}>
+                <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2.5rem', color: 'var(--accent-color)', marginBottom: '1rem' }}></i>
+                <h4 style={{ color: 'var(--text-primary)', margin: '0 0 0.5rem' }}>Generating WhatsApp QR Code...</h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Initializing WhatsApp Web Engine. Please wait a moment.</p>
+              </div>
+            )}
+
+            <div style={{ marginTop: '1rem' }}>
+              <button className="btn btn-outline" onClick={handleRestart} disabled={actionLoading} style={{ fontSize: '0.82rem', padding: '0.4rem 0.9rem' }}>
+                <i className="fa-solid fa-rotate-right"></i> Refresh QR Code
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Instructions Card */}
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 0 1rem', color: 'var(--text-primary)' }}>
+          <i className="fa-solid fa-qrcode" style={{ color: 'var(--accent-color)' }}></i>
+          How to Connect Your Phone (3 Steps)
+        </h4>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+            <span style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--accent-color)', color: '#000', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>1</span>
+            <div>
+              <strong style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Open WhatsApp on Your Phone</strong>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Open your shop's WhatsApp or WhatsApp Business mobile app.</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+            <span style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--accent-color)', color: '#000', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>2</span>
+            <div>
+              <strong style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Go to Linked Devices</strong>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Tap the <strong>3 Dots (Menu)</strong> on Android or <strong>Settings</strong> on iPhone ➔ Select <strong>Linked Devices</strong> (लिंक्ड डिवाइसेज़).</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+            <span style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--accent-color)', color: '#000', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>3</span>
+            <div>
+              <strong style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Scan the QR Code on Screen</strong>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Tap <strong>Link a Device</strong> and point your camera at the QR code on the left. Once scanned, your bot will be 24x7 active!</p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '1.5rem', padding: '0.85rem', background: 'rgba(34, 197, 94, 0.08)', borderRadius: '10px', border: '1px solid rgba(34, 197, 94, 0.25)', fontSize: '0.82rem', color: '#86efac' }}>
+          <i className="fa-solid fa-shield-halved" style={{ marginRight: '0.4rem' }}></i>
+          <strong>Zero Token Expiration:</strong> Unlike Meta Cloud API, WhatsApp Web session stays authenticated permanently. No credit card, no Meta billing, and no 24-hour expiration!
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function N8nSetupGuide({ adminToken }) {
   const [waConfig, setWaConfig] = useState(null);
 
@@ -1268,9 +1506,10 @@ export default function AdminDashboard({ adminToken, login, logout, showToast, i
 
   const tabs = [
     ['submissions-list', 'fa-solid fa-list-check', 'Submissions'],
+    ['whatsapp-bot', 'fa-brands fa-whatsapp', 'WhatsApp Live Bot'],
     ['service-management', 'fa-solid fa-briefcase', 'Service Management'],
     ['shop-settings', 'fa-solid fa-gears', 'Shop Settings'],
-    ['n8n-setup', 'fa-solid fa-network-wired', 'n8n & WhatsApp Setup'],
+    ['n8n-setup', 'fa-solid fa-network-wired', 'n8n & Meta Guide'],
   ];
 
   return (
@@ -1321,6 +1560,15 @@ export default function AdminDashboard({ adminToken, login, logout, showToast, i
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* WhatsApp Live Bot */}
+        <div className={`admin-subcontent ${activeSubTab === 'whatsapp-bot' ? 'active' : ''}`}>
+          <div className="subcontent-header">
+            <h3>WhatsApp Live Bot &amp; QR Scanner</h3>
+            <p>Connect your WhatsApp number directly to enable 24x7 automated customer replies, services menu, and instant document uploads.</p>
+          </div>
+          <WhatsAppLiveBotManager adminToken={adminToken} showToast={showToast} />
         </div>
 
         {/* Service Management */}

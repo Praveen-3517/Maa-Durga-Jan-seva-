@@ -28,6 +28,14 @@ const { body, validationResult } = require('express-validator');
 const morgan = require('morgan');
 const compression = require('compression');
 const sharp = require('sharp');
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  fetchLatestBaileysVersion
+} = require('@whiskeysockets/baileys');
+const QRCode = require('qrcode');
+const pino = require('pino');
 
 // ═══════════════════════════════════════════════════════════
 // FUTURE-PROOF: Global crash handlers — server NEVER dies silently.
@@ -508,7 +516,7 @@ const handleUploadAndSubmission = async (req, res) => {
       
       const adminNotifMsg = `🔔 *New Application Received!*\n\n🆔 *App ID:* ${appIdFormatted}\n👤 *Customer Name:* ${name}\n📞 *WhatsApp / Phone:* ${phone}\n${email ? `✉️ *Email ID:* ${email}\n` : ''}📋 *Service:* ${service}\n📄 *Uploaded Documents:* ${docCount} file(s)\n${remarks ? `📝 *Details / Notes:* ${remarks}\n` : ''}\n🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n_Log in to view documents & process application._`;
 
-      await sendWhatsAppMessage(cleanAdminPhone, adminNotifMsg);
+      await sendUnifiedWhatsAppMessage(cleanAdminPhone, adminNotifMsg);
       console.log(`[WhatsApp Admin Notification] Sent to ${cleanAdminPhone} (App ID: ${appIdFormatted})`);
     } catch (notifErr) {
       console.error('[WhatsApp Admin Notification Error]:', notifErr.message);
@@ -655,7 +663,7 @@ const handleStatusUpdate = async (req, res) => {
         }
 
         if (statusMsg) {
-          await sendWhatsAppMessage(formattedPhone, statusMsg);
+          await sendUnifiedWhatsAppMessage(formattedPhone, statusMsg);
           console.log(`[WhatsApp Customer Notification] Sent status update to ${formattedPhone} (App ID: ${appIdFormatted})`);
         }
       } catch (custNotifErr) {
@@ -1333,6 +1341,213 @@ const WHATSAPP_VERIFY_TOKEN    = (process.env.WHATSAPP_VERIFY_TOKEN || 'maa_durg
 const N8N_WEBHOOK_URL          = process.env.N8N_WEBHOOK_URL          || '';
 const PUBLIC_APP_URL           = process.env.PUBLIC_APP_URL           || 'https://durgaonline.info';
 const UPLOAD_TOKEN_EXPIRY_MIN  = parseInt(process.env.UPLOAD_TOKEN_EXPIRY_MINUTES || '60', 10);
+
+// ─── BAILEYS WHATSAPP WEB ENGINE (Self-Hosted QR Bot) ───────────────────────
+const BAILEYS_AUTH_DIR = path.join(__dirname, 'data', 'baileys_auth');
+let waSock = null;
+let waQR = null; // Base64 Data URL for live QR scanning
+let waState = 'disconnected'; // 'disconnected' | 'connecting' | 'qr_ready' | 'connected'
+let waUser = null; // Connected user metadata
+let waInitTimeout = null;
+
+// Initialize Baileys WhatsApp Web Engine
+const initWhatsAppWeb = async () => {
+  try {
+    if (!fs.existsSync(BAILEYS_AUTH_DIR)) {
+      fs.mkdirSync(BAILEYS_AUTH_DIR, { recursive: true });
+    }
+    waState = 'connecting';
+    const { state, saveCreds } = await useMultiFileAuthState(BAILEYS_AUTH_DIR);
+    let version = [2, 3000, 1015901307];
+    try {
+      const vData = await fetchLatestBaileysVersion();
+      if (vData?.version) version = vData.version;
+    } catch (_vErr) {
+      // Use fallback Baileys version
+    }
+
+    waSock = makeWASocket({
+      version,
+      logger: pino({ level: 'silent' }),
+      printQRInTerminal: false,
+      auth: state,
+      browser: ['Maa Durga Online', 'Chrome', '120.0.0']
+    });
+
+    waSock.ev.on('creds.update', saveCreds);
+
+    waSock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+
+      if (qr) {
+        try {
+          waQR = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
+          waState = 'qr_ready';
+          console.log('[WhatsApp Web Engine] 📲 New QR Code generated for Admin scanning.');
+        } catch (qrErr) {
+          console.error('[WhatsApp Web QR Error]:', qrErr.message);
+        }
+      }
+
+      if (connection === 'open') {
+        waState = 'connected';
+        waQR = null;
+        waUser = waSock.user;
+        const connectedNumber = (waSock.user?.id || '').split(':')[0] || (waSock.user?.id || '');
+        console.log(`[WhatsApp Web Engine] 🟢 Connected successfully! Phone: +${connectedNumber}`);
+      }
+
+      if (connection === 'close') {
+        waQR = null;
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        console.log(`[WhatsApp Web Engine] Connection closed (code: ${statusCode}). Reconnecting: ${shouldReconnect}`);
+
+        if (shouldReconnect) {
+          waState = 'connecting';
+          clearTimeout(waInitTimeout);
+          waInitTimeout = setTimeout(initWhatsAppWeb, 5000);
+        } else {
+          waState = 'disconnected';
+          waUser = null;
+          try {
+            fs.rmSync(BAILEYS_AUTH_DIR, { recursive: true, force: true });
+          } catch (_e) {
+            // Auth dir cleanup ignored
+          }
+        }
+      }
+    });
+
+    // Inbound customer message listener
+    waSock.ev.on('messages.upsert', async ({ messages, type }) => {
+      if (type !== 'notify') return;
+      for (const msg of messages) {
+        if (msg.key.fromMe) continue;
+        if (!msg.message) continue;
+
+        const from = msg.key.remoteJid;
+        if (!from || from.endsWith('@g.us')) continue; // Ignore groups
+
+        const senderPhone = from.replace(/[^0-9]/g, '');
+        const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || '').trim().toLowerCase();
+
+        if (!text) continue;
+        console.log(`[WhatsApp Web] Inbound from ${senderPhone}: "${text}"`);
+        await handleIncomingWebChatMessage(from, senderPhone, text);
+      }
+    });
+
+  } catch (err) {
+    console.error('[WhatsApp Web Init Error]:', err.message);
+    waState = 'disconnected';
+  }
+};
+
+// Handle incoming customer chat message on WhatsApp Web
+const handleIncomingWebChatMessage = async (fromJid, senderPhone, text) => {
+  try {
+    const settings = getSettings();
+    const shopName = settings.shopName || 'Maa Durga Online Center';
+    const services = await getActiveServices();
+
+    const greetings = ['hi', 'hello', 'helo', 'hey', 'namaste', 'namaskar', 'jai', 'start', 'menu', 'help', 'seva'];
+    const isGreeting = greetings.some(g => text.includes(g)) || text.length <= 3;
+
+    if (isGreeting) {
+      let menuText = `🙏 *${shopName}* में आपका स्वागत है!\n\nहमारी प्रमुख ऑनलाइन डिजिटल सेवाएँ:\n\n`;
+      const numEmojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+      services.forEach((s, idx) => {
+        const emoji = numEmojis[idx] || `${idx + 1}.`;
+        const title = decodeHtmlEntities(s.hindi_title || s.name);
+        menuText += `${emoji} *${title}*\n`;
+      });
+      menuText += `\n👉 जिस सर्विस की जानकारी चाहिए, उसका *नंबर (1-${services.length})* या *नाम* लिखकर भेजें।\n\n🏠 _दुकान का पता:_ ${settings.shopAddress || 'Near Ghazipur Ghat'}\n⏰ _समय:_ ${settings.shopTimings || '24/7'}`;
+
+      await sendWebWhatsAppMessage(fromJid, menuText);
+      return;
+    }
+
+    // Number choice
+    const num = parseInt(text, 10);
+    let selected = null;
+    if (!isNaN(num) && num > 0 && num <= services.length) {
+      selected = services[num - 1];
+    } else {
+      // Keyword match
+      selected = services.find(s => {
+        const nameLower = (s.name || '').toLowerCase();
+        const hindiLower = (s.hindi_title || '').toLowerCase();
+        const slugLower = (s.slug || '').toLowerCase();
+
+        if (text.includes('pan') && (nameLower.includes('pan') || slugLower.includes('pan') || hindiLower.includes('पैन'))) return true;
+        if (text.includes('voter') && (nameLower.includes('voter') || slugLower.includes('voter') || hindiLower.includes('वोटर'))) return true;
+        if ((text.includes('income') || text.includes('aay') || text.includes('आय')) && (nameLower.includes('income') || nameLower.includes('aay') || hindiLower.includes('आय') || slugLower.includes('income') || slugLower.includes('aay'))) return true;
+        if ((text.includes('caste') || text.includes('jati') || text.includes('jaati') || text.includes('जाति')) && (nameLower.includes('caste') || nameLower.includes('jati') || hindiLower.includes('जाति') || slugLower.includes('caste') || slugLower.includes('jaati'))) return true;
+        if ((text.includes('domicile') || text.includes('niwas') || text.includes('निवास')) && (nameLower.includes('domicile') || nameLower.includes('niwas') || hindiLower.includes('निवास') || slugLower.includes('domicile') || slugLower.includes('niwas'))) return true;
+        if ((text.includes('ration') || text.includes('rashan') || text.includes('राशन') || text.includes('रासन')) && (nameLower.includes('ration') || slugLower.includes('ration') || hindiLower.includes('राशन') || hindiLower.includes('रासन'))) return true;
+        if ((text.includes('police') || text.includes('verification') || text.includes('चरित्र') || text.includes('पुलिस')) && (nameLower.includes('police') || slugLower.includes('police') || hindiLower.includes('पुलिस') || hindiLower.includes('चरित्र'))) return true;
+        return false;
+      });
+    }
+
+    if (selected) {
+      const requiredDocs = (selected.documents || [])
+        .filter(d => d.is_required)
+        .map(d => `✅ ${decodeHtmlEntities(d.document_name)}`)
+        .join('\n');
+
+      const uploadUrl = await createUploadSessionInternal(selected.id, senderPhone);
+
+      const replyMsg = `📄 *${decodeHtmlEntities(selected.name)}*${selected.hindi_title ? `\n(${decodeHtmlEntities(selected.hindi_title)})` : ''}\n\n*ज़रूरी डाक्यूमेंट्स:*\n${requiredDocs || 'कृपया डाक्यूमेंट्स की जानकारी के लिए दुकान पर संपर्क करें।'}\n\n📎 *डाक्यूमेंट्स अपलोड करने के लिए यह लिंक खोलें:*\n🔗 ${uploadUrl}\n\n_⏳ यह लिंक ${UPLOAD_TOKEN_EXPIRY_MIN} मिनट में एक्सपायर होगा._\n\n*"Hi" लिखकर दोबारा मेनू देखें.*`;
+
+      await sendWebWhatsAppMessage(fromJid, replyMsg);
+      return;
+    }
+
+    // Shop info
+    if (text.includes('address') || text.includes('location') || text.includes('pata') || text.includes('kahan') || text.includes('timing') || text.includes('time')) {
+      await sendWebWhatsAppMessage(fromJid, `📍 *${shopName}*\n🏠 *पता:* ${settings.shopAddress || 'Chak Faizullaha, Bindwaliya, Near Ghazipur Ghat 233001 (UP)'}\n⏰ *समय:* ${settings.shopTimings || '24/7'}\n📞 *मोबाइल:* ${settings.shopPhone || '8707845206'}\n\n*"Hi" लिखकर सेवाएँ देखें.*`);
+      return;
+    }
+
+    // Default Fallback
+    await sendWebWhatsAppMessage(fromJid, `🙏 नमस्ते! मैं आपका संदेश समझ नहीं पाया।\n\nहमारी सभी सेवाएँ देखने के लिए कृपया *"Hi"* लिखकर भेजें।`);
+
+  } catch (err) {
+    console.error('[WhatsApp Web Inbound Handler Error]:', err.message);
+  }
+};
+
+// Send message specifically via active WhatsApp Web socket
+const sendWebWhatsAppMessage = async (to, text) => {
+  try {
+    if (waSock && waState === 'connected') {
+      const jid = to.includes('@') ? to : `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+      await waSock.sendMessage(jid, { text });
+      console.log(`[WhatsApp Web Engine] Sent message to ${jid}`);
+      return { success: true, method: 'whatsapp_web' };
+    }
+  } catch (err) {
+    console.error('[WhatsApp Web Send Error]:', err.message);
+  }
+  return null;
+};
+
+// ─── UNIFIED SENDER: Uses WhatsApp Web if connected, falls back to Meta Cloud API ──
+const sendUnifiedWhatsAppMessage = async (to, text) => {
+  const cleanTo = (to || '').replace(/[^0-9]/g, '');
+  if (!cleanTo) return { error: 'Invalid phone number' };
+
+  // 1. Try WhatsApp Web first
+  if (waSock && waState === 'connected') {
+    const res = await sendWebWhatsAppMessage(cleanTo, text);
+    if (res?.success) return res;
+  }
+
+  // 2. Fallback to Meta Cloud API
+  return await sendWhatsAppMessage(cleanTo, text);
+};
 
 // ─── Helper: Send WhatsApp text message via Meta Cloud API ─────────────────
 const sendWhatsAppMessage = async (to, text) => {
@@ -2012,7 +2227,7 @@ app.post('/api/whatsapp/send-status', checkAdmin, [
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     if (cleanPhone.length < 10) return res.status(400).json({ success: false, message: 'Invalid phone number.' });
 
-    const result = await sendWhatsAppMessage(cleanPhone, message);
+    const result = await sendUnifiedWhatsAppMessage(cleanPhone, message);
     res.json({ success: true, message: result?.simulated ? 'Message logged (WhatsApp not configured).' : 'WhatsApp message sent successfully!', result });
   } catch (err) {
     console.error('[WhatsApp Send Status] Error:', err.message);
@@ -2037,6 +2252,81 @@ app.get('/api/whatsapp/config-status', checkAdmin, (req, res) => {
     direct_mode: !N8N_WEBHOOK_URL,
     public_app_url: PUBLIC_APP_URL
   });
+});
+
+// ─── WHATSAPP WEB ENGINE API ROUTES ─────────────────────────────────────────
+
+// GET /api/whatsapp-web/status — returns live connection status & user info
+app.get('/api/whatsapp-web/status', checkAdmin, (req, res) => {
+  const connectedNumber = (waUser?.id || '').split(':')[0] || '';
+  res.json({
+    success: true,
+    state: waState, // 'connected' | 'qr_ready' | 'connecting' | 'disconnected'
+    connected: waState === 'connected',
+    user: waUser ? { id: waUser.id, name: waUser.name || 'Maa Durga Online', phone: connectedNumber } : null,
+    qrAvailable: !!waQR
+  });
+});
+
+// GET /api/whatsapp-web/qr — returns base64 QR code image
+app.get('/api/whatsapp-web/qr', checkAdmin, (req, res) => {
+  if (!waQR) {
+    return res.status(404).json({ success: false, message: 'QR Code is not available or bot is already connected.' });
+  }
+  res.json({ success: true, qr: waQR });
+});
+
+// POST /api/whatsapp-web/restart — force restart Baileys socket to generate fresh QR
+app.post('/api/whatsapp-web/restart', checkAdmin, async (req, res) => {
+  try {
+    if (waSock) {
+      try { waSock.end(); } catch (_e) { /* ignore */ }
+    }
+    waState = 'connecting';
+    waQR = null;
+    clearTimeout(waInitTimeout);
+    setTimeout(initWhatsAppWeb, 1000);
+    res.json({ success: true, message: 'WhatsApp Web engine restarting...' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/whatsapp-web/logout — disconnect and clear session
+app.post('/api/whatsapp-web/logout', checkAdmin, async (req, res) => {
+  try {
+    if (waSock) {
+      try { await waSock.logout(); } catch (_e) { /* ignore */ }
+      try { waSock.end(); } catch (_e) { /* ignore */ }
+    }
+    waState = 'disconnected';
+    waQR = null;
+    waUser = null;
+    try {
+      fs.rmSync(BAILEYS_AUTH_DIR, { recursive: true, force: true });
+    } catch (_e) {
+      // Auth dir cleanup ignored
+    }
+    res.json({ success: true, message: 'Disconnected from WhatsApp Web. Session cleared.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/whatsapp-web/send-test — send test WhatsApp message to verify connection
+app.post('/api/whatsapp-web/send-test', checkAdmin, async (req, res) => {
+  try {
+    const settings = getSettings();
+    const targetPhone = req.body?.phone || process.env.ADMIN_PHONE_NUMBER || settings.shopPhone || '918707845206';
+    const cleanPhone = targetPhone.replace(/[^0-9]/g, '');
+
+    const testMsg = `🧪 *WhatsApp Bot Test Message - Maa Durga Online Center*\n\nAapka WhatsApp Bot Engine successfully connected hai! ✅\nStatus: 🟢 *Active & Listening*\nTime: ${new Date().toLocaleTimeString('en-IN')}`;
+
+    const result = await sendUnifiedWhatsAppMessage(cleanPhone, testMsg);
+    res.json({ success: true, message: `Test message sent to ${cleanPhone}!`, result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to send test: ' + err.message });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2096,4 +2386,7 @@ app.listen(PORT, () => {
   console.log(`☁️  Storage Bucket: client_documents`);
   console.log(`📊 Database Table: submissions`);
   console.log(`==================================================`);
+
+  // Initialize WhatsApp Web Engine in background
+  initWhatsAppWeb();
 });

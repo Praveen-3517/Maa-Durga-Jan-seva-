@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `3.8.0` (Combined Certificate Vyavsay, Clean App ID Formatting, Ration Card Kotedar Field)
+- **Version**: `4.0.0` (Self-Hosted WhatsApp Web Engine - Baileys & Live Admin QR Scanner)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -41,7 +41,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
 ## 📈 Progress
 
 - **Overall Completion**: 100%
-- **Current Milestone**: Real WhatsApp Business Cloud API Integration — LIVE & VERIFIED 🚀
+- **Current Milestone**: Self-Hosted WhatsApp Web Engine (Baileys) Live & Verified 🚀
 - **Completed Phases**:
   - Phase 1: Core Portal & Simulator ✅
   - Phase 2: System Documentation & Memory Initialization ✅
@@ -57,6 +57,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Phase 12: Shop Name Rebranding to "Maa Durga Online Center" ✅
   - Phase 13: Instant Admin WhatsApp Notifications to Owner (`+91 87078 45206`) ✅
   - Phase 14: Combined Form Vyavsay Select, Clean Application ID Formatting, Ration Card Kotedar Field ✅
+  - Phase 15: Self-Hosted WhatsApp Web Engine (Baileys) + Live Admin QR Scanner (Zero-Token Lifetime Operation) ✅
 - **Pending Work**: None (Fully operational and live)
 
 ---
@@ -300,7 +301,22 @@ npm run build             # from f:\chat bot\
 
 ## 📜 Changelog
 
-- **2026-08-10 (v3.7.4 — Production PDF Receipt Font Persistence Fix)**:
+- **2026-08-13 (v4.0.0 — Self-Hosted WhatsApp Web Engine — Baileys & Admin QR Scanner Integration)**:
+  - **Problem Solved**: Meta's Cloud API was enforcing credit/debit card requirements for unverified business portfolios, causing 24-hour sandbox token expirations and blocking Indian debit cards due to RBI e-mandate errors.
+  - **Full Baileys Engine Integration**:
+    1. Installed `@whiskeysockets/baileys`, `qrcode`, and `pino`.
+    2. Integrated direct WhatsApp Web WebSocket engine into [server.js](file:///f:/chat%20bot/server.js) with multi-file authentication state stored in `data/baileys_auth/`.
+    3. Added automatic background reconnection handling upon network disconnects.
+    4. Implemented dynamic incoming message handler (`messages.upsert`): when customers message "Hi", bot replies with formatted services menu (`1️⃣` to `7️⃣`). When customer selects a service number/keyword, bot dynamically fetches required documents from Supabase and generates a secure upload link (`https://durgaonline.info/?upload=TOKEN`).
+    5. Implemented `sendUnifiedWhatsAppMessage`: automatically sends via WhatsApp Web socket if connected; seamlessly falls back to Meta Cloud API if not.
+    6. Added new Admin endpoints: `GET /api/whatsapp-web/status`, `GET /api/whatsapp-web/qr`, `POST /api/whatsapp-web/restart`, `POST /api/whatsapp-web/logout`, `POST /api/whatsapp-web/send-test`.
+  - **Admin Dashboard QR Scanner UI**:
+    1. Added dedicated **"📱 WhatsApp Live Bot"** tab in [AdminDashboard/index.jsx](file:///f:/chat%20bot/client/src/pages/AdminDashboard/index.jsx).
+    2. Displays live connection status (🟢 Connected / 🟡 Scan QR Code / ⚪ Disconnected).
+    3. Auto-generates and renders high-res QR code image for scanning with WhatsApp mobile app (*Linked Devices ➔ Link a Device*).
+    4. Includes 1-click **Send Test Message**, **Refresh QR Code**, and **Disconnect / Switch Number** controls.
+  - **Production Build Verified**: `npm run build` ✅ (28 modules transformed, 0 errors, compiled in 2.43s).
+
   - **Root Cause Identified**: On Render, Vite build (`npm run build`) runs `emptyOutDir: true` targeting `../public`, which was deleting the `public/fonts/` directory during deployment. When `server.js` started on production, no font files existed in `public/fonts/`, forcing a fallback to `Helvetica` (which cannot render Hindi/Devanagari, producing `□□□` boxes).
   - **Fix**:
     1. Placed permanent fonts in root `fonts/` directory (immune to Vite build cleanup).

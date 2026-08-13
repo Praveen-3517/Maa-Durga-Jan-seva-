@@ -2138,7 +2138,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
         const services = await getActiveServices();
         const selected = services.find(s => String(s.id) === serviceId);
         if (selected) {
-          const requiredDocs = (selected.documents || []).filter(d => d.is_required).map(d => `✅ ${d.document_name}`).join('\n');
+          const requiredDocs = (selected.documents || []).filter(d => d.is_required).map(d => `✅ ${decodeHtmlEntities(d.document_name)}`).join('\n');
           const uploadUrl = await createUploadSessionInternal(selected.id, from);
           const replyMsg = `📄 *${selected.name}*${selected.hindi_title ? `\n(${selected.hindi_title})` : ''}\n\nRequired Documents:\n${requiredDocs || 'Contact shop for document list.'}\n\n📎 Documents upload karne ke liye niche diya gaya link kholein:\n\n🔗 ${uploadUrl}\n\n_Link ${UPLOAD_TOKEN_EXPIRY_MIN} minutes mein expire hoga._\n\n*"Hi" type karein menu ke liye.*`;
           await sendWhatsAppMessage(from, replyMsg);
@@ -2160,7 +2160,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
         if (selected) {
           const requiredDocs = (selected.documents || [])
             .filter(d => d.is_required)
-            .map((d, i) => `✅ ${d.document_name}`)
+            .map((d) => `✅ ${decodeHtmlEntities(d.document_name)}`)
             .join('\n');
 
           const uploadUrl = await createUploadSessionInternal(selected.id, from);
@@ -2196,7 +2196,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
       });
 
       if (matchedService) {
-        const requiredDocs = (matchedService.documents || []).filter(d => d.is_required).map(d => `✅ ${d.document_name}`).join('\n');
+        const requiredDocs = (matchedService.documents || []).filter(d => d.is_required).map(d => `✅ ${decodeHtmlEntities(d.document_name)}`).join('\n');
         const uploadUrl = await createUploadSessionInternal(matchedService.id, from);
         const replyMsg = `📄 *${matchedService.name}*${matchedService.hindi_title ? `\n(${matchedService.hindi_title})` : ''}\n\nRequired Documents:\n${requiredDocs || 'Contact shop for document list.'}\n\n📎 Documents upload karne ke liye niche diya gaya link kholein:\n\n🔗 ${uploadUrl}\n\n_Link ${UPLOAD_TOKEN_EXPIRY_MIN} minutes mein expire hoga._\n\n*"Hi" type karein menu ke liye.*`;
         await sendWhatsAppMessage(from, replyMsg);

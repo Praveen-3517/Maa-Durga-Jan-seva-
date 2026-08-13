@@ -1350,9 +1350,57 @@ let waState = 'disconnected'; // 'disconnected' | 'connecting' | 'qr_ready' | 'c
 let waUser = null; // Connected user metadata
 let waInitTimeout = null;
 
+// Backup Baileys session files to Supabase storage to persist across Render redeployments
+const saveBaileysSessionToSupabase = async () => {
+  try {
+    if (!fs.existsSync(BAILEYS_AUTH_DIR)) return;
+    const files = fs.readdirSync(BAILEYS_AUTH_DIR);
+    if (files.length === 0) return;
+    const sessionBundle = {};
+    for (const f of files) {
+      const fullPath = path.join(BAILEYS_AUTH_DIR, f);
+      if (fs.statSync(fullPath).isFile()) {
+        sessionBundle[f] = fs.readFileSync(fullPath, 'utf8');
+      }
+    }
+    const jsonBuffer = Buffer.from(JSON.stringify(sessionBundle));
+    await supabase.storage.from('client_documents').upload('_system/baileys_session.json', jsonBuffer, {
+      upsert: true,
+      contentType: 'application/json'
+    });
+    console.log('[WhatsApp Web] ☁️ Session credentials safely backed up to Supabase storage.');
+  } catch (e) {
+    console.error('[WhatsApp Web] Supabase session backup error:', e.message);
+  }
+};
+
+// Restore Baileys session files from Supabase storage upon cold start / redeployment
+const restoreBaileysSessionFromSupabase = async () => {
+  try {
+    const { data, error } = await supabase.storage.from('client_documents').download('_system/baileys_session.json');
+    if (error || !data) return false;
+    const text = await data.text();
+    const sessionBundle = JSON.parse(text);
+    if (!fs.existsSync(BAILEYS_AUTH_DIR)) {
+      fs.mkdirSync(BAILEYS_AUTH_DIR, { recursive: true });
+    }
+    for (const [filename, content] of Object.entries(sessionBundle)) {
+      fs.writeFileSync(path.join(BAILEYS_AUTH_DIR, filename), content, 'utf8');
+    }
+    console.log('[WhatsApp Web] ☁️ Session credentials successfully restored from Supabase storage.');
+    return true;
+  } catch (e) {
+    console.warn('[WhatsApp Web] No previous Supabase session found or restore failed:', e.message);
+    return false;
+  }
+};
+
 // Initialize Baileys WhatsApp Web Engine
 const initWhatsAppWeb = async () => {
   try {
+    if (!fs.existsSync(BAILEYS_AUTH_DIR) || fs.readdirSync(BAILEYS_AUTH_DIR).length === 0) {
+      await restoreBaileysSessionFromSupabase();
+    }
     if (!fs.existsSync(BAILEYS_AUTH_DIR)) {
       fs.mkdirSync(BAILEYS_AUTH_DIR, { recursive: true });
     }
@@ -1374,7 +1422,10 @@ const initWhatsAppWeb = async () => {
       browser: ['Maa Durga Online', 'Chrome', '120.0.0']
     });
 
-    waSock.ev.on('creds.update', saveCreds);
+    waSock.ev.on('creds.update', async () => {
+      await saveCreds();
+      await saveBaileysSessionToSupabase();
+    });
 
     waSock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
@@ -2308,6 +2359,11 @@ app.post('/api/whatsapp-web/logout', checkAdmin, async (req, res) => {
       fs.rmSync(BAILEYS_AUTH_DIR, { recursive: true, force: true });
     } catch (_e) {
       // Auth dir cleanup ignored
+    }
+    try {
+      await supabase.storage.from('client_documents').remove(['_system/baileys_session.json']);
+    } catch (_e) {
+      // Supabase remove ignored
     }
     res.json({ success: true, message: 'Disconnected from WhatsApp Web. Session cleared.' });
   } catch (err) {

@@ -1445,36 +1445,20 @@ const initWhatsAppWeb = async () => {
 };
 
 // Handle incoming customer chat message on WhatsApp Web
-const handleIncomingWebChatMessage = async (fromJid, senderPhone, text) => {
+const handleIncomingWebChatMessage = async (fromJid, senderPhone, rawText) => {
   try {
     const settings = getSettings();
     const shopName = settings.shopName || 'Maa Durga Online Center';
     const services = await getActiveServices();
+    const text = (rawText || '').trim().toLowerCase();
 
-    const greetings = ['hi', 'hello', 'helo', 'hey', 'namaste', 'namaskar', 'jai', 'start', 'menu', 'help', 'seva'];
-    const isGreeting = greetings.some(g => text.includes(g)) || text.length <= 3;
-
-    if (isGreeting) {
-      let menuText = `🙏 *${shopName}* में आपका स्वागत है!\n\nहमारी प्रमुख ऑनलाइन डिजिटल सेवाएँ:\n\n`;
-      const numEmojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
-      services.forEach((s, idx) => {
-        const emoji = numEmojis[idx] || `${idx + 1}.`;
-        const title = decodeHtmlEntities(s.hindi_title || s.name);
-        menuText += `${emoji} *${title}*\n`;
-      });
-      menuText += `\n👉 जिस सर्विस की जानकारी चाहिए, उसका *नंबर (1-${services.length})* या *नाम* लिखकर भेजें।\n\n🏠 _दुकान का पता:_ ${settings.shopAddress || 'Near Ghazipur Ghat'}\n⏰ _समय:_ ${settings.shopTimings || '24/7'}`;
-
-      await sendWebWhatsAppMessage(fromJid, menuText);
-      return;
-    }
-
-    // Number choice
+    // 1. Check if input is a service number (1-8)
     const num = parseInt(text, 10);
     let selected = null;
-    if (!isNaN(num) && num > 0 && num <= services.length) {
+    if (!isNaN(num) && num > 0 && num <= services.length && /^\d+$/.test(text)) {
       selected = services[num - 1];
     } else {
-      // Keyword match
+      // 2. Keyword match (pan, voter, income, etc.)
       selected = services.find(s => {
         const nameLower = (s.name || '').toLowerCase();
         const hindiLower = (s.hindi_title || '').toLowerCase();
@@ -1499,19 +1483,37 @@ const handleIncomingWebChatMessage = async (fromJid, senderPhone, text) => {
 
       const uploadUrl = await createUploadSessionInternal(selected.id, senderPhone);
 
-      const replyMsg = `📄 *${decodeHtmlEntities(selected.name)}*${selected.hindi_title ? `\n(${decodeHtmlEntities(selected.hindi_title)})` : ''}\n\n*ज़रूरी डाक्यूमेंट्स:*\n${requiredDocs || 'कृपया डाक्यूमेंट्स की जानकारी के लिए दुकान पर संपर्क करें।'}\n\n📎 *डाक्यूमेंट्स अपलोड करने के लिए यह लिंक खोलें:*\n🔗 ${uploadUrl}\n\n_⏳ यह लिंक ${UPLOAD_TOKEN_EXPIRY_MIN} मिनट में एक्सपायर होगा._\n\n*"Hi" लिखकर दोबारा मेनू देखें.*`;
+      const replyMsg = `📄 *${decodeHtmlEntities(selected.name)}*${selected.hindi_title ? `\n(${decodeHtmlEntities(selected.hindi_title)})` : ''}\n\n*Required Documents:*\n${requiredDocs || 'Please contact the shop for document list.'}\n\n📎 *Documents upload karne ke liye niche diya gaya link kholein:*\n\n🔗 ${uploadUrl}\n\n_⏳ Link ${UPLOAD_TOKEN_EXPIRY_MIN} minutes mein expire hoga._\n\n*"Hi" type karein menu ke liye.*`;
 
       await sendWebWhatsAppMessage(fromJid, replyMsg);
       return;
     }
 
-    // Shop info
+    // 3. Greeting detection
+    const greetings = ['hi', 'hello', 'helo', 'hey', 'namaste', 'namaskar', 'jai', 'start', 'menu', 'help', 'seva'];
+    const isGreeting = greetings.includes(text) || greetings.some(g => text.startsWith(g));
+
+    if (isGreeting) {
+      let menuText = `🙏 *${shopName}* में आपका स्वागत है!\n\nहमारी प्रमुख ऑनलाइन डिजिटल सेवाएँ:\n\n`;
+      const numEmojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+      services.forEach((s, idx) => {
+        const emoji = numEmojis[idx] || `${idx + 1}.`;
+        const title = decodeHtmlEntities(s.hindi_title || s.name);
+        menuText += `${emoji} *${title}*\n`;
+      });
+      menuText += `\n👉 जिस सर्विस की जानकारी चाहिए, उसका *नंबर (1-${services.length})* या *नाम* लिखकर भेजें।\n\n🏠 _दुकान का पता:_ ${settings.shopAddress || 'Near Ghazipur Ghat'}\n⏰ _समय:_ ${settings.shopTimings || '24/7'}`;
+
+      await sendWebWhatsAppMessage(fromJid, menuText);
+      return;
+    }
+
+    // 4. Shop info
     if (text.includes('address') || text.includes('location') || text.includes('pata') || text.includes('kahan') || text.includes('timing') || text.includes('time')) {
       await sendWebWhatsAppMessage(fromJid, `📍 *${shopName}*\n🏠 *पता:* ${settings.shopAddress || 'Chak Faizullaha, Bindwaliya, Near Ghazipur Ghat 233001 (UP)'}\n⏰ *समय:* ${settings.shopTimings || '24/7'}\n📞 *मोबाइल:* ${settings.shopPhone || '8707845206'}\n\n*"Hi" लिखकर सेवाएँ देखें.*`);
       return;
     }
 
-    // Default Fallback
+    // 5. Default Fallback
     await sendWebWhatsAppMessage(fromJid, `🙏 नमस्ते! मैं आपका संदेश समझ नहीं पाया।\n\nहमारी सभी सेवाएँ देखने के लिए कृपया *"Hi"* लिखकर भेजें।`);
 
   } catch (err) {

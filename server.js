@@ -506,15 +506,26 @@ const handleUploadAndSubmission = async (req, res) => {
       }
     }
 
-    // ── Instant WhatsApp Notification to Admin (Shop Owner) ─────────
+    // ── Instant WhatsApp Notification to Admin (Shop Owner: +91 87078 45206) ──
     try {
       const settings = getSettings();
       const adminPhone = process.env.ADMIN_PHONE_NUMBER || settings.shopPhone || '918707845206';
-      const cleanAdminPhone = adminPhone.replace(/[^0-9]/g, '');
+      const rawClean = adminPhone.replace(/[^0-9]/g, '');
+      const cleanAdminPhone = rawClean.length === 10 ? `91${rawClean}` : rawClean;
       const docCount = (uploadedFiles || []).length;
       const appIdFormatted = formatApplicationId(insertedRecord?.id);
       
-      const adminNotifMsg = `🔔 *New Application Received!*\n\n🆔 *App ID:* ${appIdFormatted}\n👤 *Customer Name:* ${name}\n📞 *WhatsApp / Phone:* ${phone}\n${email ? `✉️ *Email ID:* ${email}\n` : ''}📋 *Service:* ${service}\n📄 *Uploaded Documents:* ${docCount} file(s)\n${remarks ? `📝 *Details / Notes:* ${remarks}\n` : ''}\n🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n_Log in to view documents & process application._`;
+      const adminNotifMsg = `🔔 *नया दस्तावेज़ / आवेदन प्राप्त हुआ!*\n\n` +
+        `🆔 *App ID:* ${appIdFormatted}\n` +
+        `👤 *ग्राहक का नाम:* ${name}\n` +
+        `📞 *WhatsApp Number:* ${phone}\n` +
+        `${email ? `✉️ *Email ID:* ${email}\n` : ''}` +
+        `📋 *सर्विस (Service):* ${service}\n` +
+        `📄 *अपलोड किए गए दस्तावेज़:* ${docCount} फ़ाइलें\n` +
+        `${remarks ? `📝 *ग्राहक का नोट:* ${remarks}\n` : ''}\n` +
+        `🧾 *रसीद (PDF Receipt):* ${getLiveAppUrl()}/api/submissions/${insertedRecord?.id}/receipt\n\n` +
+        `🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n` +
+        `_कृपया एडमिन डैशबोर्ड खोलकर आवेदन प्रोसेस करें।_`;
 
       await sendUnifiedWhatsAppMessage(cleanAdminPhone, adminNotifMsg);
       console.log(`[WhatsApp Admin Notification] Sent to ${cleanAdminPhone} (App ID: ${appIdFormatted})`);
@@ -655,11 +666,30 @@ const handleStatusUpdate = async (req, res) => {
         let statusMsg = '';
         const statusLower = (status || '').toLowerCase();
         if (statusLower === 'completed') {
-          statusMsg = `🎉 *Application Completed! - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\n🆔 *App ID:* ${appIdFormatted}\nAapka *${updatedRecord.service}* application poora ho gaya hai! ✅\n${remarks ? `📝 Notes: ${remarks}\n` : ''}\nAap dukan par aakar document le sakte hain. 🙏`;
+          statusMsg = `🎉 *बधाई हो! आपका काम पूरा हो गया है!*\n\n` +
+            `नमस्ते *${updatedRecord.name}* जी,\n` +
+            `*${shopName}* द्वारा आपका *${updatedRecord.service}* का आवेदन सफलतापूर्वक *पूर्ण (Completed)* कर दिया गया है! ✅\n\n` +
+            `🆔 *Application ID:* ${appIdFormatted}\n` +
+            `${remarks ? `📝 *Admin Note / रिमार्क:* ${remarks}\n\n` : ''}` +
+            `🏢 *दस्तावेज़ प्राप्त करने का स्थान:*\n` +
+            `📍 ${settings.shopAddress || 'Chak Faizullaha, Bindwaliya, Near Ghazipur Ghat (UP)'}\n` +
+            `📞 *दुकान का संपर्क:* ${settings.shopPhone || '8707845206'}\n\n` +
+            `🙏 _Maa Durga Online Center चुनने के लिए धन्यवाद!_`;
         } else if (statusLower === 'in progress' || statusLower === 'in_progress') {
-          statusMsg = `⏳ *Application Update - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\n🆔 *App ID:* ${appIdFormatted}\nAapke *${updatedRecord.service}* application par kaam shuru ho gaya hai. Status: *In Progress* 🔄\n${remarks ? `📝 Notes: ${remarks}\n` : ''}`;
+          statusMsg = `⏳ *Application Update - ${shopName}*\n\n` +
+            `नमस्ते *${updatedRecord.name}* जी,\n` +
+            `आपके *${updatedRecord.service}* के आवेदन पर काम शुरू हो चुका है। Status: *In Progress (प्रक्रिया जारी है)* 🔄\n\n` +
+            `🆔 *Application ID:* ${appIdFormatted}\n` +
+            `${remarks ? `📝 *Note:* ${remarks}\n` : ''}` +
+            `📞 *संपर्क:* ${settings.shopPhone || '8707845206'}`;
         } else if (statusLower === 'rejected') {
-          statusMsg = `⚠️ *Application Update - ${shopName}*\n\nNamaste *${updatedRecord.name}*,\n🆔 *App ID:* ${appIdFormatted}\nAapke *${updatedRecord.service}* application me issue paaya gaya hai.\n${remarks ? `📝 Reason: ${remarks}\n` : ''}\nPlease center se sampark karein.`;
+          statusMsg = `⚠️ *Application Update - ${shopName}*\n\n` +
+            `नमस्ते *${updatedRecord.name}* जी,\n` +
+            `आपके *${updatedRecord.service}* के आवेदन में कुछ समस्या/कमी पाई गई है। Status: *Rejected*\n\n` +
+            `🆔 *Application ID:* ${appIdFormatted}\n` +
+            `${remarks ? `📝 *कारण (Reason):* ${remarks}\n\n` : ''}` +
+            `कृपया सही दस्तावेज़ के साथ संपर्क करें:\n` +
+            `📞 *मोबाइल:* ${settings.shopPhone || '8707845206'}`;
         }
 
         if (statusMsg) {

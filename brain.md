@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `4.0.0` (Self-Hosted WhatsApp Web Engine - Baileys & Live Admin QR Scanner)
+- **Version**: `4.1.0` (Self-Hosted WhatsApp Web Engine - Baileys, Supabase Cloud Session Persistence, Admin QR Scanner & Automated Notifications)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live & Verified ✅.
 
@@ -41,7 +41,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
 ## 📈 Progress
 
 - **Overall Completion**: 100%
-- **Current Milestone**: Self-Hosted WhatsApp Web Engine (Baileys) Live & Verified 🚀
+- **Current Milestone**: Baileys WhatsApp Engine, Supabase Session Cloud Persistence & Automated Shop Notifications — LIVE & VERIFIED 🚀
 - **Completed Phases**:
   - Phase 1: Core Portal & Simulator ✅
   - Phase 2: System Documentation & Memory Initialization ✅
@@ -73,15 +73,10 @@ f:/chat bot/
 ├── .gitignore                  # Excludes .env, node_modules
 ├── brain.md                    # ← This file: Single Source of Truth
 ├── package.json                # Root scripts (dev, build:client, etc.)
-├── server.js                   # Express backend ← +500 lines: WhatsApp routes, services API
-├── fonts/                      # ← NEW: Permanent Unicode fonts (Mangal, FreeSans, NotoSans) - immune to Vite build
+├── server.js                   # Express backend ← Dual-mode WhatsApp (Baileys + Meta), Supabase session backup
+├── fonts/                      # Permanent Unicode fonts (Mangal, FreeSans, NotoSans)
 ├── data/
 │   ├── settings.json           # Shop settings & Admin config (persistent)
-│   └── supabase_migration.sql  # ← Run in Supabase SQL Editor
-├── public/                     # Static assets served by Express (built by Vite)
-│   ├── abhi.jpg                # Abhishek's footer avatar
-│   ├── logo.jpeg               # Shop logo / favicon
-│   ├── prave.png               # Praveen's footer avatar
 │   └── n8n_whatsapp_workflow.json  # Dynamic services + upload session
 └── client/                     # ← React (Vite) frontend app
     ├── index.html              # App entry point

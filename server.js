@@ -32,7 +32,8 @@ const {
   default: makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
+  Browsers
 } = require('@whiskeysockets/baileys');
 const QRCode = require('qrcode');
 const pino = require('pino');
@@ -655,6 +656,7 @@ const handleStatusUpdate = async (req, res) => {
     const updatedRecord = data[0];
 
     // ── Send Automated WhatsApp Status Update to Customer ────────────────
+    console.log(`[WhatsApp Notif] Status update triggered: status="${status}", phone="${updatedRecord.phone}", waState="${waState}"`);
     if (status && updatedRecord.phone) {
       try {
         const cleanPhone = updatedRecord.phone.replace(/[^0-9]/g, '');
@@ -664,7 +666,9 @@ const handleStatusUpdate = async (req, res) => {
         const appIdFormatted = formatApplicationId(updatedRecord.id);
         
         let statusMsg = '';
-        const statusLower = (status || '').toLowerCase();
+        const statusLower = (status || '').toLowerCase().trim();
+        console.log(`[WhatsApp Notif] statusLower="${statusLower}", formattedPhone="${formattedPhone}", waState="${waState}"`);
+
         if (statusLower === 'completed') {
           statusMsg = `🎉 *बधाई हो! आपका काम पूरा हो गया है!*\n\n` +
             `नमस्ते *${updatedRecord.name}* जी,\n` +
@@ -675,7 +679,7 @@ const handleStatusUpdate = async (req, res) => {
             `📍 ${settings.shopAddress || 'Chak Faizullaha, Bindwaliya, Near Ghazipur Ghat (UP)'}\n` +
             `📞 *दुकान का संपर्क:* ${settings.shopPhone || '8707845206'}\n\n` +
             `🙏 _Maa Durga Online Center चुनने के लिए धन्यवाद!_`;
-        } else if (statusLower === 'in progress' || statusLower === 'in_progress') {
+        } else if (statusLower === 'in progress' || statusLower === 'in_progress' || statusLower === 'in-progress') {
           statusMsg = `⏳ *Application Update - ${shopName}*\n\n` +
             `नमस्ते *${updatedRecord.name}* जी,\n` +
             `आपके *${updatedRecord.service}* के आवेदन पर काम शुरू हो चुका है। Status: *In Progress (प्रक्रिया जारी है)* 🔄\n\n` +
@@ -690,15 +694,20 @@ const handleStatusUpdate = async (req, res) => {
             `${remarks ? `📝 *कारण (Reason):* ${remarks}\n\n` : ''}` +
             `कृपया सही दस्तावेज़ के साथ संपर्क करें:\n` +
             `📞 *मोबाइल:* ${settings.shopPhone || '8707845206'}`;
+        } else {
+          console.log(`[WhatsApp Notif] Status "${statusLower}" does not match any notification template — no message sent.`);
         }
 
         if (statusMsg) {
-          await sendUnifiedWhatsAppMessage(formattedPhone, statusMsg);
-          console.log(`[WhatsApp Customer Notification] Sent status update to ${formattedPhone} (App ID: ${appIdFormatted})`);
+          console.log(`[WhatsApp Notif] Sending message to ${formattedPhone} via sendUnifiedWhatsAppMessage...`);
+          const sendResult = await sendUnifiedWhatsAppMessage(formattedPhone, statusMsg);
+          console.log(`[WhatsApp Notif] Result:`, JSON.stringify(sendResult));
         }
       } catch (custNotifErr) {
-        console.error('[WhatsApp Customer Status Notification Error]:', custNotifErr.message);
+        console.error('[WhatsApp Customer Status Notification Error]:', custNotifErr.message, custNotifErr.stack);
       }
+    } else {
+      console.log(`[WhatsApp Notif] Skipped — status="${status}", phone="${updatedRecord.phone}"`);
     }
 
     res.json({
@@ -1379,9 +1388,16 @@ let waQR = null; // Base64 Data URL for live QR scanning
 let waState = 'disconnected'; // 'disconnected' | 'connecting' | 'qr_ready' | 'connected'
 let waUser = null; // Connected user metadata
 let waInitTimeout = null;
+let isSavingSession = false;
+let sessionSaveQueued = false;
 
 // Backup Baileys session files to Supabase storage to persist across Render redeployments
 const saveBaileysSessionToSupabase = async () => {
+  if (isSavingSession) {
+    sessionSaveQueued = true;
+    return;
+  }
+  isSavingSession = true;
   try {
     if (!fs.existsSync(BAILEYS_AUTH_DIR)) return;
     const files = fs.readdirSync(BAILEYS_AUTH_DIR);
@@ -1401,8 +1417,21 @@ const saveBaileysSessionToSupabase = async () => {
     console.log('[WhatsApp Web] ☁️ Session credentials safely backed up to Supabase storage.');
   } catch (e) {
     console.error('[WhatsApp Web] Supabase session backup error:', e.message);
+  } finally {
+    isSavingSession = false;
+    if (sessionSaveQueued) {
+      sessionSaveQueued = false;
+      setTimeout(saveBaileysSessionToSupabase, 2000);
+    }
   }
 };
+
+// Periodic background session backup (every 3 minutes when connected)
+setInterval(() => {
+  if (waState === 'connected' && fs.existsSync(BAILEYS_AUTH_DIR)) {
+    saveBaileysSessionToSupabase();
+  }
+}, 3 * 60 * 1000);
 
 // Restore Baileys session files from Supabase storage upon cold start / redeployment
 const restoreBaileysSessionFromSupabase = async () => {
@@ -1424,6 +1453,23 @@ const restoreBaileysSessionFromSupabase = async () => {
     return false;
   }
 };
+
+// Graceful process exit hook to sync state before shutdown
+const handleProcessExit = async () => {
+  try {
+    if (fs.existsSync(BAILEYS_AUTH_DIR)) {
+      await saveBaileysSessionToSupabase();
+    }
+  } catch (_e) {}
+};
+process.on('SIGINT', async () => {
+  await handleProcessExit();
+  process.exit(0);
+});
+process.on('SIGTERM', async () => {
+  await handleProcessExit();
+  process.exit(0);
+});
 
 // Initialize Baileys WhatsApp Web Engine
 const initWhatsAppWeb = async () => {
@@ -1449,7 +1495,13 @@ const initWhatsAppWeb = async () => {
       logger: pino({ level: 'silent' }),
       printQRInTerminal: false,
       auth: state,
-      browser: ['Maa Durga Online', 'Chrome', '120.0.0']
+      browser: Browsers.ubuntu('Chrome'),
+      syncFullHistory: false,
+      generateHighQualityLinkPreview: false,
+      connectTimeoutMs: 60000,
+      keepAliveIntervalMs: 25000,
+      defaultQueryTimeoutMs: 60000,
+      retryRequestDelayMs: 2000
     });
 
     waSock.ev.on('creds.update', async () => {
@@ -1476,25 +1528,35 @@ const initWhatsAppWeb = async () => {
         waUser = waSock.user;
         const connectedNumber = (waSock.user?.id || '').split(':')[0] || (waSock.user?.id || '');
         console.log(`[WhatsApp Web Engine] 🟢 Connected successfully! Phone: +${connectedNumber}`);
+        // Immediately sync healthy connection state
+        saveBaileysSessionToSupabase();
       }
 
       if (connection === 'close') {
         waQR = null;
         const statusCode = lastDisconnect?.error?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-        console.log(`[WhatsApp Web Engine] Connection closed (code: ${statusCode}). Reconnecting: ${shouldReconnect}`);
+        const isExplicitLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+        console.log(`[WhatsApp Web Engine] Connection closed (code: ${statusCode}). Logged out: ${isExplicitLoggedOut}`);
 
-        if (shouldReconnect) {
+        if (!isExplicitLoggedOut) {
           waState = 'connecting';
           clearTimeout(waInitTimeout);
-          waInitTimeout = setTimeout(initWhatsAppWeb, 5000);
+          const reconnectDelay = statusCode === 515 ? 1500 : 5000;
+          console.log(`[WhatsApp Web Engine] Reconnecting in ${reconnectDelay}ms...`);
+          waInitTimeout = setTimeout(initWhatsAppWeb, reconnectDelay);
         } else {
+          console.log('[WhatsApp Web Engine] User logged out from phone or session revoked. Resetting auth state.');
           waState = 'disconnected';
           waUser = null;
           try {
             fs.rmSync(BAILEYS_AUTH_DIR, { recursive: true, force: true });
           } catch (_e) {
             // Auth dir cleanup ignored
+          }
+          try {
+            await supabase.storage.from('client_documents').remove(['_system/baileys_session.json']);
+          } catch (_e) {
+            // Supabase remove ignored
           }
         }
       }

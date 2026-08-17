@@ -418,21 +418,20 @@ const handleUploadAndSubmission = async (req, res) => {
     const uploadedFiles = [];
 
     // Process file uploads to Supabase Storage bucket 'client_documents'
+    // ⚡ PERFORMANCE: All files upload in PARALLEL using Promise.all (not sequential for-loop)
     if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        // Generate a unique filename
+      const uploadPromises = req.files.map(async (file) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        
         let fileBuffer = file.buffer;
         let ext = path.extname(file.originalname).toLowerCase();
         let mimetype = file.mimetype;
 
-        // ── Image Compression (if > 600KB) ──
+        // ── Image Compression (if > 600KB) — runs in parallel per file ──
         if (mimetype.startsWith('image/') && file.size > 600 * 1024) {
           try {
             fileBuffer = await sharp(file.buffer)
               .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
-              .webp({ quality: 75 }) // WebP provides excellent compression with transparency
+              .webp({ quality: 75 })
               .toBuffer();
             ext = '.webp';
             mimetype = 'image/webp';
@@ -446,7 +445,7 @@ const handleUploadAndSubmission = async (req, res) => {
         const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
 
         // Upload buffer directly to Supabase storage bucket
-        const { data: storageData, error: storageError } = await supabase
+        const { error: storageError } = await supabase
           .storage
           .from('client_documents')
           .upload(filename, fileBuffer, {
@@ -465,16 +464,18 @@ const handleUploadAndSubmission = async (req, res) => {
           .from('client_documents')
           .getPublicUrl(filename);
 
-        const publicUrl = publicUrlData.publicUrl;
-
-        uploadedFiles.push({
+        return {
           originalname: file.originalname,
           filename: filename,
           size: file.size,
           mimetype: file.mimetype,
-          url: publicUrl
-        });
-      }
+          url: publicUrlData.publicUrl
+        };
+      });
+
+      // Wait for ALL file uploads to finish simultaneously
+      const results = await Promise.all(uploadPromises);
+      uploadedFiles.push(...results);
     }
 
     // Insert record into Supabase PostgreSQL 'submissions' table
@@ -513,39 +514,44 @@ const handleUploadAndSubmission = async (req, res) => {
       }
     }
 
-    // ── Instant WhatsApp Notification to Admin (Shop Owner: +91 87078 45206) ──
-    try {
-      const settings = getSettings();
-      const adminPhone = process.env.ADMIN_PHONE_NUMBER || settings.shopPhone || '918707845206';
-      const rawClean = adminPhone.replace(/[^0-9]/g, '');
-      const cleanAdminPhone = rawClean.length === 10 ? `91${rawClean}` : rawClean;
-      const docCount = (uploadedFiles || []).length;
-      const appIdFormatted = formatApplicationId(insertedRecord?.id);
-      
-      const adminNotifMsg = `🔔 *नया दस्तावेज़ / आवेदन प्राप्त हुआ!*\n\n` +
-        `🆔 *App ID:* ${appIdFormatted}\n` +
-        `👤 *ग्राहक का नाम:* ${name}\n` +
-        `📞 *WhatsApp Number:* ${phone}\n` +
-        `${email ? `✉️ *Email ID:* ${email}\n` : ''}` +
-        `📋 *सर्विस (Service):* ${service}\n` +
-        `📄 *अपलोड किए गए दस्तावेज़:* ${docCount} फ़ाइलें\n` +
-        `${remarks ? `📝 *ग्राहक का नोट:* ${remarks}\n` : ''}\n` +
-        `🧾 *रसीद (PDF Receipt):* ${getLiveAppUrl()}/api/submissions/${insertedRecord?.id}/receipt\n\n` +
-        `🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n` +
-        `_कृपया एडमिन डैशबोर्ड खोलकर आवेदन प्रोसेस करें।_`;
-
-      await sendUnifiedWhatsAppMessage(cleanAdminPhone, adminNotifMsg);
-      console.log(`[WhatsApp Admin Notification] Sent to ${cleanAdminPhone} (App ID: ${appIdFormatted})`);
-    } catch (notifErr) {
-      console.error('[WhatsApp Admin Notification Error]:', notifErr.message);
-    }
-
-    return res.status(201).json({
+    // ✅ Send SUCCESS response to user IMMEDIATELY — don't wait for WhatsApp notification
+    res.status(201).json({
       success: true,
       message: "Application submitted successfully to Supabase!",
       id: insertedRecord ? insertedRecord.id : null,
       applicationId: insertedRecord ? formatApplicationId(insertedRecord.id) : null,
       submission: insertedRecord
+    });
+
+    // ── Instant WhatsApp Notification to Admin — fire-and-forget (background) ──
+    // NOTE: This runs AFTER response is sent — user doesn't wait for this
+    // eslint-disable-next-line no-undef
+    global.setImmediate(async () => {
+      try {
+        const settings = getSettings();
+        const adminPhone = process.env.ADMIN_PHONE_NUMBER || settings.shopPhone || '918707845206';
+        const rawClean = adminPhone.replace(/[^0-9]/g, '');
+        const cleanAdminPhone = rawClean.length === 10 ? `91${rawClean}` : rawClean;
+        const docCount = (uploadedFiles || []).length;
+        const appIdFormatted = formatApplicationId(insertedRecord?.id);
+
+        const adminNotifMsg = `🔔 *नया दस्तावेज़ / आवेदन प्राप्त हुआ!*\n\n` +
+          `🆔 *App ID:* ${appIdFormatted}\n` +
+          `👤 *ग्राहक का नाम:* ${name}\n` +
+          `📞 *WhatsApp Number:* ${phone}\n` +
+          `${email ? `✉️ *Email ID:* ${email}\n` : ''}` +
+          `📋 *सर्विस (Service):* ${service}\n` +
+          `📄 *अपलोड किए गए दस्तावेज़:* ${docCount} फ़ाइलें\n` +
+          `${remarks ? `📝 *ग्राहक का नोट:* ${remarks}\n` : ''}\n` +
+          `🧾 *रसीद (PDF Receipt):* ${getLiveAppUrl()}/api/submissions/${insertedRecord?.id}/receipt\n\n` +
+          `🔗 *Admin Dashboard:* ${getLiveAppUrl()}/#admin\n\n` +
+          `_कृपया एडमिन डैशबोर्ड खोलकर आवेदन प्रोसेस करें।_`;
+
+        await sendUnifiedWhatsAppMessage(cleanAdminPhone, adminNotifMsg);
+        console.log(`[WhatsApp Admin Notification] Sent to ${cleanAdminPhone} (App ID: ${appIdFormatted})`);
+      } catch (notifErr) {
+        console.error('[WhatsApp Admin Notification Error]:', notifErr.message);
+      }
     });
 
   } catch (error) {

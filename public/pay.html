@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay to Maa Durga Online Center - Fast & Secure UPI Payment</title>
+  <meta name="description" content="Pay securely to Maa Durga Online Center via Google Pay, PhonePe, Paytm, or any UPI app.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(22, 30, 49, 0.85);
+      --card-border: rgba(245, 158, 11, 0.25);
+      --primary: #f59e0b;
+      --primary-hover: #d97706;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --phonepe: #5f259f;
+      --gpay: #1a73e8;
+      --paytm: #00b9f5;
+      --bhim: #22c55e;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', 'Noto Sans Devanagari', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: radial-gradient(circle at top, #1e293b 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem 1rem;
+    }
+    .pay-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 1.5rem;
+      padding: 1.75rem 1.5rem;
+      box-shadow: 0 20px 40px -15px rgba(0,0,0,0.7), 0 0 30px rgba(245, 158, 11, 0.1);
+      text-align: center;
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .shop-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 0.25rem;
+      letter-spacing: -0.02em;
+    }
+    .shop-subtitle {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+    .qr-container {
+      background: #ffffff;
+      padding: 0.85rem;
+      border-radius: 1.25rem;
+      display: inline-block;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+      margin-bottom: 1.25rem;
+    }
+    .qr-image {
+      width: 220px;
+      height: auto;
+      max-width: 100%;
+      border-radius: 0.75rem;
+      display: block;
+    }
+    .upi-box {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px dashed rgba(245, 158, 11, 0.4);
+      padding: 0.75rem 1rem;
+      border-radius: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .upi-id-text {
+      font-family: monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fbbf24;
+      word-break: break-all;
+    }
+    .copy-btn {
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover, .copy-btn:active {
+      background: var(--primary);
+      color: #0f172a;
+    }
+    .btn-main-pay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      width: 100%;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #0b0f19;
+      padding: 0.95rem 1.25rem;
+      border-radius: 0.85rem;
+      font-size: 1.05rem;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.5);
+      margin-bottom: 1rem;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-main-pay:active {
+      transform: scale(0.98);
+    }
+    .app-buttons-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.65rem;
+      margin-bottom: 1.25rem;
+    }
+    .app-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.7rem 0.5rem;
+      border-radius: 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: #ffffff;
+      transition: transform 0.15s ease;
+    }
+    .app-btn:active {
+      transform: scale(0.96);
+    }
+    .app-btn.gpay {
+      background: #1a73e8;
+      box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+    }
+    .app-btn.phonepe {
+      background: #5f259f;
+      box-shadow: 0 4px 12px rgba(95, 37, 159, 0.3);
+    }
+    .app-btn.paytm {
+      background: #00b9f5;
+      color: #0b0f19;
+      box-shadow: 0 4px 12px rgba(0, 185, 245, 0.3);
+    }
+    .app-btn.bhim {
+      background: #16a34a;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    }
+    .instructions {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(50px);
+      background: #10b981;
+      color: #ffffff;
+      padding: 0.6rem 1.2rem;
+      border-radius: 9999px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+      z-index: 999;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="pay-card">
+    <div class="badge">
+      <i class="fa-solid fa-shield-halved"></i> 100% Safe & Verified UPI
+    </div>
+
+    <h1 class="shop-title">Maa Durga Online Center</h1>
+    <p class="shop-subtitle">Official Payment Gateway • Ghazipur (UP)</p>
+
+    <!-- QR Code Image -->
+    <div class="qr-container">
+      <img src="/payment_qr.png" alt="Google Pay UPI QR Code" class="qr-image" id="qrImg">
+    </div>
+
+    <!-- UPI ID with Copy -->
+    <div class="upi-box">
+      <div>
+        <div style="font-size: 0.72rem; color: #94a3b8; text-align: left;">UPI ID:</div>
+        <span class="upi-id-text" id="upiText">8707845206@okbizaxis</span>
+      </div>
+      <button class="copy-btn" onclick="copyUpi()" id="copyBtn">
+        <i class="fa-regular fa-copy"></i> Copy
+      </button>
+    </div>
+
+    <!-- Primary Fast Pay Button (Triggers Mobile App Chooser) -->
+    <a href="upi://pay?pa=8707845206@okbizaxis&pn=Maa%20Durga%20Online%20Center&cu=INR" class="btn-main-pay" id="mainPayBtn">
+      <i class="fa-solid fa-bolt"></i> Pay with Any UPI App
+    </a>
+
+    <!-- App-Specific Direct Buttons -->
+    <div class="app-buttons-grid">
+      <a href="phonepe://pay?pa=8707845206@okbizaxis&pn=Maa%20Durga%20Online%20Center&cu=INR" class="app-btn phonepe" onclick="fallbackUpi(event, this.href)">
+        <i class="fa-solid fa-wallet"></i> PhonePe
+      </a>
+      <a href="gpay://upi/pay?pa=8707845206@okbizaxis&pn=Maa%20Durga%20Online%20Center&cu=INR" class="app-btn gpay" onclick="fallbackUpi(event, this.href)">
+        <i class="fa-brands fa-google-pay" style="font-size: 1.2rem;"></i> Google Pay
+      </a>
+      <a href="paytmmp://pay?pa=8707845206@okbizaxis&pn=Maa%20Durga%20Online%20Center&cu=INR" class="app-btn paytm" onclick="fallbackUpi(event, this.href)">
+        <i class="fa-solid fa-money-bill-transfer"></i> Paytm
+      </a>
+      <a href="upi://pay?pa=8707845206@okbizaxis&pn=Maa%20Durga%20Online%20Center&cu=INR" class="app-btn bhim">
+        <i class="fa-solid fa-mobile-screen-button"></i> BHIM / Other
+      </a>
+    </div>
+
+    <p class="instructions">
+      💡 बटन पर क्लिक करने पर आपके फोन का UPI App (GPay/PhonePe/Paytm) खुल जाएगा, या QR कोड स्कैन करें।
+    </p>
+  </div>
+
+  <div class="toast" id="toast">✅ UPI ID Copied!</div>
+
+  <script>
+    const UPI_URL = "upi://pay?pa=8707845206@okbizaxis&pn=Maa%20Durga%20Online%20Center&cu=INR";
+
+    // Auto trigger UPI on mobile after gentle load
+    window.addEventListener('DOMContentLoaded', () => {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) {
+        setTimeout(() => {
+          window.location.href = UPI_URL;
+        }, 600);
+      }
+    });
+
+    function fallbackUpi(e, specificUrl) {
+      e.preventDefault();
+      window.location.href = specificUrl;
+      setTimeout(() => {
+        window.location.href = UPI_URL;
+      }, 500);
+    }
+
+    function copyUpi() {
+      const upi = document.getElementById('upiText').innerText;
+      navigator.clipboard.writeText(upi).then(() => {
+        showToast('✅ UPI ID Copied: ' + upi);
+      }).catch(() => {
+        const temp = document.createElement('textarea');
+        temp.value = upi;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        showToast('✅ UPI ID Copied: ' + upi);
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>

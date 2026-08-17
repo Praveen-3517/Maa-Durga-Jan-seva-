@@ -316,6 +316,20 @@ app.get('/api/settings', (req, res) => {
   res.json(publicSettings);
 });
 
+// ── 1-Click Instant UPI Payment Gateway Route ─────────────────────────────────
+app.get(['/pay', '/api/pay'], (req, res) => {
+  const possiblePaths = [
+    path.join(__dirname, 'client', 'public', 'pay.html'),
+    path.join(__dirname, 'public', 'pay.html')
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return res.sendFile(p);
+    }
+  }
+  return res.redirect('upi://pay?pa=8707845206@okbizaxis&pn=Maa%20Durga%20Online%20Center&cu=INR');
+});
+
 // Admin Login — rate limited + bcrypt verification
 app.post('/api/admin/login', loginLimiter, async (req, res) => {
   const { password } = req.body;
@@ -682,6 +696,7 @@ const handleStatusUpdate = async (req, res) => {
         console.log(`[WhatsApp Notif] statusLower="${statusLower}", formattedPhone="${formattedPhone}", waState="${waState}"`);
 
         if (statusLower === 'completed') {
+          const publicAppUrl = (process.env.PUBLIC_APP_URL || 'https://durgaonline.info').replace(/\/$/, '');
           statusMsg = `🎉 *बधाई हो! आपका काम पूरा हो गया है!*\n\n` +
             `नमस्ते *${updatedRecord.name}* जी,\n` +
             `*${shopName}* द्वारा आपका *${updatedRecord.service}* का आवेदन सफलतापूर्वक *पूर्ण (Completed)* कर दिया गया है! ✅\n\n` +
@@ -690,6 +705,8 @@ const handleStatusUpdate = async (req, res) => {
             `🏢 *दस्तावेज़ प्राप्त करने का स्थान:*\n` +
             `📍 ${settings.shopAddress || 'Chak Faizullaha, Bindwaliya, Near Ghazipur Ghat (UP)'}\n` +
             `📞 *दुकान का संपर्क:* ${settings.shopPhone || '8707845206'}\n\n` +
+            `💳 *1-Click UPI Payment (GPay / PhonePe / Paytm):*\n` +
+            `👉 ${publicAppUrl}/pay\n\n` +
             `🙏 _Maa Durga Online Center चुनने के लिए धन्यवाद!_`;
         } else if (statusLower === 'in progress' || statusLower === 'in_progress' || statusLower === 'in-progress') {
           statusMsg = `⏳ *Application Update - ${shopName}*\n\n` +
@@ -1691,27 +1708,56 @@ const sendWebWhatsAppMessage = async (to, text, imageUrl) => {
       const jid = to.includes('@') ? to : `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
       // Send text message first
       await waSock.sendMessage(jid, { text });
-      // Send image via URL (fetch buffer so no filesystem dependency on Render)
+      
+      // Send image if requested
       if (imageUrl) {
         try {
-          console.log(`[WhatsApp QR] Fetching QR image from: ${imageUrl}`);
-          const imgResp = await fetch(imageUrl);
-          if (imgResp.ok) {
-            const arrayBuf = await imgResp.arrayBuffer();
-            const imageBuffer = Buffer.from(arrayBuf);
+          let imageBuffer = null;
+          
+          // 1. Try reading directly from local permanent paths (fast & reliable)
+          const localQrPaths = [
+            path.join(__dirname, 'data', 'payment_qr.png'),
+            path.join(__dirname, 'client', 'public', 'payment_qr.png'),
+            path.join(__dirname, 'public', 'payment_qr.png')
+          ];
+          for (const p of localQrPaths) {
+            if (fs.existsSync(p)) {
+              imageBuffer = fs.readFileSync(p);
+              console.log(`[WhatsApp QR] Loaded local QR file from: ${p} (${imageBuffer.length} bytes)`);
+              break;
+            }
+          }
+          
+          // 2. Fallback to HTTP URL fetch if local file not found
+          if (!imageBuffer && imageUrl) {
+            console.log(`[WhatsApp QR] Fetching QR image from URL: ${imageUrl}`);
+            const imgResp = await fetch(imageUrl);
+            if (imgResp.ok) {
+              const arrayBuf = await imgResp.arrayBuffer();
+              imageBuffer = Buffer.from(arrayBuf);
+            }
+          }
+          
+          if (imageBuffer && imageBuffer.length > 0) {
+            const publicAppUrl = (process.env.PUBLIC_APP_URL || 'https://durgaonline.info').replace(/\/$/, '');
             await waSock.sendMessage(jid, {
               image: imageBuffer,
-              caption: '💳 *Payment QR Code* — GPay / PhonePe / Paytm / BHIM UPI se scan karke payment karein.\n🏪 UPI ID: *8707845206@okbizaxis*'
+              mimetype: 'image/png',
+              caption: `💳 *Maa Durga Online Center - Payment QR Code*\n\n` +
+                `📲 *1-Click Payment Link (PhonePe / GPay / Paytm):*\n` +
+                `👉 ${publicAppUrl}/pay\n\n` +
+                `🏪 *UPI ID:* 8707845206@okbizaxis\n\n` +
+                `_(ऊपर दिए गए लिंक पर क्लिक करें या इस QR कोड को स्कैन करके पेमेंट करें)_`
             });
-            console.log(`[WhatsApp Web Engine] QR image sent to ${jid} ✅`);
+            console.log(`[WhatsApp Web Engine] QR image sent successfully to ${jid} ✅`);
           } else {
-            console.warn(`[WhatsApp QR] Failed to fetch image: HTTP ${imgResp.status}`);
+            console.warn(`[WhatsApp QR] Could not get QR image buffer from local file or URL.`);
           }
         } catch (imgErr) {
-          console.error('[WhatsApp QR Fetch Error]:', imgErr.message);
+          console.error('[WhatsApp QR Send Error]:', imgErr.message);
         }
       }
-      console.log(`[WhatsApp Web Engine] Sent message to ${jid}`);
+      console.log(`[WhatsApp Web Engine] Sent text message to ${jid}`);
       return { success: true, method: 'whatsapp_web' };
     }
   } catch (err) {

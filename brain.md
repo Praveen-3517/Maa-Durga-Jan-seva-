@@ -626,18 +626,18 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **What was just accomplished (v4.3.0 — 2026-08-17 — Payment QR Code & Ultra-Fast Parallel Submissions)**:
-  - **1. Payment QR Code in Completed WhatsApp Notification**:
-    - Jab Admin kisi submission ka status `Completed` karta hai, ab customer ke WhatsApp pe completion text ke turant baad Payment QR Code image jati hai (UPI ID: `8707845206@okbizaxis`).
-    - Render hosting compatible: URL fetch architecture se direct dynamic buffer create karke Baileys engine se delivery.
-    - Meta API fallback: direct public URL pass handling.
-  - **2. Ultra-Fast Parallel Submissions (60-80% Speedup)**:
-    - Multi-file uploads converted from sequential `for` loop to concurrent `Promise.all`.
-    - Parallel image compression with WebP optimization.
-    - Admin instant WhatsApp alert moved to non-blocking `global.setImmediate` background task.
-  - **3. Admin Auto-Logout Permanent Fix (30-Day Session)**:
-    - Extended JWT expiry to 30 days (`30d`).
-    - Fixed transient 401s / network hiccup auto-logouts with explicit `tokenExpired` detection.
+- **What was just accomplished (v4.4.0 — 2026-08-17 — 1-Click Multi-App UPI Payment & High-Res QR Delivery Fix)**:
+  - **1. Instant 1-Click Multi-App UPI Payment Gateway (`/pay` & `/api/pay`)**:
+    - Created dedicated, high-converting mobile UPI payment landing page (`pay.html`).
+    - Direct App Launchers: 🟣 PhonePe, 🔵 Google Pay, 🔷 Paytm, 🟢 BHIM UPI / Any App chooser.
+    - Automatic `upi://pay?pa=8707845206@okbizaxis&pn=Maa%20Durga%20Online%20Center&cu=INR` intent trigger on mobile.
+    - Integrated clickable payment link (`https://durgaonline.info/pay`) across WhatsApp completion text message and image caption.
+  - **2. WhatsApp QR Image Display Fix (No More Grey Empty Box)**:
+    - Root cause: Missing `mimetype: 'image/png'` and Vite `emptyOutDir: true` wiping un-mirrored assets in root `public/`.
+    - Placed permanent QR asset in `data/payment_qr.png` and `client/public/payment_qr.png` (retained across builds).
+    - Multi-layer buffer loading: loads local high-res binary directly (`data/`, `client/public/`, `public/`) with URL fetch fallback.
+    - Explicit `mimetype: 'image/png'` in Baileys `sendMessage`.
+
 
 
   - **Root Cause**: Admin dashboard auto-logout ho raha tha in 3 cases:

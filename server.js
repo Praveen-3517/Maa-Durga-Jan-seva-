@@ -712,10 +712,14 @@ const handleStatusUpdate = async (req, res) => {
 
         if (statusMsg) {
           // Attach payment QR code only when status is 'completed'
-          const qrImagePath = statusLower === 'completed'
-            ? path.join(__dirname, 'public', 'payment_qr.png')
-            : null;
-          console.log(`[WhatsApp Notif] Sending message to ${formattedPhone}${qrImagePath ? ' + QR image' : ''}...`);
+          let qrImagePath = null;
+          if (statusLower === 'completed') {
+            const qrPath = path.resolve(__dirname, 'public', 'payment_qr.png');
+            const qrExists = fs.existsSync(qrPath);
+            console.log(`[WhatsApp QR] Path: ${qrPath}, Exists: ${qrExists}`);
+            qrImagePath = qrExists ? qrPath : null;
+          }
+          console.log(`[WhatsApp Notif] Sending message to ${formattedPhone}${qrImagePath ? ' + QR image' : ' (no QR)'}...`);
           const sendResult = await sendUnifiedWhatsAppMessage(formattedPhone, statusMsg, qrImagePath);
           console.log(`[WhatsApp Notif] Result:`, JSON.stringify(sendResult));
         }

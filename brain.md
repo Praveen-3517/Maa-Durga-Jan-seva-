@@ -626,17 +626,15 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **What was just accomplished (v4.4.2 — 2026-08-17 — Client-Side Pre-Upload Image Compression for Instant Submissions)**:
-  - **1. In-Browser Instant Image Compression (`compressImageClient`)**:
-    - High-res mobile camera photos (8MB-12MB) are automatically compressed in-browser to ~150-250KB in milliseconds before sending over network.
-    - Network upload payload reduced by ~95% (from 30MB+ down to ~500KB total).
-    - Mobile submissions complete in under **1 to 2 seconds**.
-  - **2. Server-Side Pipeline Optimization**:
-    - Parallel Supabase storage file stream (`Promise.all`).
-    - Smart CPU threshold skips heavy server Sharp recompression for already optimized client assets.
-    - Asynchronous admin instant WhatsApp alerts (`global.setImmediate`).
-  - **3. Verified Google Pay QR Asset & 1-Click Multi-App UPI Gateway (`/pay`)**:
-    - Real Google Pay QR code image (133 KB) preserved and delivered via Baileys and Meta API.
+- **What was just accomplished (v4.5.0 — 2026-08-17 — Permanent Cloud Storage Persistence for Shop Settings)**:
+  - **1. Shop Settings Cloud Sync (`_system/settings.json`)**:
+    - Root cause: Render free tier filesystem is ephemeral; changes to `data/settings.json` were lost on server sleep/restart, resetting to old defaults.
+    - Solution: Implemented real-time synchronization with Supabase Cloud Storage (`_system/settings.json`).
+    - On every Admin settings update (`PUT /api/settings`), settings are instantly uploaded to Supabase Storage.
+    - On server boot / restart, `restoreSettingsFromSupabase()` automatically restores the latest Admin-configured shop details, owner name, address, and timings.
+  - **2. Sub-Second Submissions & Instant QR UPI Gateway**:
+    - Verified client-side pre-upload compression and Google Pay QR code delivery.
+
 
 
 

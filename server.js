@@ -198,7 +198,7 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
-// --- 3. Helper for Local Settings Persistence ---
+// --- 3. Helper for Settings Persistence (Local File + Supabase Cloud Storage) ---
 const DATA_DIR = path.join(__dirname, 'data');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
@@ -206,48 +206,89 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// ── FIX 5: bcrypt password hash helper ───────────────────────────────────────
-// On first run, if adminPassword is stored as plaintext (legacy), it stays as-is.
-// When admin changes password via settings, it gets hashed automatically.
-const BCRYPT_ROUNDS = 12;
+const DEFAULT_SETTINGS = {
+  shopName: "Maa Durga Online Center",
+  shopOwner: "Pratap Kushwaha",
+  shopPhone: "918707845206",
+  shopEmail: "durgaonline01@gmail.com",
+  shopAddress: "Chak Faizullaha, Bindwaliya, Near Ghazipur Ghat 233001 (UP)",
+  shopTimings: "24/7",
+  adminPasswordHash: "$2b$12$3v7lE.MA4HGJ0fOY7RGFJ.bgN06kYptiLCShGZLhDlyBCwPIk0dHy",
+  adminPassword: ""
+};
+
+let cachedSettings = null;
 
 const getSettings = () => {
-  const defaultSettings = {
-    shopName: "Maa Durga Online Center",
-    shopOwner: "Ramesh Kumar",
-    shopPhone: "918707845206",
-    shopEmail: "ramesh.cybercafe@gmail.com",
-    shopAddress: "Bindwaliya near ghazipur ghat, ghazipur uttar pradesh 233001",
-    shopTimings: "24/7",
-    adminPasswordHash: "", // bcrypt hash stored here
-    adminPassword: process.env.ADMIN_PASSWORD || "Pratap@135"  // legacy plaintext fallback (migrated on first login)
-  };
+  if (cachedSettings) return cachedSettings;
 
-  if (!fs.existsSync(SETTINGS_FILE)) {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2));
-    return defaultSettings;
+  if (fs.existsSync(SETTINGS_FILE)) {
+    try {
+      const data = fs.readFileSync(SETTINGS_FILE, 'utf8');
+      cachedSettings = { ...DEFAULT_SETTINGS, ...JSON.parse(data || '{}') };
+      return cachedSettings;
+    } catch (error) {
+      console.error('[Settings] Error reading local settings file:', error.message);
+    }
   }
+
+  cachedSettings = { ...DEFAULT_SETTINGS };
+  return cachedSettings;
+};
+
+const saveSettings = async (settings) => {
+  cachedSettings = { ...DEFAULT_SETTINGS, ...settings };
+
+  // 1. Save to local filesystem atomically
   try {
-    const data = fs.readFileSync(SETTINGS_FILE, 'utf8');
-    return { ...defaultSettings, ...JSON.parse(data || '{}') };
-  } catch (error) {
-    console.error('[Settings] Error reading settings file:', error.message);
-    return defaultSettings;
+    const tmpFile = SETTINGS_FILE + '.tmp';
+    fs.writeFileSync(tmpFile, JSON.stringify(cachedSettings, null, 2));
+    fs.renameSync(tmpFile, SETTINGS_FILE);
+  } catch (err) {
+    console.error('[Settings] Failed to save local settings:', err.message);
+    try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(cachedSettings, null, 2)); } catch (_) { /* ignore */ }
+  }
+
+  // 2. ☁️ Persist to Supabase Cloud Storage (Permanent Cloud Backup - Survives Render Restarts)
+  try {
+    const jsonStr = JSON.stringify(cachedSettings, null, 2);
+    const { error } = await supabase.storage
+      .from('client_documents')
+      .upload('_system/settings.json', Buffer.from(jsonStr, 'utf8'), {
+        upsert: true,
+        contentType: 'application/json'
+      });
+    if (error) {
+      console.warn('[Settings Cloud Save Warning]:', error.message);
+    } else {
+      console.log('[Settings] ☁️ Shop settings successfully synced to Supabase Cloud Storage.');
+    }
+  } catch (cloudErr) {
+    console.error('[Settings Cloud Save Error]:', cloudErr.message);
   }
 };
 
-const saveSettings = (settings) => {
+// Restore settings from Supabase Cloud Storage on startup
+const restoreSettingsFromSupabase = async () => {
   try {
-    // Write to a temp file first, then rename — prevents corrupting settings.json
-    // if the process crashes mid-write (future-proof: atomic write)
-    const tmpFile = SETTINGS_FILE + '.tmp';
-    fs.writeFileSync(tmpFile, JSON.stringify(settings, null, 2));
-    fs.renameSync(tmpFile, SETTINGS_FILE);
-  } catch (err) {
-    console.error('[Settings] Failed to save settings:', err.message);
-    // Last resort: try direct write
-    try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2)); } catch (_) { /* ignore */ }
+    const { data, error } = await supabase.storage
+      .from('client_documents')
+      .download('_system/settings.json');
+    if (error || !data) return false;
+    const text = await data.text();
+    const cloudSettings = JSON.parse(text);
+    if (cloudSettings && typeof cloudSettings === 'object') {
+      cachedSettings = { ...DEFAULT_SETTINGS, ...cloudSettings };
+      try {
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(cachedSettings, null, 2));
+      } catch (_) { /* ignore */ }
+      console.log('[Settings] ☁️ Shop settings successfully restored from Supabase Cloud Storage on boot.');
+      return true;
+    }
+  } catch (e) {
+    console.warn('[Settings] No previous cloud settings or restore failed:', e.message);
   }
+  return false;
 };
 
 /**
@@ -1392,8 +1433,8 @@ app.put('/api/settings', checkAdmin, async (req, res) => {
       console.log('[Security] Admin password updated and stored as bcrypt hash.');
     }
 
-    saveSettings(updatedSettings);
-    res.json({ success: true, message: "Settings updated successfully!" });
+    await saveSettings(updatedSettings);
+    res.json({ success: true, message: "Settings updated successfully and synced to cloud!" });
   } catch (err) {
     console.error('[Settings PUT] Error saving settings:', err.message);
     res.status(500).json({ success: false, message: 'Failed to save settings. Please try again.' });
@@ -2655,6 +2696,7 @@ app.listen(PORT, () => {
   console.log(`📊 Database Table: submissions`);
   console.log(`==================================================`);
 
-  // Initialize WhatsApp Web Engine in background
+  // Restore cloud settings & initialize WhatsApp Web in background
+  restoreSettingsFromSupabase();
   initWhatsAppWeb();
 });

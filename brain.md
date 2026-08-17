@@ -626,17 +626,14 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **What was just accomplished (v4.4.0 — 2026-08-17 — 1-Click Multi-App UPI Payment & High-Res QR Delivery Fix)**:
-  - **1. Instant 1-Click Multi-App UPI Payment Gateway (`/pay` & `/api/pay`)**:
-    - Created dedicated, high-converting mobile UPI payment landing page (`pay.html`).
-    - Direct App Launchers: 🟣 PhonePe, 🔵 Google Pay, 🔷 Paytm, 🟢 BHIM UPI / Any App chooser.
-    - Automatic `upi://pay?pa=8707845206@okbizaxis&pn=Maa%20Durga%20Online%20Center&cu=INR` intent trigger on mobile.
-    - Integrated clickable payment link (`https://durgaonline.info/pay`) across WhatsApp completion text message and image caption.
-  - **2. WhatsApp QR Image Display Fix (No More Grey Empty Box)**:
-    - Root cause: Missing `mimetype: 'image/png'` and Vite `emptyOutDir: true` wiping un-mirrored assets in root `public/`.
-    - Placed permanent QR asset in `data/payment_qr.png` and `client/public/payment_qr.png` (retained across builds).
-    - Multi-layer buffer loading: loads local high-res binary directly (`data/`, `client/public/`, `public/`) with URL fetch fallback.
-    - Explicit `mimetype: 'image/png'` in Baileys `sendMessage`.
+- **What was just accomplished (v4.4.1 — 2026-08-17 — Exact Google Pay QR Code Asset Replaced & Verified)**:
+  - **1. Real Google Pay QR Code Asset Sync**:
+    - Replaced placeholder asset with the authentic, high-resolution Google Pay QR code image (133 KB, UPI ID: `8707845206@okbizaxis`, Maa Durga Online Center).
+    - Preserved across `client/public/`, `data/`, and `public/` directories to prevent Vite build cleanup deletion.
+  - **2. 1-Click Multi-App UPI Payment Gateway (`/pay` & `/api/pay`)**:
+    - Dedicated mobile UPI payment landing page (`pay.html`) with direct app triggers: 🟣 PhonePe, 🔵 Google Pay, 🔷 Paytm, 🟢 BHIM UPI.
+    - Clickable payment link integrated into WhatsApp status completion notifications and image caption.
+
 
 
 

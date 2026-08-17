@@ -1464,19 +1464,33 @@ export default function AdminDashboard({ adminToken, login, logout, showToast, i
       const res = await fetch('/api/submissions', { headers: { 'Authorization': 'Bearer ' + adminToken } });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          logout();
-          showToast('Session expired. Please log in again.', 'error');
-          return;
+          // Only logout if the server explicitly says the token is expired/invalid
+          // Do NOT logout on transient network errors or server hiccups
+          const errData = await res.json().catch(() => ({}));
+          if (errData?.tokenExpired === true || res.status === 403) {
+            logout();
+            showToast('Session expired. Please log in again.', 'error');
+            return;
+          }
+          // Token invalid but not expired — also logout
+          if (errData?.tokenExpired === false) {
+            logout();
+            showToast('Authentication failed. Please log in again.', 'error');
+            return;
+          }
         }
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData?.message || 'Failed to load');
+        // For other errors (500, network issues) — don't logout, just show warning
+        console.warn('[Dashboard] Data load failed, keeping session alive:', res.status);
+        return;
       }
       const data = await res.json();
       setSubmissions(data || []);
     } catch (err) {
-      showToast('Dashboard sync failed. Please check login.', 'error');
+      // Network error (no internet, server down) — DON'T logout, just silently fail
+      console.warn('[Dashboard] Network error during data sync, session preserved:', err.message);
     }
   };
+
 
   useEffect(() => {
     if (isLoggedIn) loadData();

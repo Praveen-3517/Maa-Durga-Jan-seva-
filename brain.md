@@ -34,7 +34,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
 - **Version**: `4.1.0` (Self-Hosted WhatsApp Web Engine - Baileys, Supabase Cloud Session Persistence, Admin QR Scanner & Automated Notifications)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
-- **Development Status**: Production Live & Verified ✅.
+- **Development Status**: Production Live ✅ | ⚠️ WhatsApp customer status notification issue pending debug.
 
 ---
 
@@ -59,7 +59,60 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Phase 14: Combined Form Vyavsay Select, Clean Application ID Formatting, Ration Card Kotedar Field ✅
   - Phase 15: Self-Hosted WhatsApp Web Engine (Baileys) + Live Admin QR Scanner (Zero-Token Lifetime Operation) ✅
   - Phase 16: Instant Admin Document Upload Alert with PDF Receipt Link (`+91 87078 45206`) & 1-Click Customer Completed Status Notification ✅
-- **Pending Work**: None (Fully operational and live)
+- **Pending Work**: None ✅ (Fully operational and live)
+
+---
+
+## ⚠️ PENDING TASK — WhatsApp Customer Status Notification Debug
+
+> **Date Identified**: 15 Aug 2026
+> **Priority**: High — Customer nahi bata pa raha ki form complete/reject hua
+
+### 🐛 Problem
+Jab Admin Dashboard se kisi submission ka status `Completed` ya `Rejected` ya `In Progress` karta hai aur Save dabata hai, user ke WhatsApp number pe **koi notification nahi jata**.
+
+### ✅ Root Cause Found (Render Logs Se)
+1. **Meta API Token EXPIRED** — `.env` mein `WHATSAPP_ACCESS_TOKEN` expire ho gaya:
+   ```
+   [WhatsApp API Response Error 401]: Authentication Error, OAuthException
+   ⚠️ CRITICAL: Meta WHATSAPP_ACCESS_TOKEN is EXPIRED!
+   ```
+2. **Baileys QR Scan Required After Restart** — Render restart ke baad Baileys session restore hoti hai Supabase se, par kabhi kabhi QR dobara scan karna padta hai.
+
+### ✅ Code Fixes Already Done (15 Aug 2026)
+- `server.js` line 679: **`in-progress` bug fix** — frontend `in-progress` (hyphen) bhejta tha lekin server sirf `in progress` check karta tha. Fix kiya:
+  ```js
+  // BEFORE:
+  } else if (statusLower === 'in progress' || statusLower === 'in_progress') {
+  // AFTER:
+  } else if (statusLower === 'in progress' || statusLower === 'in_progress' || statusLower === 'in-progress') {
+  ```
+- **Debug logs added** in `handleStatusUpdate` — ab Render logs mein clearly dikhega:
+  ```
+  [WhatsApp Notif] Status update triggered: status="completed", phone="91XXXXXXXXXX", waState="connected"
+  [WhatsApp Notif] Sending message to 91XXXXXXXXXX...
+  [WhatsApp Notif] Result: {success: true, method: "whatsapp_web"}
+  ```
+- Both fixes **deployed to Render** via git push (`commit 6fea2c5`)
+
+### 🔲 Remaining Steps (Baad Mein Karna Hai)
+1. **Baileys Connected Verify Karo** — Admin Dashboard → WhatsApp Live Bot → `🟢 CONNECTED` dikhna chahiye. Agar QR dikhe to scan karo.
+2. **Test Karo** — Naya submission banao, Admin Dashboard se status `Completed` karo → Save → WhatsApp aana chahiye.
+3. **Render Logs Check Karo** — `[WhatsApp Notif]` lines dekho:
+   - Agar `waState="disconnected"` → Bot scan karo
+   - Agar `Result: {simulated: true}` → Meta token update karo
+   - Agar `Result: {success: true}` → Sab theek hai, phone number format issue ho sakta hai
+4. **Phone Number Format Check** — Supabase mein submitted phone number dekho. Format hona chahiye:
+   - 10 digit: `9812345678` → server add karega `91` prefix ✅
+   - 12 digit: `919812345678` → sahi hai ✅  
+   - 0 se shuru: `09812345678` → GALAT! 11 digit banega, 91 nahi lagega ❌
+5. **Same Number Issue** — Agar bot jis number se connected hai (`+919453821XX`) aur jis number pe notification bhejna hai woh SAME hai → WhatsApp khud ko message nahi bhejta. Alag number se test karo.
+
+### 📝 Current State (15 Aug 2026, 10:25 AM)
+- Bot dashboard mein `🟢 CONNECTED (Active)` dikh raha tha
+- Code fix deploy ho chuka hai
+- User ne abhi final test nahi kiya naye code ke saath
+- Render log search mein `Internal server error` aa raha tha (Render UI bug)
 
 ---
 
@@ -293,7 +346,7 @@ npm run build             # from f:\chat bot\
 | B-016 | 2026-07-29 | High | Admin | Failed to create services due to RLS blocking anon key. Fixed by using `service_role` key in .env | Resolved |
 | B-017 | 2026-07-31 | High | Auth / UI | Password hash mismatch in settings.json & broken password eye toggle styling in Admin Login | Resolved |
 | B-018 | 2026-08-13 | High | UI / Admin | `Uncaught ReferenceError: useCallback is not defined` in AdminDashboard. Fixed by importing useCallback from react. | Resolved |
-| B-019 | 2026-08-13 | High | Bot / Logic | Inbound single-digit service numbers (e.g. '2') were caught in `text.length <= 3` greeting check. Fixed by prioritizing numeric service selection before greeting detection. | Resolved |
+| B-020 | 2026-08-17 | High | Auth / Admin | Admin dashboard auto-logout hota tha apne aap — 3 causes: (1) JWT `12h` expiry, (2) har 60s auto-refresh pe 401 aane par `logout()` call, (3) network error ko bhi logout trigger karna. Fix: Token expiry `30d`, server mein `tokenExpired` flag add kiya, frontend sirf explicit `tokenExpired:true` pe logout karta hai, client-side stale token check bhi add kiya. | Resolved |
 
 ---
 
@@ -573,8 +626,17 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **Active State**: All requested changes built and verified. Vite client production bundle compiled cleanly.
-- **What was just accomplished (v3.8.0 — 2026-08-10)**:
+- **What was just accomplished (v4.2.0 — 2026-08-17 — Auto-Logout Fix)**:
+  - **Root Cause**: Admin dashboard auto-logout ho raha tha in 3 cases:
+    1. JWT token `12h` mein expire hota tha
+    2. Har 60-second auto-refresh pe agar koi bhi 401 aata (network error, server restart) toh `logout()` trigger hota
+    3. Client-side stale/expired token detect nahi hota tha
+  - **Fixes Applied**:
+    - `server.js:348`: Token expiry `12h` → `30d` (30 din ka session)
+    - `server.js checkAdmin`: `TokenExpiredError` pe `tokenExpired: true` flag bhejo, invalid token pe `tokenExpired: false`
+    - `AdminDashboard/index.jsx loadData()`: Logout sirf tab jab server `tokenExpired: true/false` bheje. Network errors / 500s pe logout nahi hoga
+    - `useAdminAuth.js`: App load pe client-side JWT expiry check — stale token silently clear hota hai
+  - Production build verified: `npm run build` ✅
   - **1. Combined Certificate Form ("Sabhi / All Certificates") Occupation (व्यवसाय) Field**:
     - Added `{ name: 'vyavsay', label: 'व्यवसाय / Occupation', type: 'select', options: ['कृषि', 'मजदूरी', 'व्यापार', 'नौकरी', 'अन्य'], required: true }` into `CERTIFICATE_TYPES.all` in [services.js](file:///f:/chat%20bot/client/src/constants/services.js).
     - Now users applying for all 3 certificates (Aay + Jaati + Niwas) together can select their occupation just like in the individual Aay form.

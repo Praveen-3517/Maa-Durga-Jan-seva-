@@ -280,6 +280,12 @@ const checkAdmin = (req, res, next) => {
       return next();
     } catch (err) {
       console.warn('[Auth] Token verification failed:', err.message);
+      // Return specific error for expired tokens so frontend can show proper message
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ success: false, tokenExpired: true, error: 'Session expired. Please log in again.' });
+      }
+      // Invalid token — don't fall through to password fallback for security
+      return res.status(401).json({ success: false, tokenExpired: false, error: 'Invalid token. Please log in again.' });
     }
   }
 
@@ -345,7 +351,7 @@ app.post('/api/admin/login', loginLimiter, async (req, res) => {
     }
 
     if (isValid) {
-      const token = jwt.sign({ role: 'admin', shop: settings.shopName }, JWT_SECRET, { expiresIn: '12h' });
+      const token = jwt.sign({ role: 'admin', shop: settings.shopName }, JWT_SECRET, { expiresIn: '30d' });
       res.json({ success: true, message: "Login successful!", token });
     } else {
       res.status(401).json({ success: false, message: "Incorrect password. Please try again." });
@@ -1427,7 +1433,8 @@ const saveBaileysSessionToSupabase = async () => {
 };
 
 // Periodic background session backup (every 3 minutes when connected)
-setInterval(() => {
+// eslint-disable-next-line no-undef
+global.setInterval(() => {
   if (waState === 'connected' && fs.existsSync(BAILEYS_AUTH_DIR)) {
     saveBaileysSessionToSupabase();
   }
@@ -1460,7 +1467,7 @@ const handleProcessExit = async () => {
     if (fs.existsSync(BAILEYS_AUTH_DIR)) {
       await saveBaileysSessionToSupabase();
     }
-  } catch (_e) {}
+  } catch (_e) { /* ignore — best-effort save on exit */ }
 };
 process.on('SIGINT', async () => {
   await handleProcessExit();

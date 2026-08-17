@@ -440,19 +440,18 @@ const handleUploadAndSubmission = async (req, res) => {
         let ext = path.extname(file.originalname).toLowerCase();
         let mimetype = file.mimetype;
 
-        // ── Image Compression (if > 600KB) — runs in parallel per file ──
-        if (mimetype.startsWith('image/') && file.size > 600 * 1024) {
+        // ── Server-side Image Optimization Fallback (if > 1.2MB) ──
+        if (mimetype.startsWith('image/') && file.size > 1200 * 1024) {
           try {
             fileBuffer = await sharp(file.buffer)
-              .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
-              .webp({ quality: 75 })
+              .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 80 })
               .toBuffer();
             ext = '.webp';
             mimetype = 'image/webp';
-            console.log(`[Compression] ${file.originalname} compressed successfully.`);
+            console.log(`[Compression] ${file.originalname} optimized on server.`);
           } catch (e) {
-            console.error("[Compression Error] Failed to compress:", file.originalname, e);
-            // Fallback to original buffer if compression fails
+            console.error("[Compression Error] Fallback to original buffer:", file.originalname, e);
           }
         }
 

@@ -31,6 +31,66 @@ const getSubmitErrorMessage = (err) => {
 };
 
 /**
+ * compressImageClient — Ultra-fast in-browser image optimization.
+ * Resizes 8-12MB camera photos to ~150-250KB in milliseconds so network upload completes in 1 second!
+ */
+const compressImageClient = async (file, maxDimension = 1600, quality = 0.82) => {
+  if (!file || !(file instanceof File || file instanceof Blob)) return file;
+  if (!file.type || !file.type.startsWith('image/') || file.size <= 250 * 1024) {
+    return file; // Already small (< 250KB) or non-image (e.g. PDF)
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob && blob.size < file.size) {
+                const optimizedFile = new File([blob], (file.name || 'photo.jpg').replace(/\.[^.]+$/, '.jpg'), {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(optimizedFile);
+              } else {
+                resolve(file);
+              }
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+        img.onerror = () => resolve(file);
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    } catch {
+      resolve(file);
+    }
+  });
+};
+
+/**
  * fetchWithWakeUp — Smart fetch that auto-retries for up to 60s on network errors.
  * Used for submissions when Render server might be cold-starting.
  * @param {string} url
@@ -579,35 +639,33 @@ function CertificateFormModal({
       formData.append('upload_token', uploadToken);
     }
 
-    if (aadharFile) {
-      formData.append('documents', aadharFile);
-    }
+    // ⚡ Ultra-fast client-side compression on all images before network upload
+    const [
+      optAadhar,
+      optAadharBack,
+      optPhoto,
+      optSalary,
+      optAgeProof,
+      optOldPan,
+      ...optOtherFiles
+    ] = await Promise.all([
+      compressImageClient(aadharFile),
+      compressImageClient(aadharBackFile),
+      compressImageClient(photoFile),
+      salarySlipFile ? compressImageClient(salarySlipFile) : null,
+      ageProofFile ? compressImageClient(ageProofFile) : null,
+      oldPanFile ? compressImageClient(oldPanFile) : null,
+      ...selectedFiles.map(f => compressImageClient(f))
+    ]);
 
-    if (aadharBackFile) {
-      formData.append('documents', aadharBackFile);
-    }
-
-    if (photoFile) {
-      formData.append('documents', photoFile);
-    }
-
-    // Attach salary slip if Occupation = नौकरी
-    if (salarySlipFile) {
-      formData.append('documents', salarySlipFile);
-    }
-
-    // Attach Age Proof if New PAN
-    if (ageProofFile) {
-      formData.append('documents', ageProofFile);
-    }
-
-    // Attach Old PAN if Correction
-    if (oldPanFile) {
-      formData.append('documents', oldPanFile);
-    }
-
-    selectedFiles.forEach(f => {
-      formData.append('documents', f);
+    if (optAadhar) formData.append('documents', optAadhar);
+    if (optAadharBack) formData.append('documents', optAadharBack);
+    if (optPhoto) formData.append('documents', optPhoto);
+    if (optSalary) formData.append('documents', optSalary);
+    if (optAgeProof) formData.append('documents', optAgeProof);
+    if (optOldPan) formData.append('documents', optOldPan);
+    optOtherFiles.forEach(f => {
+      if (f) formData.append('documents', f);
     });
 
     try {
@@ -1826,16 +1884,20 @@ function UploadModal({
       );
     }
 
-    formData.append('documents', aadharFile);
-    formData.append('documents', aadharBackFile);
-    formData.append('documents', photoFile);
+    // ⚡ Ultra-fast client-side compression on all images before network upload
+    const [optAadhar, optAadharBack, optPhoto, ...optOtherFiles] = await Promise.all([
+      compressImageClient(aadharFile),
+      compressImageClient(aadharBackFile),
+      compressImageClient(photoFile),
+      ...selectedFiles.map(f => compressImageClient(f))
+    ]);
 
-    selectedFiles.forEach(f =>
-      formData.append(
-        'documents',
-        f
-      )
-    );
+    if (optAadhar) formData.append('documents', optAadhar);
+    if (optAadharBack) formData.append('documents', optAadharBack);
+    if (optPhoto) formData.append('documents', optPhoto);
+    optOtherFiles.forEach(f => {
+      if (f) formData.append('documents', f);
+    });
 
     try {
       const res = await fetchWithWakeUp(

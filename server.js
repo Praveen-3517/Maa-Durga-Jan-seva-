@@ -711,16 +711,15 @@ const handleStatusUpdate = async (req, res) => {
         }
 
         if (statusMsg) {
-          // Attach payment QR code only when status is 'completed'
-          let qrImagePath = null;
+          // For 'completed' status: attach payment QR code URL
+          let qrImageUrl = null;
           if (statusLower === 'completed') {
-            const qrPath = path.resolve(__dirname, 'public', 'payment_qr.png');
-            const qrExists = fs.existsSync(qrPath);
-            console.log(`[WhatsApp QR] Path: ${qrPath}, Exists: ${qrExists}`);
-            qrImagePath = qrExists ? qrPath : null;
+            const publicAppUrl = (process.env.PUBLIC_APP_URL || 'https://durgaonline.info').replace(/\/$/, '');
+            qrImageUrl = `${publicAppUrl}/payment_qr.png`;
+            console.log(`[WhatsApp QR] Will send QR image from URL: ${qrImageUrl}`);
           }
-          console.log(`[WhatsApp Notif] Sending message to ${formattedPhone}${qrImagePath ? ' + QR image' : ' (no QR)'}...`);
-          const sendResult = await sendUnifiedWhatsAppMessage(formattedPhone, statusMsg, qrImagePath);
+          console.log(`[WhatsApp Notif] Sending message to ${formattedPhone}${qrImageUrl ? ' + QR image' : ' (no QR)'}...`);
+          const sendResult = await sendUnifiedWhatsAppMessage(formattedPhone, statusMsg, qrImageUrl);
           console.log(`[WhatsApp Notif] Result:`, JSON.stringify(sendResult));
         }
       } catch (custNotifErr) {
@@ -1686,20 +1685,31 @@ const handleIncomingWebChatMessage = async (fromJid, senderPhone, rawText) => {
 };
 
 // Send message specifically via active WhatsApp Web socket
-const sendWebWhatsAppMessage = async (to, text, imagePath) => {
+const sendWebWhatsAppMessage = async (to, text, imageUrl) => {
   try {
     if (waSock && waState === 'connected') {
       const jid = to.includes('@') ? to : `${to.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
       // Send text message first
       await waSock.sendMessage(jid, { text });
-      // Send image if provided
-      if (imagePath && fs.existsSync(imagePath)) {
-        const imageBuffer = fs.readFileSync(imagePath);
-        await waSock.sendMessage(jid, {
-          image: imageBuffer,
-          caption: '💳 *Payment QR Code* — GPay / PhonePe / Paytm / BHIM UPI se scan karke payment karein.\n🏪 UPI ID: *8707845206@okbizaxis*'
-        });
-        console.log(`[WhatsApp Web Engine] Sent image to ${jid}`);
+      // Send image via URL (fetch buffer so no filesystem dependency on Render)
+      if (imageUrl) {
+        try {
+          console.log(`[WhatsApp QR] Fetching QR image from: ${imageUrl}`);
+          const imgResp = await fetch(imageUrl);
+          if (imgResp.ok) {
+            const arrayBuf = await imgResp.arrayBuffer();
+            const imageBuffer = Buffer.from(arrayBuf);
+            await waSock.sendMessage(jid, {
+              image: imageBuffer,
+              caption: '💳 *Payment QR Code* — GPay / PhonePe / Paytm / BHIM UPI se scan karke payment karein.\n🏪 UPI ID: *8707845206@okbizaxis*'
+            });
+            console.log(`[WhatsApp Web Engine] QR image sent to ${jid} ✅`);
+          } else {
+            console.warn(`[WhatsApp QR] Failed to fetch image: HTTP ${imgResp.status}`);
+          }
+        } catch (imgErr) {
+          console.error('[WhatsApp QR Fetch Error]:', imgErr.message);
+        }
       }
       console.log(`[WhatsApp Web Engine] Sent message to ${jid}`);
       return { success: true, method: 'whatsapp_web' };
@@ -1738,25 +1748,21 @@ const sendWhatsAppImageUrl = async (to, imageUrl, caption) => {
 };
 
 // ─── UNIFIED SENDER: Uses WhatsApp Web if connected, falls back to Meta Cloud API ──
-const sendUnifiedWhatsAppMessage = async (to, text, imagePath) => {
+const sendUnifiedWhatsAppMessage = async (to, text, imageUrl) => {
   const cleanTo = (to || '').replace(/[^0-9]/g, '');
   if (!cleanTo) return { error: 'Invalid phone number' };
 
-  // 1. Try WhatsApp Web first (supports both text + image)
+  // 1. Try WhatsApp Web first (fetches image from URL, no filesystem needed)
   if (waSock && waState === 'connected') {
-    const res = await sendWebWhatsAppMessage(cleanTo, text, imagePath);
+    const res = await sendWebWhatsAppMessage(cleanTo, text, imageUrl);
     if (res?.success) return res;
   }
 
-  // 2. Fallback to Meta Cloud API (text only, then image URL if PUBLIC_APP_URL set)
+  // 2. Fallback to Meta Cloud API
   const textResult = await sendWhatsAppMessage(cleanTo, text);
-  if (imagePath) {
-    const publicUrl = process.env.PUBLIC_APP_URL || '';
-    if (publicUrl) {
-      const imageFileName = path.basename(imagePath);
-      const imageUrl = `${publicUrl}/${imageFileName}`;
-      await sendWhatsAppImageUrl(cleanTo, imageUrl, '💳 Payment QR Code — GPay / PhonePe / Paytm / BHIM UPI\n🏪 UPI ID: 8707845206@okbizaxis');
-    }
+  if (imageUrl) {
+    // For Meta API: send image via direct URL
+    await sendWhatsAppImageUrl(cleanTo, imageUrl, '💳 Payment QR Code — GPay / PhonePe / Paytm / BHIM UPI\n🏪 UPI ID: 8707845206@okbizaxis');
   }
   return textResult;
 };

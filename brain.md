@@ -626,7 +626,17 @@ npm run build             # from f:\chat bot\
 
 ## 🎯 Current Context
 
-- **What was just accomplished (v4.2.0 — 2026-08-17 — Auto-Logout Fix)**:
+- **What was just accomplished (v4.3.0 — 2026-08-17 — Payment QR Code in Completed WhatsApp Notification)**:
+  - Jab Admin kisi submission ka status `Completed` karta hai, ab customer ke WhatsApp pe 2 messages jaate hain:
+    1. ✅ Completion text message (pehle se tha)
+    2. 💳 **Payment QR Code image** (naya) — Google Pay, PhonePe, Paytm, BHIM UPI ke saath
+  - QR Image saved at: `public/payment_qr.png` (UPI ID: `8707845206@okbizaxis`)
+  - **Baileys (WhatsApp Web)**: `waSock.sendMessage(jid, { image: buffer, caption })` — direct buffer se
+  - **Meta Cloud API fallback**: `sendWhatsAppImageUrl()` — public URL se image bhejta hai
+  - `sendWebWhatsAppMessage(to, text, imagePath)` — now accepts optional imagePath
+  - `sendUnifiedWhatsAppMessage(to, text, imagePath)` — now accepts optional imagePath
+  - `In Progress` aur `Rejected` status pe QR nahi bheja jaata (sirf Completed pe)
+
   - **Root Cause**: Admin dashboard auto-logout ho raha tha in 3 cases:
     1. JWT token `12h` mein expire hota tha
     2. Har 60-second auto-refresh pe agar koi bhi 401 aata (network error, server restart) toh `logout()` trigger hota
@@ -663,7 +673,7 @@ npm run build             # from f:\chat bot\
   - Fixed Top 4 Services Sequence in Database & Customer Portal.
 - **What was previously accomplished (v3.7.0)**:
   - Services reordering, Police Verification with direct text Thana field, Admin Auto-Scroll to Top on Edit.
-- **Admin Password**: `Pratap@135`
+- **Admin Password**: `Pratap@321`
 - **WhatsApp Verify Token**: `maa_durga_verify_token_2026`
 - **WhatsApp Business Account ID**: `1044096971603756`
 

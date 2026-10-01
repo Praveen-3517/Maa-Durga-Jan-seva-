@@ -214,7 +214,9 @@ const DEFAULT_SETTINGS = {
   shopAddress: "Chak Faizullaha, Bindwaliya, Near Ghazipur Ghat 233001 (UP)",
   shopTimings: "24/7",
   adminPasswordHash: "$2b$12$3v7lE.MA4HGJ0fOY7RGFJ.bgN06kYptiLCShGZLhDlyBCwPIk0dHy",
-  adminPassword: ""
+  adminPassword: "",
+  maintenanceNotice: true,
+  maintenanceMessage: "Cloud infrastructure & server maintenance renewal is due. Automated document processing is temporarily on hold."
 };
 
 let cachedSettings = null;
@@ -1420,6 +1422,8 @@ app.put('/api/settings', checkAdmin, async (req, res) => {
       shopEmail: newSettings.shopEmail || currentSettings.shopEmail,
       shopAddress: newSettings.shopAddress || currentSettings.shopAddress,
       shopTimings: newSettings.shopTimings || currentSettings.shopTimings,
+      maintenanceNotice: typeof newSettings.maintenanceNotice !== 'undefined' ? !!newSettings.maintenanceNotice : !!currentSettings.maintenanceNotice,
+      maintenanceMessage: typeof newSettings.maintenanceMessage !== 'undefined' ? newSettings.maintenanceMessage : (currentSettings.maintenanceMessage || ''),
       adminPasswordHash: currentSettings.adminPasswordHash || '',
       adminPassword: ''  // always clear plaintext after first migration
     };

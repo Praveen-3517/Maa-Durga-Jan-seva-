@@ -50,7 +50,6 @@ export default function App() {
 
   return (
     <StarsBackground containeClassName="min-h-screen">
-
       <Navbar activeTab={activeTab} onTabChange={switchTab} onOpenCertificate={() => setShowCertModalGlobal(true)} shopSettings={shopSettings} />
       <main className="main-container">
         {activeTab === 'portal' && (
@@ -71,6 +70,7 @@ export default function App() {
             logout={logout}
             showToast={showToast}
             isLoggedIn={isLoggedIn}
+            shopSettings={shopSettings}
             onRefreshSettings={refetchSettings}
           />
         )}

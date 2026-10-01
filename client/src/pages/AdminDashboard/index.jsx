@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import MaintenanceBanner from '../../components/MaintenanceBanner';
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -268,11 +269,31 @@ function SubmissionsTable({ submissions, onUpdate, adminToken, showToast }) {
 }
 
 function ShopSettingsForm({ adminToken, showToast, onRefreshSettings }) {
-  const [form, setForm] = useState({ shopName: '', shopOwner: '', shopPhone: '', shopEmail: '', shopAddress: '', shopTimings: '', adminPassword: '' });
+  const [form, setForm] = useState({ 
+    shopName: '', 
+    shopOwner: '', 
+    shopPhone: '', 
+    shopEmail: '', 
+    shopAddress: '', 
+    shopTimings: '', 
+    adminPassword: '',
+    maintenanceNotice: false,
+    maintenanceMessage: ''
+  });
 
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(d => {
-      setForm(f => ({ ...f, shopName: d.shopName || '', shopOwner: d.shopOwner || '', shopPhone: d.shopPhone || '', shopEmail: d.shopEmail || '', shopAddress: d.shopAddress || '', shopTimings: d.shopTimings || '' }));
+      setForm(f => ({ 
+        ...f, 
+        shopName: d.shopName || '', 
+        shopOwner: d.shopOwner || '', 
+        shopPhone: d.shopPhone || '', 
+        shopEmail: d.shopEmail || '', 
+        shopAddress: d.shopAddress || '', 
+        shopTimings: d.shopTimings || '',
+        maintenanceNotice: !!d.maintenanceNotice,
+        maintenanceMessage: d.maintenanceMessage || ''
+      }));
     }).catch(() => {});
   }, []);
 
@@ -323,6 +344,43 @@ function ShopSettingsForm({ adminToken, showToast, onRefreshSettings }) {
       </div>
       <div className="form-group"><label>Shop Physical Address</label><textarea rows="2" required {...field('shopAddress')} /></div>
       <div className="form-group"><label>Shop Timings Message</label><input type="text" required {...field('shopTimings')} /></div>
+      
+      {/* Maintenance Notice Switch */}
+      <div className="divider" style={{ margin: '1.5rem 0', borderColor: 'var(--border-color)' }}></div>
+      <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <div>
+            <h4 style={{ margin: 0, color: '#f59e0b', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <i className="fa-solid fa-triangle-exclamation"></i> Server Infrastructure &amp; Maintenance Notice
+            </h4>
+            <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Enable this notice to show top alert banner and temporary maintenance alert across the portal.
+            </p>
+          </div>
+          <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+            <input 
+              type="checkbox" 
+              checked={form.maintenanceNotice} 
+              onChange={e => setForm(f => ({ ...f, maintenanceNotice: e.target.checked }))}
+              style={{ width: '18px', height: '18px', accentColor: '#f59e0b', cursor: 'pointer' }}
+            />
+            {form.maintenanceNotice ? <span style={{ color: '#f59e0b' }}>ON (Active)</span> : <span style={{ color: 'var(--text-muted)' }}>OFF</span>}
+          </label>
+        </div>
+
+        {form.maintenanceNotice && (
+          <div className="form-group" style={{ marginTop: '0.75rem' }}>
+            <label style={{ fontSize: '0.82rem', color: '#d1d5db' }}>Custom Notice Message</label>
+            <input 
+              type="text" 
+              placeholder="Notice shown to visitors..." 
+              {...field('maintenanceMessage')} 
+              style={{ fontSize: '0.85rem' }}
+            />
+          </div>
+        )}
+      </div>
+
       <div className="divider"></div>
       <div className="form-group password-group">
         <label>Change Admin Dashboard Password</label>
@@ -1452,7 +1510,7 @@ function ServiceModal({ editService, adminToken, showToast, onClose, onSaved }) 
   );
 }
 
-export default function AdminDashboard({ adminToken, login, logout, showToast, isLoggedIn, onRefreshSettings }) {
+export default function AdminDashboard({ adminToken, login, logout, showToast, isLoggedIn, shopSettings, onRefreshSettings }) {
   const [activeSubTab, setActiveSubTab] = useState('submissions-list');
   const [submissions, setSubmissions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1515,7 +1573,14 @@ export default function AdminDashboard({ adminToken, login, logout, showToast, i
   });
 
   if (!isLoggedIn) {
-    return <section className="tab-content active"><LoginCard onLogin={login} /></section>;
+    return (
+      <section className="tab-content active">
+        <div style={{ maxWidth: '440px', margin: '0 auto 1.25rem' }}>
+          <MaintenanceBanner shopSettings={shopSettings} />
+        </div>
+        <LoginCard onLogin={login} />
+      </section>
+    );
   }
 
   const tabs = [
@@ -1529,6 +1594,7 @@ export default function AdminDashboard({ adminToken, login, logout, showToast, i
   return (
     <section className="tab-content active">
       <div className="admin-panel">
+        <MaintenanceBanner shopSettings={shopSettings} onGoToSettings={() => setActiveSubTab('shop-settings')} />
         <div className="admin-header-bar">
           <div>
             <h2><i className="fa-solid fa-gauge-high"></i> Cafe Admin Dashboard</h2>

@@ -32,7 +32,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Unified Admin Dashboard with Service Management, instant status updates, and file management.
 - **Platforms**: Web Browsers (Desktop & Mobile), Node.js Runtime.
 - **Engine / Stack**: Node.js, Express.js, React 19 (Vite), Supabase, Multer (Memory Storage), dotenv.
-- **Version**: `4.5.0` (Baileys WhatsApp Engine, 1-Click UPI Payment Gateway, Ultra-Fast Client Compression & Cloud Settings Persistence)
+- **Version**: `4.6.0` (Admin-Exclusive Infrastructure & Maintenance Notice with Smart Switch Controls)
 - **Current Live URL**: `https://durgaonline.info` (LIVE & VERIFIED ✅)
 - **Development Status**: Production Live ✅ | All Systems Operational & Verified 🚀
 
@@ -41,7 +41,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
 ## 📈 Progress
 
 - **Overall Completion**: 100%
-- **Current Milestone**: Full Production Live — 1-Click UPI Payment Gateway, Real Google Pay QR Delivery, In-Browser Sub-Second Compression & Supabase Cloud Settings Persistence ✅
+- **Current Milestone**: Full Production Live — Admin-Exclusive Infrastructure & Maintenance Notice with Smart Switch Controls ✅
 - **Completed Phases**:
   - Phase 1: Core Portal & Simulator ✅
   - Phase 2: System Documentation & Memory Initialization ✅
@@ -59,6 +59,7 @@ This document is the **Single Source of Truth** for the **Maa Durga Online Cente
   - Phase 14: Combined Form Vyavsay Select, Clean Application ID Formatting, Ration Card Kotedar Field ✅
   - Phase 15: Self-Hosted WhatsApp Web Engine (Baileys) + Live Admin QR Scanner (Zero-Token Lifetime Operation) ✅
   - Phase 16: Instant Admin Document Upload Alert with PDF Receipt Link (`+91 87078 45206`) & 1-Click Customer Completed Status Notification ✅
+  - Phase 17: Admin-Exclusive Infrastructure & Maintenance Notice with Smart Switch Controls ✅
 - **Pending Work**: None ✅ (Fully operational and live)
 
 ---
@@ -318,6 +319,14 @@ npm run build             # from f:\chat bot\
 ---
 
 ## 📜 Changelog
+
+- **2026-10-01 (v4.6.0 — Admin-Exclusive Infrastructure & Maintenance Notice with Smart Switch Controls)**:
+  - **Admin-Exclusive Scope**: Maintenance notice alert banner is strictly rendered inside Admin Dashboard (`#admin`) and completely hidden from public users on Customer Portal (`#portal`) and Simulator (`#simulator`).
+  - **Zero Interruption to Customer Operations**: Normal users experience a pristine, uninterrupted portal; all forms, camera uploads, WhatsApp bot, status notifications, UPI payments, and PDF receipts function with 100% full capacity.
+  - **Dynamic Admin Controls**: Admin Dashboard includes an instant ON/OFF switch and customizable message field under the Shop Settings tab.
+  - **Message Refinement**: Removed technical administrator / developer contact phrase from default message and modal.
+  - **Cloud Persistence**: Maintenance toggle state and message are preserved across Render restarts via `PUT /api/settings` and synced directly to Supabase Cloud Storage (`_system/settings.json`).
+  - **Production Build Verified**: `npm run build` ✅ (29 modules transformed, 0 errors, compiled in 918ms).
 
 - **2026-08-17 (v4.5.0 — Permanent Cloud Settings, 1-Click UPI Gateway, Sub-Second Submissions & 30-Day Admin Session)**:
   - **Shop Settings Cloud Persistence (`_system/settings.json`)**:
